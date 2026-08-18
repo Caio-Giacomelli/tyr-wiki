@@ -1,0 +1,577 @@
+@import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #1a1a1a;
+    font-family: 'Crimson Text', serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* ===== MAPA ===== */
+#map-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    cursor: grab;
+}
+
+#map-container:active {
+    cursor: grabbing;
+}
+
+#map-wrapper {
+    position: absolute;
+    transform-origin: 0 0;
+    width: 100%;
+    height: 100%;
+}
+
+#map-svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* ===== CIDADES SVG ===== */
+.city-group {
+    cursor: pointer;
+    transition: filter 0.3s ease, transform 0.3s ease;
+    transform-origin: center;
+}
+
+.city-group:hover {
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.7)) brightness(1.2);
+}
+
+.city-group.active {
+    filter: drop-shadow(0 0 12px rgba(255, 180, 0, 0.9)) brightness(1.3);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { filter: drop-shadow(0 0 12px rgba(255, 180, 0, 0.9)) brightness(1.3); }
+    50% { filter: drop-shadow(0 0 20px rgba(255, 215, 0, 1)) brightness(1.5); }
+}
+
+/* ===== PAINEL DE INFORMAÇÕES ===== */
+#info-panel {
+    position: fixed;
+    top: 0;
+    right: -420px;
+    width: 400px;
+    height: 100vh;
+    background: linear-gradient(135deg, #2c1810 0%, #1a0f0a 100%);
+    border-left: 3px solid #8b6914;
+    box-shadow: -5px 0 30px rgba(0,0,0,0.7);
+    z-index: 1000;
+    transition: right 0.4s ease;
+    overflow-y: auto;
+    padding: 30px;
+}
+
+#info-panel.open {
+    right: 0;
+}
+
+#info-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+}
+
+#close-panel {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 36px;
+    height: 36px;
+    background: rgba(139, 105, 20, 0.3);
+    border: 1px solid #8b6914;
+    border-radius: 50%;
+    color: #d4a843;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+#close-panel:hover {
+    background: rgba(139, 105, 20, 0.6);
+}
+
+#city-name {
+    font-family: 'MedievalSharp', cursive;
+    font-size: 28px;
+    color: #d4a843;
+    margin-bottom: 5px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid rgba(139, 105, 20, 0.4);
+}
+
+#city-region {
+    font-family: 'Crimson Text', serif;
+    font-size: 14px;
+    color: #a08050;
+    font-style: italic;
+    margin-bottom: 20px;
+}
+
+.info-section {
+    margin-bottom: 20px;
+}
+
+.info-section h3 {
+    font-family: 'MedievalSharp', cursive;
+    font-size: 16px;
+    color: #c9a84c;
+    margin-bottom: 8px;
+}
+
+.info-section p {
+    font-size: 16px;
+    color: #ccc;
+    line-height: 1.6;
+}
+
+.info-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.info-section ul li {
+    color: #ccc;
+    font-size: 15px;
+    padding: 4px 0;
+    padding-left: 18px;
+    position: relative;
+}
+
+.info-section ul li::before {
+    content: '\2726';
+    position: absolute;
+    left: 0;
+    color: #8b6914;
+}
+
+/* ===== CONTROLES DE ZOOM ===== */
+#zoom-controls {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    z-index: 500;
+}
+
+.zoom-btn {
+    width: 40px;
+    height: 40px;
+    background: rgba(44, 24, 16, 0.9);
+    border: 2px solid #8b6914;
+    border-radius: 8px;
+    color: #d4a843;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.zoom-btn:hover {
+    background: rgba(139, 105, 20, 0.5);
+}
+
+/* ===== BOTÃO DE JORNADA ===== */
+#trail-btn {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    padding: 10px 20px;
+    font-family: 'MedievalSharp', cursive;
+    font-size: 14px;
+    background: rgba(44, 24, 16, 0.9);
+    border: 2px solid #8b6914;
+    border-radius: 8px;
+    color: #d4a843;
+    cursor: pointer;
+    z-index: 600;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+#trail-btn:hover {
+    background: rgba(139, 105, 20, 0.5);
+}
+
+#trail-btn.active {
+    background: rgba(139, 105, 20, 0.4);
+    border-color: #d4a843;
+}
+
+/* ===== CONTROLES DA TRILHA ===== */
+#trail-controls {
+    position: fixed;
+    top: 55px;
+    left: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    z-index: 601;
+    max-width: 220px;
+}
+
+#trail-season {
+    width: 100%;
+    padding: 6px 8px;
+    font-family: 'Crimson Text', serif;
+    font-size: 12px;
+    background: rgba(44, 24, 16, 0.95);
+    border: 1px solid #8b6914;
+    border-radius: 6px;
+    color: #d4a843;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+#trail-season option {
+    background: #2c1810;
+    color: #d4a843;
+}
+
+#trail-season option:disabled {
+    color: #666;
+}
+
+.trail-ctrl-btn {
+    padding: 6px 12px;
+    font-family: 'Crimson Text', serif;
+    font-size: 13px;
+    background: rgba(44, 24, 16, 0.9);
+    border: 1px solid #8b6914;
+    border-radius: 6px;
+    color: #d4a843;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.trail-ctrl-btn:hover {
+    background: rgba(139, 105, 20, 0.5);
+}
+
+.trail-ctrl-btn.active {
+    background: rgba(139, 105, 20, 0.4);
+    border-color: #d4a843;
+}
+
+/* ===== INSTRUÇÃO ===== */
+#instructions {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Crimson Text', serif;
+    font-size: 14px;
+    color: #999;
+    background: rgba(26, 15, 10, 0.85);
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 1px solid rgba(139, 105, 20, 0.3);
+    z-index: 500;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 2s ease;
+}
+
+/* ===== SCROLLBAR ===== */
+#info-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+#info-panel::-webkit-scrollbar-track {
+    background: #1a0f0a;
+}
+
+#info-panel::-webkit-scrollbar-thumb {
+    background: #8b6914;
+    border-radius: 4px;
+}
+
+/* ===== MENU WIKI LATERAL ===== */
+#wiki-sidebar {
+    position: fixed;
+    top: 60px;
+    left: 15px;
+    width: 220px;
+    max-height: calc(100vh - 100px);
+    z-index: 499;
+    font-family: 'Crimson Text', serif;
+    display: flex;
+    flex-direction: column;
+    background: rgba(30, 18, 12, 0.95);
+    border: 2px solid #8b6914;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(139, 105, 20, 0.2);
+    overflow: hidden;
+}
+
+#wiki-sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
+    pointer-events: none;
+    border-radius: 10px;
+}
+
+/* Cabeçalho da sidebar */
+.wiki-sidebar-header {
+    padding: 12px 14px 8px;
+    border-bottom: 1px solid rgba(139, 105, 20, 0.3);
+    position: relative;
+}
+
+.wiki-sidebar-title {
+    font-family: 'MedievalSharp', cursive;
+    font-size: 15px;
+    color: #d4a843;
+    text-align: center;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+/* Barra de pesquisa */
+.wiki-search-wrapper {
+    position: relative;
+}
+
+.wiki-search-wrapper::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid #888;
+    border-radius: 50%;
+}
+
+.wiki-search-wrapper::after {
+    content: '';
+    position: absolute;
+    left: 18px;
+    top: 58%;
+    width: 5px;
+    height: 1.5px;
+    background: #888;
+    transform: rotate(45deg);
+}
+
+#wiki-search {
+    width: 100%;
+    padding: 6px 10px 6px 28px;
+    font-family: 'Crimson Text', serif;
+    font-size: 13px;
+    background: rgba(20, 12, 8, 0.8);
+    border: 1px solid rgba(139, 105, 20, 0.4);
+    border-radius: 6px;
+    color: #ccc;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+#wiki-search::placeholder {
+    color: #777;
+    font-style: italic;
+}
+
+#wiki-search:focus {
+    border-color: #d4a843;
+}
+
+/* Conteúdo scrollável */
+.wiki-sidebar-content {
+    overflow-y: auto;
+    flex: 1;
+    padding: 6px 0;
+}
+
+.wiki-sidebar-content::-webkit-scrollbar {
+    width: 5px;
+}
+
+.wiki-sidebar-content::-webkit-scrollbar-thumb {
+    background: #8b6914;
+    border-radius: 3px;
+}
+
+/* Seções */
+.wiki-section {
+    margin: 0 6px 4px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(44, 24, 16, 0.5);
+    border: 1px solid rgba(139, 105, 20, 0.2);
+    transition: border-color 0.2s;
+}
+
+.wiki-section:hover {
+    border-color: rgba(139, 105, 20, 0.4);
+}
+
+.wiki-section-header {
+    padding: 9px 12px;
+    font-family: 'MedievalSharp', cursive;
+    font-size: 13px;
+    color: #d4a843;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.wiki-section-header:hover {
+    background: rgba(139, 105, 20, 0.2);
+}
+
+.wiki-section-header .arrow {
+    transition: transform 0.3s;
+    font-size: 11px;
+}
+
+.wiki-section-header.open .arrow {
+    transform: rotate(90deg);
+}
+
+.wiki-section-list {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.wiki-section-list.open {
+    max-height: 500px;
+}
+
+.wiki-item {
+    padding: 6px 12px 6px 18px;
+    font-size: 13px;
+    color: #bbb;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    border-top: 1px solid rgba(139, 105, 20, 0.1);
+}
+
+.wiki-item:hover {
+    background: rgba(139, 105, 20, 0.15);
+    color: #d4a843;
+}
+
+.wiki-item.active {
+    background: rgba(139, 105, 20, 0.3);
+    color: #d4a843;
+}
+
+.wiki-item.hidden {
+    display: none;
+}
+
+/* Seção vazia (Marcos Históricos) */
+.wiki-section-empty {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+    text-align: center;
+}
+
+/* ===== IMAGEM NO PAINEL ===== */
+.info-portrait {
+    width: 100%;
+    max-width: 200px;
+    border-radius: 8px;
+    border: 2px solid #8b6914;
+    margin-bottom: 15px;
+    display: block;
+}
+
+/* ===== LINKS DE LOCAIS ===== */
+.map-link {
+    color: #d4a843;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.map-link:hover {
+    color: #f0d060;
+}
+
+/* ===== SELETOR DE IDIOMA ===== */
+#lang-selector {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.lang-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-family: 'Crimson Text', serif;
+    font-size: 13px;
+    font-weight: 600;
+    background: rgba(44, 24, 16, 0.9);
+    border: 2px solid #8b6914;
+    border-radius: 8px;
+    color: #d4a843;
+    cursor: default;
+    transition: background 0.2s;
+}
+
+.lang-btn .lang-flag {
+    width: 20px;
+    height: 14px;
+    border-radius: 2px;
+    background: linear-gradient(to bottom, #009c3b 0%, #009c3b 37.5%, #ffdf00 37.5%, #ffdf00 62.5%, #002776 62.5%, #002776 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.lang-btn .lang-flag::after {
+    content: '';
+    position: absolute;
+    top: 37.5%;
+    left: 50%;
+    width: 10px;
+    height: 25%;
+    background: #ffdf00;
+    transform: translateX(-50%) rotate(0deg);
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
