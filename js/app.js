@@ -620,13 +620,17 @@ trailBtn.addEventListener('click', () => {
     trailVisible = !trailVisible;
     trailBtn.classList.toggle('active', trailVisible);
 
+    const sidebar = document.getElementById('wiki-sidebar');
+
     if (trailVisible) {
         trailBtn.textContent = 'Esconder Jornada';
         trailControls.style.display = 'flex';
+        if (sidebar) sidebar.classList.add('trail-active');
     } else {
         trailBtn.textContent = 'Mostrar Jornada';
         trailControls.style.display = 'none';
         trailNextBtn.style.display = 'none';
+        if (sidebar) sidebar.classList.remove('trail-active');
         stopJourney();
         removeTrail();
     }

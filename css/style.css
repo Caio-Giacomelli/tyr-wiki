@@ -226,13 +226,13 @@ body {
 /* ===== CONTROLES DA TRILHA ===== */
 #trail-controls {
     position: fixed;
-    top: 15px;
-    left: 200px;
+    top: 55px;
+    left: 15px;
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
     z-index: 700;
-    max-width: 300px;
+    max-width: 220px;
 }
 
 #trail-season {
@@ -328,6 +328,12 @@ body {
     border-radius: 10px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(139, 105, 20, 0.2);
     overflow: hidden;
+    transition: top 0.3s ease;
+}
+
+#wiki-sidebar.trail-active {
+    top: 130px;
+    max-height: calc(100vh - 170px);
 }
 
 #wiki-sidebar::before {
