@@ -524,8 +524,7 @@ body {
 /* ===== LINKS DE LOCAIS ===== */
 .map-link {
     color: #d4a843;
-    text-decoration: underline;
-    text-decoration-style: dotted;
+    text-decoration: none;
     cursor: pointer;
     transition: color 0.2s;
 }
@@ -537,8 +536,7 @@ body {
 /* Links de entidades (personagens, legião, vilões) */
 .wiki-link {
     color: #8fc8e8;
-    text-decoration: underline;
-    text-decoration-style: dotted;
+    text-decoration: none;
     cursor: pointer;
     transition: color 0.2s;
 }
