@@ -210,7 +210,7 @@ body {
     border-radius: 8px;
     color: #d4a843;
     cursor: pointer;
-    z-index: 600;
+    z-index: 700;
     transition: background 0.2s, border-color 0.2s;
 }
 
@@ -226,13 +226,13 @@ body {
 /* ===== CONTROLES DA TRILHA ===== */
 #trail-controls {
     position: fixed;
-    top: 55px;
-    left: 15px;
+    top: 15px;
+    left: 200px;
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
-    z-index: 601;
-    max-width: 220px;
+    z-index: 700;
+    max-width: 300px;
 }
 
 #trail-season {

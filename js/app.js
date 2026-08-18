@@ -525,8 +525,17 @@ function linkifyLocations(text) {
     let result = text;
     names.forEach(name => {
         const svgId = locationNameToSvgId[name];
-        const regex = new RegExp(`(?<!<[^>]*)\\b(${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b`, 'g');
-        result = result.replace(regex, `<a class="map-link" href="#" onclick="highlightLocation('${svgId}'); return false;">$1</a>`);
+        const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\b(${escapedName})\\b`, 'g');
+        // Evitar substituir dentro de tags HTML existentes
+        result = result.replace(regex, (match, p1, offset) => {
+            // Verificar se estamos dentro de uma tag HTML
+            const before = result.substring(0, offset);
+            const lastOpen = before.lastIndexOf('<');
+            const lastClose = before.lastIndexOf('>');
+            if (lastOpen > lastClose) return match; // dentro de tag
+            return `<a class="map-link" href="#" onclick="highlightLocation('${svgId}'); return false;">${p1}</a>`;
+        });
     });
     return result;
 }
@@ -608,7 +617,6 @@ function getOffsetStops() {
 const offsetStops = getOffsetStops();
 
 trailBtn.addEventListener('click', () => {
-    if (!svgDoc) return;
     trailVisible = !trailVisible;
     trailBtn.classList.toggle('active', trailVisible);
 
