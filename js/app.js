@@ -14,7 +14,7 @@ let lastTranslateX, lastTranslateY;
 let svgDoc = null;
 
 // ===== INICIALIZAR SVG =====
-mapSvg.addEventListener('load', () => {
+function initSvg() {
     svgDoc = mapSvg.contentDocument;
     if (!svgDoc) return;
 
@@ -106,7 +106,14 @@ mapSvg.addEventListener('load', () => {
     }, { passive: false });
 
     fitMapToScreen();
-});
+}
+
+// Registrar o load event E verificar se já carregou
+mapSvg.addEventListener('load', initSvg);
+// Se o SVG já estava em cache e carregou antes do script
+if (mapSvg.contentDocument && mapSvg.contentDocument.querySelector('svg')) {
+    initSvg();
+}
 
 // ===== SELEÇÃO DE CIDADES =====
 function selectCity(id) {

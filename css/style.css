@@ -548,7 +548,6 @@ body {
 .lang-btn {
     display: flex;
     align-items: center;
-    gap: 6px;
     padding: 8px 14px;
     font-family: 'Crimson Text', serif;
     font-size: 13px;
@@ -559,11 +558,4 @@ body {
     color: #d4a843;
     cursor: default;
     transition: background 0.2s;
-}
-
-.lang-btn .lang-flag {
-    width: 20px;
-    height: 14px;
-    border-radius: 2px;
-    display: block;
 }
