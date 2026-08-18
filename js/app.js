@@ -526,24 +526,96 @@ function toggleWikiSection(header) {
     list.classList.toggle('open');
 }
 
-// ===== LINKIFY LOCAIS =====
+// ===== LINKIFY LOCAIS E PERSONAGENS =====
+
+// Construir mapeamento de nomes de entidades para ações
+function buildEntityMap() {
+    const map = {};
+
+    // Locais
+    Object.keys(locationNameToSvgId).forEach(name => {
+        map[name] = { type: 'location', id: locationNameToSvgId[name] };
+    });
+
+    // Personagens
+    characters.forEach((char, index) => {
+        map[char.name] = { type: 'character', index: index };
+        // Adicionar primeiro nome também se tiver sobrenome
+        const firstName = char.name.split(' ')[0];
+        if (firstName !== char.name && firstName.length > 3) {
+            if (!map[firstName]) map[firstName] = { type: 'character', index: index };
+        }
+    });
+
+    // Legião
+    legion.forEach((member, index) => {
+        map[member.name] = { type: 'legion', index: index };
+        const firstName = member.name.split(' ')[0];
+        if (firstName !== member.name && firstName.length > 3) {
+            if (!map[firstName]) map[firstName] = { type: 'legion', index: index };
+        }
+    });
+
+    // Vilões
+    villains.forEach((villain, index) => {
+        map[villain.name] = { type: 'villain', index: index };
+        const firstName = villain.name.split(' ')[0];
+        if (firstName !== villain.name && firstName.length > 3) {
+            if (!map[firstName]) map[villain.name] = { type: 'villain', index: index };
+        }
+    });
+
+    return map;
+}
+
+const entityMap = buildEntityMap();
+
 function linkifyLocations(text) {
-    const names = Object.keys(locationNameToSvgId).sort((a, b) => b.length - a.length);
+    const names = Object.keys(entityMap).sort((a, b) => b.length - a.length);
     let result = text;
+    const alreadyLinked = new Set();
+
     names.forEach(name => {
-        const svgId = locationNameToSvgId[name];
+        const entity = entityMap[name];
         const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`\\b(${escapedName})\\b`, 'g');
-        // Evitar substituir dentro de tags HTML existentes
+
         result = result.replace(regex, (match, p1, offset) => {
             // Verificar se estamos dentro de uma tag HTML
             const before = result.substring(0, offset);
             const lastOpen = before.lastIndexOf('<');
             const lastClose = before.lastIndexOf('>');
-            if (lastOpen > lastClose) return match; // dentro de tag
-            return `<a class="map-link" href="#" onclick="highlightLocation('${svgId}'); return false;">${p1}</a>`;
+            if (lastOpen > lastClose) return match;
+
+            // Evitar linkar a mesma entidade múltiplas vezes no mesmo texto
+            const key = `${entity.type}-${entity.index || entity.id}`;
+            if (alreadyLinked.has(key + '-' + offset)) return match;
+
+            let onclick = '';
+            let cssClass = 'map-link';
+
+            switch (entity.type) {
+                case 'location':
+                    onclick = `highlightLocation('${entity.id}')`;
+                    break;
+                case 'character':
+                    onclick = `showCharacterInfo(${entity.index})`;
+                    cssClass = 'wiki-link';
+                    break;
+                case 'legion':
+                    onclick = `showLegionInfo(${entity.index})`;
+                    cssClass = 'wiki-link';
+                    break;
+                case 'villain':
+                    onclick = `showVillainInfo(${entity.index})`;
+                    cssClass = 'wiki-link';
+                    break;
+            }
+
+            return `<a class="${cssClass}" href="#" onclick="${onclick}; return false;">${p1}</a>`;
         });
     });
+
     return result;
 }
 

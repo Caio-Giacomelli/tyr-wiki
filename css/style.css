@@ -534,6 +534,19 @@ body {
     color: #f0d060;
 }
 
+/* Links de entidades (personagens, legião, vilões) */
+.wiki-link {
+    color: #8fc8e8;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.wiki-link:hover {
+    color: #b8e0f8;
+}
+
 /* ===== SELETOR DE IDIOMA ===== */
 #lang-selector {
     position: fixed;
