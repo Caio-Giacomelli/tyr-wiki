@@ -1003,3 +1003,52 @@ function removeTrail() {
         }
     }
 }
+
+
+// ===== SELETOR DE FONTE/IDIOMA =====
+const langToggle = document.getElementById('lang-toggle');
+const langMenu = document.getElementById('lang-menu');
+const fontDragao = document.getElementById('font-dragao');
+let isDragaoFont = false;
+
+if (langToggle && langMenu) {
+    langToggle.addEventListener('click', () => {
+        if (isDragaoFont) {
+            // Voltar para fonte normal
+            document.body.classList.remove('font-dragao');
+            isDragaoFont = false;
+            langToggle.classList.remove('active');
+            langMenu.classList.remove('open');
+        } else {
+            // Abrir/fechar menu
+            langMenu.classList.toggle('open');
+            langToggle.classList.toggle('active');
+        }
+    });
+
+    if (fontDragao) {
+        fontDragao.addEventListener('click', () => {
+            document.body.classList.add('font-dragao');
+            isDragaoFont = true;
+            langMenu.classList.remove('open');
+            langToggle.textContent = 'DRA-GAO';
+            langToggle.classList.add('active');
+        });
+    }
+
+    // Fechar menu ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!langToggle.contains(e.target) && !langMenu.contains(e.target)) {
+            langMenu.classList.remove('open');
+            if (!isDragaoFont) langToggle.classList.remove('active');
+        }
+    });
+}
+
+// Atualizar texto do botão quando voltar ao normal
+const originalLangObserver = new MutationObserver(() => {
+    if (!document.body.classList.contains('font-dragao') && langToggle) {
+        langToggle.textContent = 'PT-BR';
+    }
+});
+originalLangObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });

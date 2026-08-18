@@ -1,5 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
 
+@font-face {
+    font-family: 'Dragao';
+    src: url('../Teste Mac.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -551,9 +558,6 @@ body {
     bottom: 20px;
     left: 20px;
     z-index: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
 }
 
 .lang-btn {
@@ -567,6 +571,57 @@ body {
     border: 2px solid #8b6914;
     border-radius: 8px;
     color: #d4a843;
-    cursor: default;
+    cursor: pointer;
     transition: background 0.2s;
+}
+
+.lang-btn:hover {
+    background: rgba(139, 105, 20, 0.4);
+}
+
+.lang-btn.active {
+    border-color: #d4a843;
+    background: rgba(139, 105, 20, 0.3);
+}
+
+#lang-menu {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 6px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+}
+
+#lang-menu.open {
+    display: flex;
+}
+
+.lang-option {
+    padding: 8px 14px;
+    font-size: 14px;
+    background: rgba(44, 24, 16, 0.95);
+    border: 2px solid #8b6914;
+    border-radius: 8px;
+    color: #d4a843;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.lang-option:hover {
+    background: rgba(139, 105, 20, 0.4);
+}
+
+.lang-option-dragao {
+    font-family: 'Dragao', serif;
+    font-size: 16px;
+    letter-spacing: 2px;
+}
+
+/* Classe global para aplicar fonte Dragao */
+body.font-dragao,
+body.font-dragao * {
+    font-family: 'Dragao', serif !important;
 }
