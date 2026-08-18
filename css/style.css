@@ -332,8 +332,8 @@ body {
 }
 
 #wiki-sidebar.trail-active {
-    top: 130px;
-    max-height: calc(100vh - 170px);
+    top: 155px;
+    max-height: calc(100vh - 195px);
 }
 
 #wiki-sidebar::before {
@@ -562,6 +562,8 @@ body {
 }
 
 .lang-btn .lang-flag {
-    font-size: 18px;
-    line-height: 1;
+    width: 20px;
+    height: 14px;
+    border-radius: 2px;
+    display: block;
 }
