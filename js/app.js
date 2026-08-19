@@ -1353,7 +1353,8 @@ let debugMode = false;
 let debugPoints = [];
 
 document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'Q') {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'Q' || e.key === 'q' || e.code === 'KeyQ')) {
+        e.preventDefault();
         debugMode = !debugMode;
         let debugPanel = document.getElementById('debug-panel');
         if (debugMode) {
