@@ -1254,7 +1254,6 @@ function advanceJourney() {
         const partyChars = currentJourneyKey === 'solnegro1'
             ? [{ offset: -36 }, { offset: 36 }, { offset: 0 }, { offset: 0 }]
             : [{ offset: -30 }, { offset: 30 }];
-        const prev = offsetStops[thisIndex - 1];
         const duration = 2000;
         const animStart = performance.now();
 
