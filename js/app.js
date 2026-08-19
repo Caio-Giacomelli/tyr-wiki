@@ -1050,13 +1050,19 @@ function restoreAccentsInDOM() {
 }
 
 // Observer para aplicar strip em conteúdo dinâmico quando fonte Dragao está ativa
-let isStripping = false;
-const dragaoObserver = new MutationObserver(() => {
-    if (isDragaoFont && !isStripping) {
-        isStripping = true;
+let stripTimeout = null;
+const dragaoObserver = new MutationObserver((mutations) => {
+    if (!isDragaoFont) return;
+    // Verificar se a mutation é de childList (novo conteúdo adicionado), não characterData
+    const hasNewContent = mutations.some(m => m.type === 'childList' && m.addedNodes.length > 0);
+    if (!hasNewContent) return;
+    // Debounce para evitar loops
+    if (stripTimeout) clearTimeout(stripTimeout);
+    stripTimeout = setTimeout(() => {
+        dragaoObserver.disconnect();
         stripAccentsFromDOM();
-        isStripping = false;
-    }
+        dragaoObserver.observe(document.body, { childList: true, subtree: true });
+    }, 50);
 });
 dragaoObserver.observe(document.body, { childList: true, subtree: true });
     nodes.forEach(node => {
