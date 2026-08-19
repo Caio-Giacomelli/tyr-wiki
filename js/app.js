@@ -519,6 +519,59 @@ function showVillainInfo(index) {
     infoPanel.classList.add('open');
 }
 
+// ===== WIKI - ARTEFATOS =====
+const artifactsList = document.getElementById('artifacts-list');
+if (artifactsList && typeof artifacts !== 'undefined') {
+    artifacts.forEach((artifact, index) => {
+        const item = document.createElement('div');
+        item.className = 'wiki-item';
+        item.textContent = artifact.name;
+        item.dataset.searchName = artifact.name.toLowerCase();
+        item.addEventListener('click', () => showArtifactInfo(index));
+        artifactsList.appendChild(item);
+    });
+}
+
+function showArtifactInfo(index) {
+    const artifact = artifacts[index];
+
+    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
+    if (artifactsList) artifactsList.children[index].classList.add('active');
+
+    if (svgDoc) {
+        const svgEl = svgDoc.querySelector('svg');
+        const overlay = svgDoc.getElementById('dim-overlay');
+        if (overlay) overlay.style.opacity = '0';
+        cityIds.forEach(id => {
+            const g = svgDoc.getElementById(id);
+            if (g) {
+                g.classList.remove('active', 'city-highlighted');
+                g.style.filter = '';
+                if (overlay) svgEl.insertBefore(g, overlay);
+            }
+        });
+    }
+
+    document.getElementById('city-name').textContent = artifact.name;
+    document.getElementById('city-region').textContent = 'Artefato';
+
+    let html = `
+        <div class="info-section">
+            <h3>Descrição</h3>
+            <p>${linkifyLocations(artifact.description)}</p>
+        </div>
+        <div class="info-section">
+            <h3>Detalhes</h3>
+            <ul>
+                ${artifact.details.map(d => `<li>${linkifyLocations(d)}</li>`).join('')}
+            </ul>
+        </div>
+    `;
+
+    document.getElementById('city-info').innerHTML = html;
+    infoPanel.classList.add('open');
+}
+
 // ===== TOGGLE SEÇÕES WIKI =====
 function toggleWikiSection(header) {
     header.classList.toggle('open');
@@ -565,6 +618,13 @@ function buildEntityMap() {
         }
     });
 
+    // Artefatos
+    if (typeof artifacts !== 'undefined') {
+        artifacts.forEach((artifact, index) => {
+            map[artifact.name] = { type: 'artifact', index: index };
+        });
+    }
+
     return map;
 }
 
@@ -608,6 +668,10 @@ function linkifyLocations(text) {
                     break;
                 case 'villain':
                     onclick = `showVillainInfo(${entity.index})`;
+                    cssClass = 'wiki-link';
+                    break;
+                case 'artifact':
+                    onclick = `showArtifactInfo(${entity.index})`;
                     cssClass = 'wiki-link';
                     break;
             }
