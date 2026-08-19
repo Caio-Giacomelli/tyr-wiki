@@ -1240,14 +1240,27 @@ function advanceJourney() {
 
     if (thisIndex > 0) {
         const prev = offsetStops[thisIndex - 1];
+
+        // Border line (colored, thicker) - drawn first
+        const borderLine = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'line');
+        borderLine.setAttribute('x1', prev.ox); borderLine.setAttribute('y1', prev.oy);
+        borderLine.setAttribute('x2', stop.ox); borderLine.setAttribute('y2', stop.oy);
+        borderLine.setAttribute('stroke', config.pathColor);
+        borderLine.setAttribute('stroke-width', '5');
+        borderLine.setAttribute('stroke-dasharray', '12 7');
+        borderLine.setAttribute('stroke-linecap', 'round');
+        borderLine.setAttribute('opacity', '0');
+        linesGroup.appendChild(borderLine);
+
+        // Inner line (black, thinner) - drawn on top
         const line = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('x1', prev.ox); line.setAttribute('y1', prev.oy);
         line.setAttribute('x2', stop.ox); line.setAttribute('y2', stop.oy);
-        line.setAttribute('stroke', config.pathColor);
-        line.setAttribute('stroke-width', '3');
+        line.setAttribute('stroke', '#111');
+        line.setAttribute('stroke-width', '2.5');
         line.setAttribute('stroke-dasharray', '12 7');
         line.setAttribute('stroke-linecap', 'round');
-        line.setAttribute('opacity', '0.8');
+        line.setAttribute('opacity', '0');
         linesGroup.appendChild(line);
 
         // Animate party icons along the path
@@ -1272,7 +1285,8 @@ function advanceJourney() {
             });
 
             // Animate line opacity
-            line.setAttribute('opacity', String(eased * 0.8));
+            borderLine.setAttribute('opacity', String(eased * 0.9));
+            line.setAttribute('opacity', String(eased * 0.9));
 
             if (t < 1) {
                 requestAnimationFrame(animatePartyMove);
@@ -1285,7 +1299,6 @@ function advanceJourney() {
             }
         }
 
-        line.setAttribute('opacity', '0');
         requestAnimationFrame(animatePartyMove);
     } else {
         placeStopMarker(stop, 0, stopsGroup, config);
