@@ -740,16 +740,54 @@ function showJourneyStop(stop, index) {
     document.getElementById('city-name').textContent = stop.location;
     document.getElementById('city-region').textContent = stop.session;
 
+    // Encontrar sessão correspondente
+    const sessionMatch = stop.session.match(/\d+/);
+    const sessionId = sessionMatch ? parseInt(sessionMatch[0]) : null;
+    const sessionBtn = (sessionId !== null && typeof sessionsData !== 'undefined' && sessionsData[sessionId])
+        ? `<button id="session-read-btn" onclick="openSessionModal(${sessionId})">Ler Sessao Completa</button>`
+        : '';
+
     let html = `
         <div class="info-section">
             <h3>Parada ${index + 1} de ${journeyStops.length}</h3>
             <p>${linkifyLocations(stop.summary)}</p>
+            ${sessionBtn}
         </div>
     `;
 
     document.getElementById('city-info').innerHTML = html;
     infoPanel.classList.add('open');
 }
+
+// ===== MODAL DE SESSÃO =====
+function openSessionModal(sessionId) {
+    const session = sessionsData[sessionId];
+    if (!session) return;
+
+    document.getElementById('session-modal-title').textContent = session.title;
+    const quoteText = session.quote + (session.quoteAuthor ? ' — ' + session.quoteAuthor : '');
+    document.getElementById('session-modal-quote').textContent = quoteText;
+    document.getElementById('session-modal-content').textContent = session.content;
+
+    document.getElementById('session-modal-overlay').classList.add('open');
+}
+
+function closeSessionModal() {
+    document.getElementById('session-modal-overlay').classList.remove('open');
+}
+
+// Fechar modal
+document.getElementById('session-modal-close').addEventListener('click', closeSessionModal);
+document.getElementById('session-modal-overlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('session-modal-overlay')) {
+        closeSessionModal();
+    }
+});
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('session-modal-overlay').classList.contains('open')) {
+        closeSessionModal();
+    }
+});
 
 function startJourney() {
     removeTrail();
