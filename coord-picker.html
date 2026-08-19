@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Mapeador de Coordenadas - Tyr</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #1a1a1a; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
+        #map-container { position: relative; width: 100vw; height: 100vh; overflow: hidden; cursor: crosshair; }
+        #map-wrapper { position: absolute; transform-origin: 0 0; width: 100%; height: 100%; }
+        #map-svg { width: 100%; height: 100%; }
+        #coords-display {
+            position: fixed; top: 15px; left: 15px; background: rgba(0,0,0,0.85);
+            color: #4ae04a; font-family: monospace; font-size: 16px; padding: 15px 20px;
+            border-radius: 8px; border: 2px solid #4ae04a; z-index: 1000;
+        }
+        #coords-display h3 { color: #fff; margin-bottom: 8px; font-size: 14px; }
+        #coords-display .coord { margin: 4px 0; }
+        #coords-display .hint { color: #999; font-size: 12px; margin-top: 10px; }
+        #points-log {
+            position: fixed; top: 15px; right: 15px; width: 350px; max-height: 80vh;
+            background: rgba(0,0,0,0.85); color: #ddd; font-family: monospace; font-size: 13px;
+            padding: 15px; border-radius: 8px; border: 2px solid #8b6914; z-index: 1000;
+            overflow-y: auto;
+        }
+        #points-log h3 { color: #d4a843; margin-bottom: 10px; }
+        .point-entry { background: rgba(255,255,255,0.05); padding: 6px 10px; margin: 4px 0; border-radius: 4px; }
+        .point-entry:hover { background: rgba(255,255,255,0.1); }
+        #copy-btn {
+            margin-top: 10px; padding: 8px 16px; background: #8b6914; border: none;
+            color: #fff; border-radius: 6px; cursor: pointer; font-size: 13px;
+        }
+        #copy-btn:hover { background: #d4a843; }
+        #clear-btn {
+            margin-top: 10px; margin-left: 8px; padding: 8px 16px; background: #555; border: none;
+            color: #fff; border-radius: 6px; cursor: pointer; font-size: 13px;
+        }
+        .marker {
+            position: absolute; width: 20px; height: 20px; background: rgba(74, 224, 74, 0.8);
+            border: 2px solid #fff; border-radius: 50%; transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 500;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: bold; color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div id="map-container">
+        <div id="map-wrapper">
+            <object id="map-svg" type="image/svg+xml" data="Mapa-Tyr.svg">Mapa de Tyr</object>
+        </div>
+    </div>
+
+    <div id="coords-display">
+        <h3>Mapeador de Coordenadas</h3>
+        <div class="coord">x: <span id="cx">—</span></div>
+        <div class="coord">y: <span id="cy">—</span></div>
+        <div class="hint">Clique no mapa para registrar um ponto.<br>Scroll = zoom | Arraste = mover</div>
+    </div>
+
+    <div id="points-log">
+        <h3>Pontos Registrados</h3>
+        <div id="log-entries"></div>
+        <button id="copy-btn">Copiar Todos</button>
+        <button id="clear-btn">Limpar</button>
+    </div>
+
+    <script>
+        const mapContainer = document.getElementById('map-container');
+        const mapWrapper = document.getElementById('map-wrapper');
+        const mapSvg = document.getElementById('map-svg');
+        const cxEl = document.getElementById('cx');
+        const cyEl = document.getElementById('cy');
+        const logEntries = document.getElementById('log-entries');
+
+        let scale = 1, translateX = 0, translateY = 0;
+        let isDragging = false, startX, startY, lastTX, lastTY;
+        let points = [];
+        let svgDoc = null;
+
+        mapSvg.addEventListener('load', () => {
+            svgDoc = mapSvg.contentDocument;
+            if (svgDoc) {
+                svgDoc.addEventListener('click', handleMapClick);
+                svgDoc.addEventListener('wheel', handleWheel, { passive: false });
+            }
+        });
+
+        if (mapSvg.contentDocument && mapSvg.contentDocument.querySelector('svg')) {
+            svgDoc = mapSvg.contentDocument;
+            svgDoc.addEventListener('click', handleMapClick);
+            svgDoc.addEventListener('wheel', handleWheel, { passive: false });
+        }
+
+        function handleMapClick(e) {
+            if (isDragging) return;
+            const svgEl = svgDoc.querySelector('svg');
+            const rect = svgEl.getBoundingClientRect();
+            const viewBox = svgEl.viewBox.baseVal;
+
+            // Calcular coordenadas no espaço do SVG viewBox
+            const svgX = ((e.clientX - rect.left) / rect.width) * viewBox.width;
+            const svgY = ((e.clientY - rect.top) / rect.height) * viewBox.height;
+
+            const x = Math.round(svgX);
+            const y = Math.round(svgY);
+
+            cxEl.textContent = x;
+            cyEl.textContent = y;
+
+            points.push({ x, y });
+            updateLog();
+            addMarker(e.clientX, e.clientY, points.length);
+        }
+
+        function addMarker(clientX, clientY, num) {
+            const marker = document.createElement('div');
+            marker.className = 'marker';
+            marker.textContent = num;
+            marker.style.left = clientX + 'px';
+            marker.style.top = clientY + 'px';
+            document.body.appendChild(marker);
+        }
+
+        function updateLog() {
+            logEntries.innerHTML = points.map((p, i) =>
+                `<div class="point-entry">${i + 1}. x: ${p.x}, y: ${p.y}</div>`
+            ).join('');
+        }
+
+        document.getElementById('copy-btn').addEventListener('click', () => {
+            const text = points.map((p, i) =>
+                `    {\n        x: ${p.x}, y: ${p.y},\n        location: "Ponto ${i + 1}",\n        session: "",\n        summary: ""\n    }`
+            ).join(',\n');
+            navigator.clipboard.writeText(text).then(() => {
+                document.getElementById('copy-btn').textContent = '✓ Copiado!';
+                setTimeout(() => document.getElementById('copy-btn').textContent = 'Copiar Todos', 2000);
+            });
+        });
+
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            points = [];
+            logEntries.innerHTML = '';
+            document.querySelectorAll('.marker').forEach(m => m.remove());
+            cxEl.textContent = '—';
+            cyEl.textContent = '—';
+        });
+
+        // Pan
+        mapContainer.addEventListener('mousedown', (e) => {
+            isDragging = true; startX = e.clientX; startY = e.clientY;
+            lastTX = translateX; lastTY = translateY;
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            translateX = lastTX + (e.clientX - startX);
+            translateY = lastTY + (e.clientY - startY);
+            updateTransform();
+        });
+        document.addEventListener('mouseup', (e) => {
+            if (Math.abs(e.clientX - startX) > 5 || Math.abs(e.clientY - startY) > 5) {
+                setTimeout(() => { isDragging = false; }, 50);
+            } else {
+                isDragging = false;
+            }
+        });
+
+        // Zoom
+        function handleWheel(e) {
+            e.preventDefault();
+            const rect = mapContainer.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const prevScale = scale;
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            scale = Math.min(Math.max(scale * delta, 0.5), 4);
+            translateX = mouseX - (mouseX - translateX) * (scale / prevScale);
+            translateY = mouseY - (mouseY - translateY) * (scale / prevScale);
+            updateTransform();
+        }
+
+        mapContainer.addEventListener('wheel', handleWheel, { passive: false });
+
+        function updateTransform() {
+            mapWrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        }
+    </script>
+</body>
+</html>
