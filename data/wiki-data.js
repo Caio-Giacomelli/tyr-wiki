@@ -723,7 +723,7 @@ const locationNameToSvgId = {
 // ===== PARADAS DA JORNADA - CICATRIZES DO ECLIPSE T1 =====
 const journeyStopsCicatriz = [
     {
-        x: 130, y: 1180,
+        x: 130, y: 900,
         location: "Orvengrad",
         session: "S01E01",
         summary: "Durgan e Falin enfrentam um wendigo na neve. Encontram a Pedra Magna em ruínas de um antigo culto. Derrotam o ronin Ukta para obter o passe de entrada para Orvengrad."
@@ -747,13 +747,13 @@ const journeyStopsCicatriz = [
         summary: "Kellan informa que Dregoth recua tropas de Erëd Luin. Galerion revela a lenda das 3 criaturas. Durgan conhece Orin e a Deusa. Partem em águias com Klaus."
     },
     {
-        x: 870, y: 440,
+        x: 960, y: 420,
         location: "Erëd Luin",
         session: "S01E02-03",
         summary: "Chegam ao acampamento de Dôrin. Infiltram-se na montanha disfarçados. Nymira é chamada de 'a perdida'. Atravessam a cachoeira de lava — portal para o Plano Elemental do Fogo."
     },
     {
-        x: 870, y: 350,
+        x: 870, y: 460,
         location: "Plano Elemental do Fogo",
         session: "S01E03",
         summary: "Cidade de bronze com uma criatura tentando eclodir de uma bola de fogo. Durgan renuncia Salaak'nir e recebe a fé da Deusa. Nymira absorve seus poderes e cai. O Rei do Fogo dá a Falin o poder de abrir portais."
