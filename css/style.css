@@ -626,37 +626,3 @@ body.font-dragao * {
     font-family: 'Dragao', serif !important;
     text-transform: uppercase !important;
 }
-
-body.font-dragao {
-    font-size: 25px;
-}
-
-body.font-dragao #city-name {
-    font-size: 37px;
-}
-
-body.font-dragao .info-section h3 {
-    font-size: 25px;
-}
-
-body.font-dragao .info-section p,
-body.font-dragao .info-section ul li {
-    font-size: 24px;
-}
-
-body.font-dragao .wiki-section-header {
-    font-size: 22px;
-}
-
-body.font-dragao .wiki-item {
-    font-size: 22px;
-}
-
-body.font-dragao .wiki-sidebar-title {
-    font-size: 24px;
-}
-
-body.font-dragao #trail-btn,
-body.font-dragao .trail-ctrl-btn {
-    font-size: 23px;
-}
