@@ -626,3 +626,66 @@ body.font-dragao * {
     font-family: 'Dragao', serif !important;
     text-transform: uppercase !important;
 }
+
+
+/* ===== MODO DE EDIÇÃO ===== */
+#edit-btn {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    padding: 6px 14px;
+    font-family: 'Crimson Text', serif;
+    font-size: 14px;
+    background: rgba(139, 105, 20, 0.3);
+    border: 1px solid #8b6914;
+    border-radius: 6px;
+    color: #d4a843;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#edit-btn:hover {
+    background: rgba(139, 105, 20, 0.5);
+}
+
+#edit-btn.saving {
+    background: rgba(34, 139, 34, 0.3);
+    border-color: #4a9c4a;
+    color: #7ddb7d;
+}
+
+#edit-btn.saving:hover {
+    background: rgba(34, 139, 34, 0.5);
+}
+
+/* Campos editáveis */
+.editable {
+    outline: 1px dashed rgba(139, 105, 20, 0.5);
+    outline-offset: 3px;
+    padding: 4px;
+    border-radius: 4px;
+    min-height: 1.5em;
+    transition: outline-color 0.2s, background 0.2s;
+}
+
+.editable:focus {
+    outline-color: #d4a843;
+    background: rgba(139, 105, 20, 0.1);
+}
+
+#info-panel.editing #city-name,
+#info-panel.editing #city-region {
+    outline: 1px dashed rgba(139, 105, 20, 0.5);
+    outline-offset: 3px;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+#info-panel.editing #city-name:focus,
+#info-panel.editing #city-region:focus {
+    outline-color: #d4a843;
+    background: rgba(139, 105, 20, 0.1);
+}
