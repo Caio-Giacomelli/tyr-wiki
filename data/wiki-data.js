@@ -723,37 +723,37 @@ const locationNameToSvgId = {
 // ===== PARADAS DA JORNADA - CICATRIZES DO ECLIPSE T1 =====
 const journeyStopsCicatriz = [
     {
-        x: 444, y: 859,
+        x: 523, y: 862,
         location: "Orvengrad",
         session: "S01E01",
         summary: "Durgan e Falin enfrentam um wendigo na neve. Encontram a Pedra Magna em ruínas de um antigo culto. Derrotam o ronin Ukta para obter o passe de entrada para Orvengrad."
     },
     {
-        x: 671, y: 1078,
+        x: 792, y: 1078,
         location: "Hammerhold",
         session: "S01E01",
         summary: "O grupo entrega a Pedra Magna e o passe para a Legião. Decidem partir rapidamente devido ao perigo de Salaak'nir reconhecer Durgan."
     },
     {
-        x: 1003, y: 1291,
+        x: 1230, y: 1308,
         location: "Alto Mar",
         session: "S01E02",
         summary: "Viagem de 5 dias no navio dos Maralen. Nymira tem visões proféticas com lágrimas douradas: 'o destino de 3 será selado'. Desvia de Gordon Black no cais."
     },
     {
-        x: 1353, y: 1215,
+        x: 1590, y: 1214,
         location: "Veyrinn",
         session: "S01E02",
         summary: "Kellan informa que Dregoth recua tropas de Erëd Luin. Galerion revela a lenda das 3 criaturas. Durgan conhece Orin e a Deusa. Partem em águias com Klaus."
     },
     {
-        x: 1068, y: 426,
+        x: 1252, y: 432,
         location: "Erëd Luin",
         session: "S01E02-03",
         summary: "Chegam ao acampamento de Dôrin. Infiltram-se na montanha disfarçados. Nymira é chamada de 'a perdida'. Atravessam a cachoeira de lava — portal para o Plano Elemental do Fogo."
     },
     {
-        x: 976, y: 485,
+        x: 1145, y: 487,
         location: "Plano Elemental do Fogo",
         session: "S01E03",
         summary: "Cidade de bronze com uma criatura tentando eclodir de uma bola de fogo. Durgan renuncia Salaak'nir e recebe a fé da Deusa. Nymira absorve seus poderes e cai. O Rei do Fogo dá a Falin o poder de abrir portais."
