@@ -174,7 +174,9 @@ function showCityInfo(id) {
     document.getElementById('city-name').textContent = name;
     document.getElementById('city-region').textContent = city.region;
 
-    let html = `
+    let html = '';
+    if (city.image) html = '<img class="info-portrait" src="' + city.image + '" alt="' + name + '">';
+    html += `
         <div class="info-section">
             <h3>Descrição</h3>
             <p>${linkifyLocations(city.description)}</p>
@@ -651,6 +653,151 @@ function openBookModal(index) {
     document.getElementById('session-modal-content').textContent = book.fullText;
 
     document.getElementById('session-modal-overlay').classList.add('open');
+}
+
+// ===== WIKI - MARCOS HISTÓRICOS =====
+const landmarksList = document.getElementById('landmarks-list');
+if (landmarksList && typeof landmarks !== 'undefined') {
+    landmarks.forEach((landmark, index) => {
+        const item = document.createElement('div');
+        item.className = 'wiki-item';
+        item.textContent = landmark.name;
+        item.dataset.searchName = landmark.name.toLowerCase();
+        item.addEventListener('click', () => showLandmarkInfo(index));
+        landmarksList.appendChild(item);
+    });
+}
+
+function showLandmarkInfo(index) {
+    const landmark = landmarks[index];
+    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
+    if (landmarksList) landmarksList.children[index].classList.add('active');
+
+    if (svgDoc) {
+        const svgEl = svgDoc.querySelector('svg');
+        const overlay = svgDoc.getElementById('dim-overlay');
+        if (overlay) overlay.style.opacity = '0';
+        cityIds.forEach(id => {
+            const g = svgDoc.getElementById(id);
+            if (g) { g.classList.remove('active', 'city-highlighted'); g.style.filter = ''; if (overlay) svgEl.insertBefore(g, overlay); }
+        });
+    }
+
+    document.getElementById('city-name').textContent = landmark.name;
+    document.getElementById('city-region').textContent = 'Marco Histórico';
+
+    let html = `
+        <div class="info-section">
+            <h3>Descrição</h3>
+            <p>${linkifyLocations(landmark.description)}</p>
+        </div>
+        <div class="info-section">
+            <h3>Detalhes</h3>
+            <ul>
+                ${landmark.details.map(d => `<li>${linkifyLocations(d)}</li>`).join('')}
+            </ul>
+        </div>
+    `;
+    document.getElementById('city-info').innerHTML = html;
+    infoPanel.classList.add('open');
+}
+
+// ===== WIKI - PERSONAGENS HISTÓRICOS =====
+const historicalList = document.getElementById('historical-list');
+if (historicalList && typeof historicalNPCs !== 'undefined') {
+    historicalNPCs.forEach((npc, index) => {
+        const item = document.createElement('div');
+        item.className = 'wiki-item';
+        item.textContent = npc.name;
+        item.dataset.searchName = npc.name.toLowerCase();
+        item.addEventListener('click', () => showHistoricalInfo(index));
+        historicalList.appendChild(item);
+    });
+}
+
+function showHistoricalInfo(index) {
+    const npc = historicalNPCs[index];
+    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
+    if (historicalList) historicalList.children[index].classList.add('active');
+
+    if (svgDoc) {
+        const svgEl = svgDoc.querySelector('svg');
+        const overlay = svgDoc.getElementById('dim-overlay');
+        if (overlay) overlay.style.opacity = '0';
+        cityIds.forEach(id => {
+            const g = svgDoc.getElementById(id);
+            if (g) { g.classList.remove('active', 'city-highlighted'); g.style.filter = ''; if (overlay) svgEl.insertBefore(g, overlay); }
+        });
+    }
+
+    document.getElementById('city-name').textContent = npc.name;
+    document.getElementById('city-region').textContent = npc.title;
+
+    let html = '';
+    if (npc.image) html += `<img class="info-portrait" src="${npc.image}" alt="${npc.name}">`;
+    html += `
+        <div class="info-section">
+            <h3>Descrição</h3>
+            <p>${linkifyLocations(npc.description)}</p>
+        </div>
+        <div class="info-section">
+            <h3>Detalhes</h3>
+            <ul>
+                ${npc.details.map(d => `<li>${linkifyLocations(d)}</li>`).join('')}
+            </ul>
+        </div>
+    `;
+    document.getElementById('city-info').innerHTML = html;
+    infoPanel.classList.add('open');
+}
+
+// ===== WIKI - ALIADOS =====
+const alliesList = document.getElementById('allies-list');
+if (alliesList && typeof allies !== 'undefined') {
+    allies.forEach((ally, index) => {
+        const item = document.createElement('div');
+        item.className = 'wiki-item';
+        item.textContent = ally.name;
+        item.dataset.searchName = ally.name.toLowerCase();
+        item.addEventListener('click', () => showAllyInfo(index));
+        alliesList.appendChild(item);
+    });
+}
+
+function showAllyInfo(index) {
+    const ally = allies[index];
+    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
+    if (alliesList) alliesList.children[index].classList.add('active');
+
+    if (svgDoc) {
+        const svgEl = svgDoc.querySelector('svg');
+        const overlay = svgDoc.getElementById('dim-overlay');
+        if (overlay) overlay.style.opacity = '0';
+        cityIds.forEach(id => {
+            const g = svgDoc.getElementById(id);
+            if (g) { g.classList.remove('active', 'city-highlighted'); g.style.filter = ''; if (overlay) svgEl.insertBefore(g, overlay); }
+        });
+    }
+
+    document.getElementById('city-name').textContent = ally.name;
+    document.getElementById('city-region').textContent = ally.title;
+
+    let html = '';
+    if (ally.image) html += `<img class="info-portrait" src="${ally.image}" alt="${ally.name}">`;
+    html += `
+        <div class="info-section">
+            <h3>Descrição</h3>
+            <p>${linkifyLocations(ally.description)}</p>
+        </div>
+        <div class="info-section">
+            <h3>Detalhes</h3>
+            <ul>
+                ${ally.details.map(d => `<li>${linkifyLocations(d)}</li>`).join('')}
+            </ul>
+        </div>
+    `;
+    document.getElementById('city-info').innerHTML = html;
+    infoPanel.classList.add('open');
 }
 
 // ===== TOGGLE SEÇÕES WIKI =====

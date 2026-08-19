@@ -84,6 +84,7 @@ const cities = {
     },
     "Veyrinn": {
         region: "Sudeste - Costa",
+        image: "img/Local - Veyrinn.png",
         description: "Uma bela cidade em camadas, lar de Oronis e da poderosa família Maralen. Seu palácio principal está fortemente ligado à natureza. Governada pelo Sexto Campeão, que abandonou a corrupção.",
         population: "Grande cidade",
         government: "Rei Feiticeiro Oronis (Sexto Campeão / Líder da Legião)",
@@ -102,6 +103,7 @@ const cities = {
     "Myreendale": {
         displayName: "Myrrendale",
         region: "Sul - Farmlands",
+        image: "img/Local - Myrrendale.png",
         description: "Uma cidade próspera com um grande porto em construção para fomentar o comércio. Foi palco do Cerco de Myrrendale, onde a Legião da Estrela da Manhã defendeu a cidade contra a Ascensão Dracônica de Ozul.",
         population: "Cidade próspera",
         government: "Desconhecido",
