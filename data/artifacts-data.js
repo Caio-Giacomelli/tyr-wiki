@@ -3,6 +3,7 @@
 const artifacts = [
     {
         name: "Adagas de Dentes",
+        image: "img/Item - Adagas de Stor.png",
         description: "Um par de adagas forjadas a partir de dentes de criaturas derrotadas pelo grupo.",
         details: [
             "Uma das adagas foi confeccionada por Fannar, com os dentes do urso que causou o ferimento no rosto de Stor",
@@ -11,6 +12,7 @@ const artifacts = [
     },
     {
         name: "Albert (Colar do Escaravelho)",
+        image: "img/Item - Albert.png",
         description: "Um colar com um escaravelho magico que guia seu portador ate o Hellvault mais proximo.",
         details: [
             "Ao fazer carinho, ele se desprende de seu encaixe e comeca a voar na direcao da entrada do Hellvault mais proximo",
@@ -20,6 +22,7 @@ const artifacts = [
     },
     {
         name: "Apito dos Caes Espectrais",
+        image: null,
         description: "Um apito magico que invoca um cao de caca espectral ao ser assoprado.",
         details: [
             "Ao assoprar, um cao espectral se apresenta ao local",
@@ -31,6 +34,7 @@ const artifacts = [
     },
     {
         name: "Arco do Juramento da Vinganca",
+        image: "img/Item - Juramento.png",
         description: "Arco lendario confeccionado por Fannar. Possui 6 marcas representando mortes importantes. Permite jurar inimigos de morte.",
         details: [
             "Confeccionado por Fannar",
@@ -46,6 +50,7 @@ const artifacts = [
     },
     {
         name: "Broche Rosado",
+        image: null,
         description: "Uma lotus branca e dourada que permite localizar membros da Legiao.",
         details: [
             "Uma lotus branca e dourada, agora desabrochada",
@@ -53,7 +58,22 @@ const artifacts = [
         ]
     },
     {
+        name: "O Flagelo",
+        image: null,
+        description: "A espada lendaria de Borys, o Dragao de Ebe. Permanece enterrada com Rkard.",
+        details: [
+            "Espada de Rkard (cravada nele por Borys)",
+            "Esta enterrada com ele no Tumulo de Rkard"
+        ]
+    }
+];
+
+// ===== DADOS DOS LIVROS & RELATOS =====
+
+const books = [
+    {
         name: "Carta de Dekkar",
+        image: null,
         description: "Uma carta emocionante de Dekkar para seu irmao, revelando segredos sobre os locais sagrados e a destruicao de Borys.",
         details: [
             "Dekkar construiu os cinco locais sagrados e suas passagens",
@@ -66,6 +86,7 @@ const artifacts = [
     },
     {
         name: "Escrita Antiga",
+        image: null,
         description: "Paginas de um livro em escrita antiga dos dragoes. Apenas Stor e Fannar possuem conhecimento para le-las.",
         details: [
             "Existem 2 estruturas para o vocabulario: simbolos que se conectam e simbolos separados que formam estrutura gramatical",
@@ -76,6 +97,7 @@ const artifacts = [
     },
     {
         name: "Livro de Urik",
+        image: null,
         description: "Relato de Hamanu de Urik, o Leao do Norte, sobre sua tarefa como Campeao e sua decisao de enfrentar Abalach-Re.",
         details: [
             "Hamanu completou sua tarefa de Campeao mas questiona a moralidade",
@@ -88,6 +110,7 @@ const artifacts = [
     },
     {
         name: "Livro dos Reis de Ered Luin",
+        image: null,
         description: "O livro sagrado dos Anoes, contendo a historia de Ered Luin, a queda de Rkard e o legado do povo anao.",
         details: [
             "Registra a historia do povo anao e sua queda",
@@ -100,6 +123,7 @@ const artifacts = [
     },
     {
         name: "Livro sem Titulo",
+        image: null,
         description: "Relato final de Wyan, Rei Feiticeiro de Sedraxis, sobre a Ascensao Draconica e a loucura que ela traz.",
         details: [
             "Descreve o ritual da Ascensao Draconica ensinado por Borys",
@@ -112,15 +136,8 @@ const artifacts = [
         ]
     },
     {
-        name: "O Flagelo",
-        description: "A espada lendaria de Borys, o Dragao de Ebe. Permanece enterrada com Rkard.",
-        details: [
-            "Espada de Rkard (cravada nele por Borys)",
-            "Esta enterrada com ele no Tumulo de Rkard"
-        ]
-    },
-    {
         name: "Relato de Lalali-Puy",
+        image: null,
         description: "Ultimo relato de Lalali-Puy, o Flagelo dos Elfos, antes de renunciar ao titulo de Campea e adotar o nome 'a Chuva Eterna'.",
         details: [
             "Narra a destruicao de uma floresta elfica sob suas ordens",

@@ -555,7 +555,13 @@ function showArtifactInfo(index) {
     document.getElementById('city-name').textContent = artifact.name;
     document.getElementById('city-region').textContent = 'Artefato';
 
-    let html = `
+    let html = '';
+
+    if (artifact.image) {
+        html += `<img class="info-portrait" src="${artifact.image}" alt="${artifact.name}">`;
+    }
+
+    html += `
         <div class="info-section">
             <h3>Descrição</h3>
             <p>${linkifyLocations(artifact.description)}</p>
@@ -564,6 +570,65 @@ function showArtifactInfo(index) {
             <h3>Detalhes</h3>
             <ul>
                 ${artifact.details.map(d => `<li>${linkifyLocations(d)}</li>`).join('')}
+            </ul>
+        </div>
+    `;
+
+    document.getElementById('city-info').innerHTML = html;
+    infoPanel.classList.add('open');
+}
+
+// ===== WIKI - LIVROS & RELATOS =====
+const booksList = document.getElementById('books-list');
+if (booksList && typeof books !== 'undefined') {
+    books.forEach((book, index) => {
+        const item = document.createElement('div');
+        item.className = 'wiki-item';
+        item.textContent = book.name;
+        item.dataset.searchName = book.name.toLowerCase();
+        item.addEventListener('click', () => showBookInfo(index));
+        booksList.appendChild(item);
+    });
+}
+
+function showBookInfo(index) {
+    const book = books[index];
+
+    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
+    if (booksList) booksList.children[index].classList.add('active');
+
+    if (svgDoc) {
+        const svgEl = svgDoc.querySelector('svg');
+        const overlay = svgDoc.getElementById('dim-overlay');
+        if (overlay) overlay.style.opacity = '0';
+        cityIds.forEach(id => {
+            const g = svgDoc.getElementById(id);
+            if (g) {
+                g.classList.remove('active', 'city-highlighted');
+                g.style.filter = '';
+                if (overlay) svgEl.insertBefore(g, overlay);
+            }
+        });
+    }
+
+    document.getElementById('city-name').textContent = book.name;
+    document.getElementById('city-region').textContent = 'Livro / Relato';
+
+    let html = '';
+
+    if (book.image) {
+        html += `<img class="info-portrait" src="${book.image}" alt="${book.name}">`;
+    }
+
+    html += `
+        <div class="info-section">
+            <h3>Descrição</h3>
+            <p>${linkifyLocations(book.description)}</p>
+        </div>
+        <div class="info-section">
+            <h3>Detalhes</h3>
+            <ul>
+                ${book.details.map(d => `<li>${linkifyLocations(d)}</li>`).join('')}
             </ul>
         </div>
     `;
@@ -625,6 +690,13 @@ function buildEntityMap() {
         });
     }
 
+    // Livros & Relatos
+    if (typeof books !== 'undefined') {
+        books.forEach((book, index) => {
+            map[book.name] = { type: 'book', index: index };
+        });
+    }
+
     return map;
 }
 
@@ -672,6 +744,10 @@ function linkifyLocations(text) {
                     break;
                 case 'artifact':
                     onclick = `showArtifactInfo(${entity.index})`;
+                    cssClass = 'wiki-link';
+                    break;
+                case 'book':
+                    onclick = `showBookInfo(${entity.index})`;
                     cssClass = 'wiki-link';
                     break;
             }
