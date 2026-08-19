@@ -1011,14 +1011,54 @@ const langMenu = document.getElementById('lang-menu');
 const fontDragao = document.getElementById('font-dragao');
 let isDragaoFont = false;
 
+// Remove acentos e ç de um texto
+function removeDiacritics(text) {
+    return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[çÇ]/g, (m) => m === 'ç' ? 'c' : 'C');
+}
+
+// Aplica remoção de acentos em todos os nós de texto do DOM
+function stripAccentsFromDOM() {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+    const nodes = [];
+    while (walker.nextNode()) {
+        const node = walker.currentNode;
+        // Ignorar scripts e styles
+        if (node.parentElement && (node.parentElement.tagName === 'SCRIPT' || node.parentElement.tagName === 'STYLE')) continue;
+        nodes.push(node);
+    }
+    nodes.forEach(node => {
+        const original = node.textContent;
+        const stripped = removeDiacritics(original);
+        if (original !== stripped) {
+            node._originalText = original;
+            node.textContent = stripped;
+        }
+    });
+}
+
+// Restaura os textos originais
+function restoreAccentsInDOM() {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node => {
+        if (node._originalText) {
+            node.textContent = node._originalText;
+            delete node._originalText;
+        }
+    });
+}
+
 if (langToggle && langMenu) {
     langToggle.addEventListener('click', () => {
         if (isDragaoFont) {
             // Voltar para fonte normal
             document.body.classList.remove('font-dragao');
+            restoreAccentsInDOM();
             isDragaoFont = false;
             langToggle.classList.remove('active');
             langMenu.classList.remove('open');
+            langToggle.textContent = 'PT-BR';
         } else {
             // Abrir/fechar menu
             langMenu.classList.toggle('open');
@@ -1029,6 +1069,7 @@ if (langToggle && langMenu) {
     if (fontDragao) {
         fontDragao.addEventListener('click', () => {
             document.body.classList.add('font-dragao');
+            stripAccentsFromDOM();
             isDragaoFont = true;
             langMenu.classList.remove('open');
             langToggle.textContent = 'DRA-GAO';
@@ -1044,11 +1085,3 @@ if (langToggle && langMenu) {
         }
     });
 }
-
-// Atualizar texto do botão quando voltar ao normal
-const originalLangObserver = new MutationObserver(() => {
-    if (!document.body.classList.contains('font-dragao') && langToggle) {
-        langToggle.textContent = 'PT-BR';
-    }
-});
-originalLangObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
