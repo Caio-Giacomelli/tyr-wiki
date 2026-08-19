@@ -1183,7 +1183,7 @@ function drawJourneyBase() {
         ]
         : [
             { name: 'Falin', img: 'img/Falin.png', offset: -30 },
-            { name: 'Durgan', img: null, offset: 30 }
+            { name: 'Durgan', img: 'img/Durgan.png', offset: 30 }
         ];
 
     const offsetStops = getOffsetStopsFor(config.stops);

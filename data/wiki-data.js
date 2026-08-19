@@ -277,7 +277,7 @@ const characters = [
     {
         name: "Durgan",
         title: "Meio-Orc Paladino",
-        image: null,
+        image: "img/Durgan.png",
         description: "Um meio-orc de 26 anos que fez um juramento de proteger Fälin e Nymira. Ex-adorador de Salaak'nir, renunciou sua fé e agora busca a peregrinação da Deusa.",
         details: [
             "Meio-Orc — 26 anos",
