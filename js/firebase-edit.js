@@ -80,7 +80,7 @@ function enterEditMode() {
     editMode = true;
     const panel = document.getElementById('info-panel');
     panel.classList.add('editing');
-    editBtn.textContent = '✓ Salvar';
+    editBtn.textContent = '✓';
     editBtn.classList.add('saving');
 
     // Tornar campos editáveis
@@ -102,7 +102,7 @@ function exitEditMode() {
     const panel = document.getElementById('info-panel');
     panel.classList.remove('editing');
     if (editBtn) {
-        editBtn.textContent = '✎ Editar';
+        editBtn.textContent = '✎';
         editBtn.classList.remove('saving');
     }
 
@@ -200,8 +200,8 @@ async function saveEdits() {
     if (success) {
         exitEditMode();
         // Feedback visual
-        editBtn.textContent = '✓ Salvo!';
-        setTimeout(() => { editBtn.textContent = '✎ Editar'; }, 1500);
+        editBtn.textContent = '✓';
+        setTimeout(() => { editBtn.textContent = '✎'; }, 1500);
     }
 }
 
