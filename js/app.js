@@ -1065,13 +1065,6 @@ const dragaoObserver = new MutationObserver((mutations) => {
     }, 50);
 });
 dragaoObserver.observe(document.body, { childList: true, subtree: true });
-    nodes.forEach(node => {
-        if (node._originalText) {
-            node.textContent = node._originalText;
-            delete node._originalText;
-        }
-    });
-}
 
 if (langToggle && langMenu) {
     langToggle.addEventListener('click', () => {
