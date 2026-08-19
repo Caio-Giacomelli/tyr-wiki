@@ -1140,6 +1140,14 @@ function removeTrailFor(key) {
     const group = activeJourneys[key];
     if (group && group.parentNode) group.parentNode.removeChild(group);
     delete activeJourneys[key];
+    // Clean clip paths
+    if (svgDoc) {
+        const defs = svgDoc.querySelector('defs');
+        if (defs) {
+            const clips = defs.querySelectorAll(`[id^="party-clip-${key}"]`);
+            clips.forEach(c => c.remove());
+        }
+    }
 }
 
 function drawJourneyBase() {
@@ -1157,6 +1165,61 @@ function drawJourneyBase() {
     const stopsGroup = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
     stopsGroup.setAttribute('id', `journey-stops-${currentJourneyKey}`);
     trailGroup.appendChild(stopsGroup);
+
+    // Party character icons
+    const partyGroup = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
+    partyGroup.setAttribute('id', `journey-party-${currentJourneyKey}`);
+    trailGroup.appendChild(partyGroup);
+
+    const defs = svgDoc.querySelector('defs') || svgDoc.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    if (!svgEl.querySelector('defs')) svgEl.insertBefore(defs, svgEl.firstChild);
+
+    const partyChars = currentJourneyKey === 'solnegro1'
+        ? [
+            { name: 'Stor', img: 'img/Stor.png', offset: -36 },
+            { name: 'Elandor', img: 'img/Elandor.png', offset: 36 },
+            { name: 'Flint', img: 'img/Flint.png', offset: 0 },
+            { name: 'Azarran', img: 'img/Azarran.png', offset: 0 }
+        ]
+        : [
+            { name: 'Falin', img: 'img/Falin.png', offset: -30 },
+            { name: 'Durgan', img: null, offset: 30 }
+        ];
+
+    const offsetStops = getOffsetStopsFor(config.stops);
+    const firstStop = offsetStops[0];
+
+    partyChars.forEach((char, i) => {
+        if (!char.img) return;
+        const clipId = `party-clip-${currentJourneyKey}-${i}`;
+        const clipPath = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+        clipPath.setAttribute('id', clipId);
+        const clipCircle = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        clipCircle.setAttribute('cx', '0'); clipCircle.setAttribute('cy', '0'); clipCircle.setAttribute('r', '25');
+        clipPath.appendChild(clipCircle);
+        defs.appendChild(clipPath);
+
+        const charG = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
+        charG.setAttribute('id', `party-char-${currentJourneyKey}-${i}`);
+
+        const border = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        border.setAttribute('cx', '0'); border.setAttribute('cy', '0'); border.setAttribute('r', '27');
+        border.setAttribute('fill', '#111');
+        border.setAttribute('stroke', config.color);
+        border.setAttribute('stroke-width', '2');
+        charG.appendChild(border);
+
+        const img = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+        img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', char.img);
+        img.setAttribute('x', '-25'); img.setAttribute('y', '-25');
+        img.setAttribute('width', '50'); img.setAttribute('height', '50');
+        img.setAttribute('clip-path', `url(#${clipId})`);
+        img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+        charG.appendChild(img);
+
+        charG.setAttribute('transform', `translate(${firstStop.ox + char.offset}, ${firstStop.oy - 40})`);
+        partyGroup.appendChild(charG);
+    });
 
     svgEl.appendChild(trailGroup);
     activeJourneys[currentJourneyKey] = trailGroup;
@@ -1186,6 +1249,18 @@ function advanceJourney() {
         line.setAttribute('stroke-linecap', 'round');
         line.setAttribute('opacity', '0.8');
         linesGroup.appendChild(line);
+
+        // Move party icons
+        const partyGroup = svgDoc.getElementById(`journey-party-${currentJourneyKey}`);
+        if (partyGroup) {
+            const partyChars = currentJourneyKey === 'solnegro1'
+                ? [{ offset: -36 }, { offset: 36 }, { offset: 0 }, { offset: 0 }]
+                : [{ offset: -30 }, { offset: 30 }];
+            partyChars.forEach((char, i) => {
+                const charG = svgDoc.getElementById(`party-char-${currentJourneyKey}-${i}`);
+                if (charG) charG.setAttribute('transform', `translate(${stop.ox + char.offset}, ${stop.oy - 40})`);
+            });
+        }
 
         // Animate to stop
         setTimeout(() => {

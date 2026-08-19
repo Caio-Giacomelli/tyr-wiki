@@ -258,6 +258,37 @@ const characters = [
         ],
         ideal: "Desconhecido",
         location: "Ur-Draxa (origem)"
+    },
+    {
+        name: "Fälin",
+        title: "Anão Artífice",
+        image: "img/Falin.png",
+        description: "Um anão artífice com mais de 200 anos. Companheiro íntimo de Durgan, a quem chama de 'criança'. Possui conhecimento profundo de magia e artefatos.",
+        details: [
+            "Anão Artífice — mais de 200 anos de idade",
+            "Chama Durgan de 'criança' pela diferença de idade",
+            "Durgan o chama de 'Pequeno'",
+            "Recebeu do Rei do Fogo o poder de abrir portais para o Plano Elemental do Fogo",
+            "Descobriu que a Pedra Magna é semelhante a um coração da montanha"
+        ],
+        ideal: "Desconhecido",
+        location: "Veyrinn / Erëd Luin"
+    },
+    {
+        name: "Durgan",
+        title: "Meio-Orc Paladino",
+        image: null,
+        description: "Um meio-orc de 26 anos que fez um juramento de proteger Fälin e Nymira. Ex-adorador de Salaak'nir, renunciou sua fé e agora busca a peregrinação da Deusa.",
+        details: [
+            "Meio-Orc — 26 anos",
+            "Fez juramento de proteger Fälin",
+            "Ex-adorador de Salaak'nir — renunciou a ele no Plano Elemental do Fogo",
+            "Recebeu a fé da Deusa (olhos de mármore) através do amuleto de Orin",
+            "Precisa fazer a peregrinação para ser aceito como fiel",
+            "Jurou livrar o mundo de todo o mal que se disfarça de bem"
+        ],
+        ideal: "Livrar o mundo de todo o mal que se disfarça de bem.",
+        location: "Veyrinn / Hammerhold"
     }
 ];
 
@@ -692,19 +723,19 @@ const locationNameToSvgId = {
 // ===== PARADAS DA JORNADA - CICATRIZES DO ECLIPSE T1 =====
 const journeyStopsCicatriz = [
     {
-        x: 430, y: 1350,
+        x: 130, y: 1180,
         location: "Orvengrad",
         session: "S01E01",
         summary: "Durgan e Falin enfrentam um wendigo na neve. Encontram a Pedra Magna em ruínas de um antigo culto. Derrotam o ronin Ukta para obter o passe de entrada para Orvengrad."
     },
     {
-        x: 1180, y: 1250,
+        x: 530, y: 1140,
         location: "Hammerhold",
         session: "S01E01",
         summary: "O grupo entrega a Pedra Magna e o passe para a Legião. Decidem partir rapidamente devido ao perigo de Salaak'nir reconhecer Durgan."
     },
     {
-        x: 1200, y: 1300,
+        x: 1100, y: 1300,
         location: "Alto Mar",
         session: "S01E02",
         summary: "Viagem de 5 dias no navio dos Maralen. Nymira tem visões proféticas com lágrimas douradas: 'o destino de 3 será selado'. Desvia de Gordon Black no cais."
@@ -716,13 +747,13 @@ const journeyStopsCicatriz = [
         summary: "Kellan informa que Dregoth recua tropas de Erëd Luin. Galerion revela a lenda das 3 criaturas. Durgan conhece Orin e a Deusa. Partem em águias com Klaus."
     },
     {
-        x: 900, y: 450,
+        x: 870, y: 440,
         location: "Erëd Luin",
         session: "S01E02-03",
         summary: "Chegam ao acampamento de Dôrin. Infiltram-se na montanha disfarçados. Nymira é chamada de 'a perdida'. Atravessam a cachoeira de lava — portal para o Plano Elemental do Fogo."
     },
     {
-        x: 900, y: 350,
+        x: 870, y: 350,
         location: "Plano Elemental do Fogo",
         session: "S01E03",
         summary: "Cidade de bronze com uma criatura tentando eclodir de uma bola de fogo. Durgan renuncia Salaak'nir e recebe a fé da Deusa. Nymira absorve seus poderes e cai. O Rei do Fogo dá a Falin o poder de abrir portais."
