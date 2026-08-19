@@ -194,6 +194,53 @@ async function saveEdits() {
             }
             Object.assign(villains[entity.id], editedData);
             break;
+        case 'artifact':
+            collection = 'artifacts';
+            editedData.name = newName;
+            if (editedData.features) {
+                editedData.details = editedData.features;
+                delete editedData.features;
+            }
+            Object.assign(artifacts[entity.id], editedData);
+            break;
+        case 'book':
+            collection = 'books';
+            editedData.name = newName;
+            if (editedData.features) {
+                editedData.details = editedData.features;
+                delete editedData.features;
+            }
+            Object.assign(books[entity.id], editedData);
+            break;
+        case 'historical':
+            collection = 'historicalNPCs';
+            editedData.name = newName;
+            editedData.title = newRegion;
+            if (editedData.features) {
+                editedData.details = editedData.features;
+                delete editedData.features;
+            }
+            Object.assign(historicalNPCs[entity.id], editedData);
+            break;
+        case 'ally':
+            collection = 'allies';
+            editedData.name = newName;
+            editedData.title = newRegion;
+            if (editedData.features) {
+                editedData.details = editedData.features;
+                delete editedData.features;
+            }
+            Object.assign(allies[entity.id], editedData);
+            break;
+        case 'landmark':
+            collection = 'landmarks';
+            editedData.name = newName;
+            if (editedData.features) {
+                editedData.details = editedData.features;
+                delete editedData.features;
+            }
+            Object.assign(landmarks[entity.id], editedData);
+            break;
     }
 
     const success = await saveToFirestore(collection, docId, editedData);
@@ -241,6 +288,36 @@ const _originalShowVillainInfo = showVillainInfo;
 showVillainInfo = function(index) {
     _originalShowVillainInfo(index);
     showEditButton('villain', index, villains[index]);
+};
+
+const _originalShowArtifactInfo = showArtifactInfo;
+showArtifactInfo = function(index) {
+    _originalShowArtifactInfo(index);
+    showEditButton('artifact', index, artifacts[index]);
+};
+
+const _originalShowBookInfo = showBookInfo;
+showBookInfo = function(index) {
+    _originalShowBookInfo(index);
+    showEditButton('book', index, books[index]);
+};
+
+const _originalShowHistoricalInfo = showHistoricalInfo;
+showHistoricalInfo = function(index) {
+    _originalShowHistoricalInfo(index);
+    showEditButton('historical', index, historicalNPCs[index]);
+};
+
+const _originalShowAllyInfo = showAllyInfo;
+showAllyInfo = function(index) {
+    _originalShowAllyInfo(index);
+    showEditButton('ally', index, allies[index]);
+};
+
+const _originalShowLandmarkInfo = showLandmarkInfo;
+showLandmarkInfo = function(index) {
+    _originalShowLandmarkInfo(index);
+    showEditButton('landmark', index, landmarks[index]);
 };
 
 // Esconder botão quando fecha painel
