@@ -1250,26 +1250,44 @@ function advanceJourney() {
         line.setAttribute('opacity', '0.8');
         linesGroup.appendChild(line);
 
-        // Move party icons
-        const partyGroup = svgDoc.getElementById(`journey-party-${currentJourneyKey}`);
-        if (partyGroup) {
-            const partyChars = currentJourneyKey === 'solnegro1'
-                ? [{ offset: -36 }, { offset: 36 }, { offset: 0 }, { offset: 0 }]
-                : [{ offset: -30 }, { offset: 30 }];
+        // Animate party icons along the path
+        const partyChars = currentJourneyKey === 'solnegro1'
+            ? [{ offset: -36 }, { offset: 36 }, { offset: 0 }, { offset: 0 }]
+            : [{ offset: -30 }, { offset: 30 }];
+        const prev = offsetStops[thisIndex - 1];
+        const duration = 2000;
+        const animStart = performance.now();
+
+        function animatePartyMove(now) {
+            if (!activeJourneys[currentJourneyKey]) return;
+            const elapsed = now - animStart;
+            const t = Math.min(elapsed / duration, 1);
+            const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+            const cx = prev.ox + (stop.ox - prev.ox) * eased;
+            const cy = prev.oy + (stop.oy - prev.oy) * eased;
+
             partyChars.forEach((char, i) => {
                 const charG = svgDoc.getElementById(`party-char-${currentJourneyKey}-${i}`);
-                if (charG) charG.setAttribute('transform', `translate(${stop.ox + char.offset}, ${stop.oy - 40})`);
+                if (charG) charG.setAttribute('transform', `translate(${cx + char.offset}, ${cy - 40})`);
             });
+
+            // Animate line opacity
+            line.setAttribute('opacity', String(eased * 0.8));
+
+            if (t < 1) {
+                requestAnimationFrame(animatePartyMove);
+            } else {
+                placeStopMarker(stop, thisIndex, stopsGroup, config);
+                showJourneyStop(config.stops[thisIndex], thisIndex);
+                if (journeyMode === 'auto' && currentStopIndex === thisIndex) {
+                    journeyAnimation = setTimeout(() => { currentStopIndex++; advanceJourney(); }, 2500);
+                }
+            }
         }
 
-        // Animate to stop
-        setTimeout(() => {
-            placeStopMarker(stop, thisIndex, stopsGroup, config);
-            showJourneyStop(config.stops[thisIndex], thisIndex);
-            if (journeyMode === 'auto' && currentStopIndex === thisIndex) {
-                journeyAnimation = setTimeout(() => { currentStopIndex++; advanceJourney(); }, 2500);
-            }
-        }, 500);
+        line.setAttribute('opacity', '0');
+        requestAnimationFrame(animatePartyMove);
     } else {
         placeStopMarker(stop, 0, stopsGroup, config);
         showJourneyStop(config.stops[0], 0);
