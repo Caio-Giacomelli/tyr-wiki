@@ -47,7 +47,7 @@
 <body>
     <div id="map-container">
         <div id="map-wrapper">
-            <object id="map-svg" type="image/svg+xml" data="Mapa-Tyr.svg">Mapa de Tyr</object>
+            <img id="map-img" src="Mapa-Tyr.svg" style="width:100%;height:100%;user-select:none;" draggable="false">
         </div>
     </div>
 
@@ -68,42 +68,30 @@
     <script>
         const mapContainer = document.getElementById('map-container');
         const mapWrapper = document.getElementById('map-wrapper');
-        const mapSvg = document.getElementById('map-svg');
+        const mapImg = document.getElementById('map-img');
         const cxEl = document.getElementById('cx');
         const cyEl = document.getElementById('cy');
         const logEntries = document.getElementById('log-entries');
 
+        // SVG viewBox dimensions (from Mapa-Tyr.svg)
+        const SVG_WIDTH = 1920;
+        const SVG_HEIGHT = 1550;
+
         let scale = 1, translateX = 0, translateY = 0;
-        let isDragging = false, startX, startY, lastTX, lastTY;
+        let isDragging = false, dragMoved = false, startX, startY, lastTX, lastTY;
         let points = [];
-        let svgDoc = null;
 
-        mapSvg.addEventListener('load', () => {
-            svgDoc = mapSvg.contentDocument;
-            if (svgDoc) {
-                svgDoc.addEventListener('click', handleMapClick);
-                svgDoc.addEventListener('wheel', handleWheel, { passive: false });
-            }
-        });
+        // Click handler on the wrapper
+        mapWrapper.addEventListener('click', (e) => {
+            if (dragMoved) return;
 
-        if (mapSvg.contentDocument && mapSvg.contentDocument.querySelector('svg')) {
-            svgDoc = mapSvg.contentDocument;
-            svgDoc.addEventListener('click', handleMapClick);
-            svgDoc.addEventListener('wheel', handleWheel, { passive: false });
-        }
+            const rect = mapImg.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
 
-        function handleMapClick(e) {
-            if (isDragging) return;
-            const svgEl = svgDoc.querySelector('svg');
-            const rect = svgEl.getBoundingClientRect();
-            const viewBox = svgEl.viewBox.baseVal;
-
-            // Calcular coordenadas no espaço do SVG viewBox
-            const svgX = ((e.clientX - rect.left) / rect.width) * viewBox.width;
-            const svgY = ((e.clientY - rect.top) / rect.height) * viewBox.height;
-
-            const x = Math.round(svgX);
-            const y = Math.round(svgY);
+            // Convert to SVG coordinate space
+            const x = Math.round((clickX / rect.width) * SVG_WIDTH);
+            const y = Math.round((clickY / rect.height) * SVG_HEIGHT);
 
             cxEl.textContent = x;
             cyEl.textContent = y;
@@ -111,7 +99,7 @@
             points.push({ x, y });
             updateLog();
             addMarker(e.clientX, e.clientY, points.length);
-        }
+        });
 
         function addMarker(clientX, clientY, num) {
             const marker = document.createElement('div');
@@ -148,38 +136,36 @@
 
         // Pan
         mapContainer.addEventListener('mousedown', (e) => {
-            isDragging = true; startX = e.clientX; startY = e.clientY;
+            isDragging = true; dragMoved = false;
+            startX = e.clientX; startY = e.clientY;
             lastTX = translateX; lastTY = translateY;
         });
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            translateX = lastTX + (e.clientX - startX);
-            translateY = lastTY + (e.clientY - startY);
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMoved = true;
+            translateX = lastTX + dx;
+            translateY = lastTY + dy;
             updateTransform();
         });
-        document.addEventListener('mouseup', (e) => {
-            if (Math.abs(e.clientX - startX) > 5 || Math.abs(e.clientY - startY) > 5) {
-                setTimeout(() => { isDragging = false; }, 50);
-            } else {
-                isDragging = false;
-            }
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
         });
 
         // Zoom
-        function handleWheel(e) {
+        mapContainer.addEventListener('wheel', (e) => {
             e.preventDefault();
             const rect = mapContainer.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
             const prevScale = scale;
             const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            scale = Math.min(Math.max(scale * delta, 0.5), 4);
+            scale = Math.min(Math.max(scale * delta, 0.5), 6);
             translateX = mouseX - (mouseX - translateX) * (scale / prevScale);
             translateY = mouseY - (mouseY - translateY) * (scale / prevScale);
             updateTransform();
-        }
-
-        mapContainer.addEventListener('wheel', handleWheel, { passive: false });
+        }, { passive: false });
 
         function updateTransform() {
             mapWrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
