@@ -1368,11 +1368,11 @@ document.addEventListener('keydown', (e) => {
             debugPanel.style.display = 'block';
             debugPoints = [];
             if (svgDoc) {
-                svgDoc.addEventListener('click', debugClick);
+                svgDoc.addEventListener('click', debugClick, true);
             }
         } else {
             if (debugPanel) debugPanel.style.display = 'none';
-            if (svgDoc) svgDoc.removeEventListener('click', debugClick);
+            if (svgDoc) svgDoc.removeEventListener('click', debugClick, true);
         }
     }
 });
