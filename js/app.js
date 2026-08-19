@@ -633,8 +633,24 @@ function showBookInfo(index) {
         </div>
     `;
 
+    if (book.fullText) {
+        html += `<button id="session-read-btn" onclick="openBookModal(${index})">Ler na Integra</button>`;
+    }
+
     document.getElementById('city-info').innerHTML = html;
     infoPanel.classList.add('open');
+}
+
+// Abre modal com texto completo do livro/relato
+function openBookModal(index) {
+    const book = books[index];
+    if (!book || !book.fullText) return;
+
+    document.getElementById('session-modal-title').textContent = book.name;
+    document.getElementById('session-modal-quote').textContent = 'Livro / Relato';
+    document.getElementById('session-modal-content').textContent = book.fullText;
+
+    document.getElementById('session-modal-overlay').classList.add('open');
 }
 
 // ===== TOGGLE SEÇÕES WIKI =====
