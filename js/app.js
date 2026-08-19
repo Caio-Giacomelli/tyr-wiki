@@ -1011,9 +1011,14 @@ const langMenu = document.getElementById('lang-menu');
 const fontDragao = document.getElementById('font-dragao');
 let isDragaoFont = false;
 
-// Remove acentos e ç de um texto
+// Remove acentos, ç, e números de um texto, deixa tudo uppercase
 function removeDiacritics(text) {
-    return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[çÇ]/g, (m) => m === 'ç' ? 'c' : 'C');
+    return text
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')  // remove acentos
+        .replace(/[ÇÇ]/g, 'C')           // ç → C
+        .replace(/[0-9]/g, '');            // remove números
 }
 
 // Aplica remoção de acentos em todos os nós de texto do DOM
