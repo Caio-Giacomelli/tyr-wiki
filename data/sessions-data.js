@@ -112,3 +112,66 @@ O grupo retorna ao plano fisico apos seis dias. Descobrem que Xolo e Mellanie mo
 Atravessam um portal para Veyrinn, sobem ate o castelo e encontram Oronis, o Redimido, que os aguardava. Fim da Temporada 1.`
     }
 ];
+
+// ===== SESSÕES - CICATRIZES DO ECLIPSE T1 =====
+const sessionsDataCicatriz = [
+    {
+        id: 0,
+        title: "S01E01 — O Suporte Necessário",
+        quote: "Se pela minha vida ou morte, eu puder protegê-lo, eu o farei",
+        quoteAuthor: "Aragorn",
+        content: `A primeira sessão teve início em Orvengrad, onde Durgan e seu companheiro Falin, um anão artífice, enfrentaram uma criatura semelhante a um wendigo. Após derrotá-la, Durgan verificou se Nymira estava bem.
+
+O objetivo era encontrar dois itens: a Pedra Magna e um passe de entrada para Orvengrad válido para quatro pessoas.
+
+Seguiram viagem até um local com restos de um antigo culto. Falin desmontou um baú encantado pelo lado oposto da tranca e obteve a Pedra Magna — semelhante a um coração da montanha capaz de gerar energia gigantesca.
+
+Para o passe, precisavam executar Ukta, um orc ronin exilado. A batalha foi épica — Durgan quase caiu, mas com Falin conseguiram derrotá-lo. Durgan cortou a cabeça de Ukta e obteve o passe.
+
+Com os dois objetivos concluídos, o grupo partiu para Hammerhold onde entregaram os itens para a Legião.`
+    },
+    {
+        id: 1,
+        title: "S01E02 — Visões",
+        quote: "Será que o andarilho escolhe o caminho, ou o caminho escolhe o andarilho?",
+        quoteAuthor: "Garth Nix",
+        content: `Nas estalagens da Legião em Hammerhold, Falin e Durgan decidiram partir. Encontraram o navio dos Maralen no cais, desviando de Gordon Black, um oficial de Salaak'nir.
+
+Durante a viagem de 5 dias, Nymira teve pesadelos e repetiu uma profecia: "Depois de encontrar o caminho do vento, entrarão na cidade afogada em areia, lá o mapa para a torre de marfim será achado e o destino de 3 será selado." Chorava lágrimas douradas com olhos brilhantes.
+
+Em Veyrinn, Kellan (novo posto de Mellanie) informou que Dregoth recuava tropas de Erëd Luin. O grupo aceitou confirmar a informação.
+
+Galerion revelou a lenda das três criaturas que acabariam com o mundo. Descobriram que o monumento do sonho de Nymira era o portal para o Plano Elemental do Vento.
+
+Pegaram carona com Klaus em águias gigantes. Durgan conheceu Orin na igreja e viu o poder da fé em ação.
+
+Após dias de viagem a pé, chegaram ao acampamento dos anões perto de Erëd Luin, guiados por Dôrin (irmão de Galerion). Infiltraram-se na montanha disfarçados. Nymira disse que a criatura estava prestes a acordar.
+
+Adentraram um local onde um anão encarava uma cachoeira de lava. Ele chamou Nymira de "a perdida". Ela disse trazer Durgan e Falin para selar o destino de 3. Os três atravessaram a cachoeira de lava.`
+    },
+    {
+        id: 2,
+        title: "S01E03 — A Cidade de Bronze",
+        quote: "A emoção mais antiga e mais forte da humanidade é o medo, e o mais antigo e mais forte de todos os medos, é o medo do desconhecido",
+        quoteAuthor: "H.P. Lovecraft",
+        content: `Ao atravessar a cachoeira (portal para o Plano Elemental do Fogo), encontraram uma cidade de bronze cortada por rios de lava e uma enorme bola de fogo com uma criatura horrenda tentando eclodir.
+
+Nymira afirmou precisar encontrar seus poderes para parar "aquilo". Falava diferente — não era mais a mesma menina.
+
+Encontraram Tithian (um Orc com a Katana Enja - Espada das Almas) lutando contra criaturas. Após batalha épica juntos, seguiram até onde magos contiam a criatura.
+
+Durgan sentiu o amuleto de Orin vibrar. Ao erguê-lo, foi transportado para diante de grandes olhos de mármore — a Deusa. Ela perguntou se estava disposto a renunciar a Salaak'nir. Durgan arrancou o colar do dragão e a Deusa disse que deveria fazer a peregrinação.
+
+O símbolo brilhou e a criatura recuou. Mas uma segunda cabeça atacou — Durgan protegeu Falin com uma luz intensa.
+
+Comunicaram-se com alguém contendo a criatura: o poder de Nymira estava debaixo do castelo do Rei do Fogo.
+
+No tesouro, Falin encontrou a pedra (invólucro dos poderes — resultado de ascensão dracônica) e Durgan encontrou uma estátua de Tiefling consagrada.
+
+Nymira absorveu a pedra e disse que pararia aquilo. Pediu que cuidassem da "casca" e caiu inconsciente.
+
+O Rei do Fogo revelou que quem falava pela criança era alguém que se arrependia do passado. Entregou a Falin o poder de abrir portais para o Plano Elemental do Fogo.
+
+A sessão encerra com os três entrando no portal para o Plano Elemental da Terra.`
+    }
+];

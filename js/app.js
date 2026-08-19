@@ -968,40 +968,39 @@ window.addEventListener('resize', fitMapToScreen);
 
 // ===== TRILHA / JORNADA =====
 let trailVisible = false;
-let trailGroup = null;
+let activeJourneys = {}; // tracks visible journey groups by key
 let journeyAnimation = null;
 let journeyMode = null;
 let currentStopIndex = 0;
+let currentJourneyKey = 'solnegro1';
 const trailBtn = document.getElementById('trail-btn');
 const trailControls = document.getElementById('trail-controls');
 const trailAutoBtn = document.getElementById('trail-auto');
 const trailStepBtn = document.getElementById('trail-step');
 const trailNextBtn = document.getElementById('trail-next');
+const trailSeason = document.getElementById('trail-season');
 
-// Calcular offsets para paradas no mesmo local
-function getOffsetStops() {
+const journeyConfigs = {
+    solnegro1: { stops: journeyStops, sessions: typeof sessionsData !== 'undefined' ? sessionsData : [], color: '#d4a843', pathColor: '#d4a843' },
+    cicatriz1: { stops: typeof journeyStopsCicatriz !== 'undefined' ? journeyStopsCicatriz : [], sessions: typeof sessionsDataCicatriz !== 'undefined' ? sessionsDataCicatriz : [], color: '#4a9cc8', pathColor: '#4a9cc8' }
+};
+
+function getOffsetStopsFor(stops) {
     const counts = {};
-    return journeyStops.map((stop, i) => {
+    return stops.map((stop) => {
         const key = `${Math.round(stop.x / 50)}_${Math.round(stop.y / 50)}`;
         counts[key] = (counts[key] || 0);
         const visit = counts[key];
         counts[key]++;
         const angle = visit * 1.2;
         const dist = visit * 18;
-        return {
-            ...stop,
-            ox: stop.x + Math.cos(angle) * dist,
-            oy: stop.y + Math.sin(angle) * dist
-        };
+        return { ...stop, ox: stop.x + Math.cos(angle) * dist, oy: stop.y + Math.sin(angle) * dist };
     });
 }
-
-const offsetStops = getOffsetStops();
 
 trailBtn.addEventListener('click', () => {
     trailVisible = !trailVisible;
     trailBtn.classList.toggle('active', trailVisible);
-
     const sidebar = document.getElementById('wiki-sidebar');
 
     if (trailVisible) {
@@ -1014,9 +1013,18 @@ trailBtn.addEventListener('click', () => {
         trailNextBtn.style.display = 'none';
         if (sidebar) sidebar.classList.remove('trail-active');
         stopJourney();
-        removeTrail();
+        removeAllTrails();
     }
 });
+
+// Enable cicatriz1 option and handle season change
+if (trailSeason) {
+    const cicatrizOpt = trailSeason.querySelector('option[value="cicatriz1"]');
+    if (cicatrizOpt) cicatrizOpt.disabled = false;
+    trailSeason.addEventListener('change', () => {
+        currentJourneyKey = trailSeason.value;
+    });
+}
 
 trailAutoBtn.addEventListener('click', () => {
     journeyMode = 'auto';
@@ -1040,24 +1048,24 @@ trailNextBtn.addEventListener('click', () => {
 });
 
 function showJourneyStop(stop, index) {
+    const config = journeyConfigs[currentJourneyKey];
     document.getElementById('city-name').textContent = stop.location;
     document.getElementById('city-region').textContent = stop.session;
 
-    // Encontrar sessão correspondente
     const sessionMatch = stop.session.match(/\d+/);
     const sessionId = sessionMatch ? parseInt(sessionMatch[0]) : null;
-    const sessionBtn = (sessionId !== null && typeof sessionsData !== 'undefined' && sessionsData[sessionId])
-        ? `<button id="session-read-btn" onclick="openSessionModal(${sessionId})">Ler Sessao Completa</button>`
+    const sessionsArray = config.sessions;
+    const sessionBtn = (sessionId !== null && sessionsArray && sessionsArray[sessionId])
+        ? `<button id="session-read-btn" onclick="openSessionModalFor('${currentJourneyKey}', ${sessionId})">Ler Sessão Completa</button>`
         : '';
 
     let html = `
         <div class="info-section">
-            <h3>Parada ${index + 1} de ${journeyStops.length}</h3>
+            <h3>Parada ${index + 1} de ${config.stops.length}</h3>
             <p>${linkifyLocations(stop.summary)}</p>
             ${sessionBtn}
         </div>
     `;
-
     document.getElementById('city-info').innerHTML = html;
     infoPanel.classList.add('open');
 }
@@ -1072,6 +1080,17 @@ function openSessionModal(sessionId) {
     document.getElementById('session-modal-quote').textContent = quoteText;
     document.getElementById('session-modal-content').textContent = session.content;
 
+    document.getElementById('session-modal-overlay').classList.add('open');
+}
+
+function openSessionModalFor(journeyKey, sessionId) {
+    const config = journeyConfigs[journeyKey];
+    const session = config.sessions[sessionId];
+    if (!session) return;
+    document.getElementById('session-modal-title').textContent = session.title;
+    const quoteText = session.quote + (session.quoteAuthor ? ' — ' + session.quoteAuthor : '');
+    document.getElementById('session-modal-quote').textContent = quoteText;
+    document.getElementById('session-modal-content').textContent = session.content;
     document.getElementById('session-modal-overlay').classList.add('open');
 }
 
@@ -1093,7 +1112,10 @@ document.addEventListener('keydown', (e) => {
 });
 
 function startJourney() {
-    removeTrail();
+    // Remove only the current journey's trail if replaying
+    if (activeJourneys[currentJourneyKey]) {
+        removeTrailFor(currentJourneyKey);
+    }
     currentStopIndex = 0;
     drawJourneyBase();
     advanceJourney();
@@ -1109,240 +1131,116 @@ function stopJourney() {
     trailStepBtn.classList.remove('active');
 }
 
+function removeAllTrails() {
+    Object.keys(activeJourneys).forEach(key => removeTrailFor(key));
+}
+
+function removeTrailFor(key) {
+    if (journeyAnimation) { clearTimeout(journeyAnimation); journeyAnimation = null; }
+    const group = activeJourneys[key];
+    if (group && group.parentNode) group.parentNode.removeChild(group);
+    delete activeJourneys[key];
+}
+
 function drawJourneyBase() {
     if (!svgDoc) return;
     const svgEl = svgDoc.querySelector('svg');
+    const config = journeyConfigs[currentJourneyKey];
 
-    trailGroup = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
-    trailGroup.setAttribute('id', 'journey-trail');
+    const trailGroup = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
+    trailGroup.setAttribute('id', `journey-trail-${currentJourneyKey}`);
 
     const linesGroup = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
-    linesGroup.setAttribute('id', 'journey-lines');
+    linesGroup.setAttribute('id', `journey-lines-${currentJourneyKey}`);
     trailGroup.appendChild(linesGroup);
 
     const stopsGroup = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
-    stopsGroup.setAttribute('id', 'journey-stops-group');
+    stopsGroup.setAttribute('id', `journey-stops-${currentJourneyKey}`);
     trailGroup.appendChild(stopsGroup);
 
-    const partyGroup = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
-    partyGroup.setAttribute('id', 'journey-party');
-    trailGroup.appendChild(partyGroup);
-
-    // Criar ícones dos personagens
-    const defs = svgDoc.querySelector('defs') || svgDoc.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    if (!svgEl.querySelector('defs')) {
-        svgEl.insertBefore(defs, svgEl.firstChild);
-    }
-
-    const chars = [
-        { name: 'Stor', img: 'img/Stor.png', offset: -36 },
-        { name: 'Elandor', img: 'img/Elandor.png', offset: 36 },
-        { name: 'Flint', img: 'img/Flint.png', offset: 0, leavesAtStop: 5 },
-        { name: 'Azarran', img: 'img/Azarran.png', offset: 0, joinsAtStop: 9 }
-    ];
-
-    chars.forEach((char, i) => {
-        const clipId = `party-clip-${i}`;
-        const clipPath = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
-        clipPath.setAttribute('id', clipId);
-        const clipCircle = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        clipCircle.setAttribute('cx', '0');
-        clipCircle.setAttribute('cy', '0');
-        clipCircle.setAttribute('r', '30');
-        clipPath.appendChild(clipCircle);
-        defs.appendChild(clipPath);
-
-        const charG = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
-        charG.setAttribute('id', `party-char-${i}`);
-
-        const border = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        border.setAttribute('cx', '0');
-        border.setAttribute('cy', '0');
-        border.setAttribute('r', '32');
-        border.setAttribute('fill', '#111');
-        border.setAttribute('stroke', 'rgba(212, 168, 67, 0.95)');
-        border.setAttribute('stroke-width', '2.5');
-        charG.appendChild(border);
-
-        const img = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-        img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', char.img);
-        img.setAttribute('x', '-30');
-        img.setAttribute('y', '-30');
-        img.setAttribute('width', '60');
-        img.setAttribute('height', '60');
-        img.setAttribute('clip-path', `url(#${clipId})`);
-        img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-        charG.appendChild(img);
-
-        // Posicionar no primeiro stop
-        const firstStop = offsetStops[0];
-        charG.setAttribute('transform', `translate(${firstStop.ox + char.offset}, ${firstStop.oy - 45})`);
-
-        // Esconder personagens que entram depois
-        if (char.joinsAtStop) {
-            charG.style.opacity = '0';
-        }
-
-        partyGroup.appendChild(charG);
-    });
-
     svgEl.appendChild(trailGroup);
+    activeJourneys[currentJourneyKey] = trailGroup;
 }
 
 function advanceJourney() {
-    if (!svgDoc || !trailGroup) return;
-    if (currentStopIndex >= offsetStops.length) {
-        stopJourney();
-        return;
-    }
+    if (!svgDoc) return;
+    const config = journeyConfigs[currentJourneyKey];
+    const offsetStops = getOffsetStopsFor(config.stops);
+    const trailGroup = activeJourneys[currentJourneyKey];
+    if (!trailGroup) return;
+    if (currentStopIndex >= offsetStops.length) { stopJourney(); return; }
 
     const thisIndex = currentStopIndex;
     const stop = offsetStops[thisIndex];
-    const linesGroup = svgDoc.getElementById('journey-lines');
-    const stopsGroup = svgDoc.getElementById('journey-stops-group');
-    const partyGroup = svgDoc.getElementById('journey-party');
+    const linesGroup = svgDoc.getElementById(`journey-lines-${currentJourneyKey}`);
+    const stopsGroup = svgDoc.getElementById(`journey-stops-${currentJourneyKey}`);
 
     if (thisIndex > 0) {
         const prev = offsetStops[thisIndex - 1];
         const line = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', prev.ox);
-        line.setAttribute('y1', prev.oy);
-        line.setAttribute('x2', stop.ox);
-        line.setAttribute('y2', stop.oy);
-        line.setAttribute('stroke', '#111');
-        line.setAttribute('stroke-width', '3.5');
+        line.setAttribute('x1', prev.ox); line.setAttribute('y1', prev.oy);
+        line.setAttribute('x2', stop.ox); line.setAttribute('y2', stop.oy);
+        line.setAttribute('stroke', config.pathColor);
+        line.setAttribute('stroke-width', '3');
         line.setAttribute('stroke-dasharray', '12 7');
         line.setAttribute('stroke-linecap', 'round');
-        line.style.opacity = '0';
-        line.style.transition = 'opacity 0.5s ease';
+        line.setAttribute('opacity', '0.8');
         linesGroup.appendChild(line);
 
-        const chars = [
-            svgDoc.getElementById('party-char-0'),
-            svgDoc.getElementById('party-char-1'),
-            svgDoc.getElementById('party-char-2'),
-            svgDoc.getElementById('party-char-3')
-        ];
-
-        const duration = 2500;
-        const startTime = performance.now();
-
-        function animateParty(now) {
-            if (!trailGroup) return;
-
-            const elapsed = now - startTime;
-            const t = Math.min(elapsed / duration, 1);
-            const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-
-            const cx = prev.ox + (stop.ox - prev.ox) * eased;
-            const cy = prev.oy + (stop.oy - prev.oy) * eased;
-
-            if (chars[0]) chars[0].setAttribute('transform', `translate(${cx - 36}, ${cy - 45})`);
-            if (chars[1]) chars[1].setAttribute('transform', `translate(${cx + 36}, ${cy - 45})`);
-            if (chars[2] && chars[2].style.opacity !== '0') chars[2].setAttribute('transform', `translate(${cx}, ${cy - 45})`);
-            if (chars[3] && chars[3].style.opacity !== '0') chars[3].setAttribute('transform', `translate(${cx}, ${cy - 45})`);
-
-            line.style.opacity = String(eased);
-
-            if (t < 1) {
-                requestAnimationFrame(animateParty);
-            } else {
-                placeStop(stop, thisIndex, stopsGroup);
-                showJourneyStop(journeyStops[thisIndex], thisIndex);
-
-                if (thisIndex >= 5 && chars[2]) {
-                    chars[2].style.opacity = '0';
-                    chars[2].style.transition = 'opacity 1s ease';
-                }
-
-                if (thisIndex >= 9 && chars[3]) {
-                    chars[3].style.opacity = '1';
-                    chars[3].style.transition = 'opacity 1s ease';
-                    chars[3].setAttribute('transform', `translate(${cx}, ${cy - 45})`);
-                }
-
-                if (journeyMode === 'auto' && currentStopIndex === thisIndex) {
-                    journeyAnimation = setTimeout(() => {
-                        currentStopIndex++;
-                        advanceJourney();
-                    }, 3000);
-                }
+        // Animate to stop
+        setTimeout(() => {
+            placeStopMarker(stop, thisIndex, stopsGroup, config);
+            showJourneyStop(config.stops[thisIndex], thisIndex);
+            if (journeyMode === 'auto' && currentStopIndex === thisIndex) {
+                journeyAnimation = setTimeout(() => { currentStopIndex++; advanceJourney(); }, 2500);
             }
-        }
-
-        requestAnimationFrame(animateParty);
+        }, 500);
     } else {
-        placeStop(stop, 0, stopsGroup);
-        showJourneyStop(journeyStops[0], 0);
-
+        placeStopMarker(stop, 0, stopsGroup, config);
+        showJourneyStop(config.stops[0], 0);
         if (journeyMode === 'auto') {
-            journeyAnimation = setTimeout(() => {
-                currentStopIndex++;
-                advanceJourney();
-            }, 2000);
+            journeyAnimation = setTimeout(() => { currentStopIndex++; advanceJourney(); }, 2000);
         }
     }
 }
 
-function placeStop(stop, index, stopsGroup) {
+function placeStopMarker(stop, index, stopsGroup, config) {
     const stopG = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
     stopG.style.cursor = 'pointer';
 
     const circle = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', stop.ox);
-    circle.setAttribute('cy', stop.oy);
+    circle.setAttribute('cx', stop.ox); circle.setAttribute('cy', stop.oy);
     circle.setAttribute('r', '12');
     circle.setAttribute('fill', '#111');
-    circle.setAttribute('stroke', 'rgba(212, 168, 67, 0.95)');
+    circle.setAttribute('stroke', config.color);
     circle.setAttribute('stroke-width', '2.5');
 
     const numText = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
-    numText.setAttribute('x', stop.ox);
-    numText.setAttribute('y', stop.oy + 5);
+    numText.setAttribute('x', stop.ox); numText.setAttribute('y', stop.oy + 5);
     numText.setAttribute('text-anchor', 'middle');
     numText.setAttribute('font-family', 'serif');
     numText.setAttribute('font-size', '12');
     numText.setAttribute('font-weight', 'bold');
-    numText.setAttribute('fill', '#d4a843');
+    numText.setAttribute('fill', config.color);
     numText.textContent = index + 1;
 
     stopG.appendChild(circle);
     stopG.appendChild(numText);
 
+    const currentKey = currentJourneyKey;
     stopG.addEventListener('click', (e) => {
         e.stopPropagation();
-        showJourneyStop(journeyStops[index], index);
+        const cfg = journeyConfigs[currentKey];
+        showJourneyStop(cfg.stops[index], index);
     });
 
-    stopG.addEventListener('mouseenter', () => {
-        circle.setAttribute('r', '14');
-    });
-    stopG.addEventListener('mouseleave', () => {
-        circle.setAttribute('r', '12');
-    });
+    stopG.addEventListener('mouseenter', () => circle.setAttribute('r', '14'));
+    stopG.addEventListener('mouseleave', () => circle.setAttribute('r', '12'));
 
     stopG.style.opacity = '0';
     stopG.style.transition = 'opacity 0.4s ease';
     stopsGroup.appendChild(stopG);
     requestAnimationFrame(() => { stopG.style.opacity = '1'; });
-}
-
-function removeTrail() {
-    if (journeyAnimation) {
-        clearTimeout(journeyAnimation);
-        journeyAnimation = null;
-    }
-    if (trailGroup && trailGroup.parentNode) {
-        trailGroup.parentNode.removeChild(trailGroup);
-        trailGroup = null;
-    }
-    if (svgDoc) {
-        const defs = svgDoc.querySelector('defs');
-        if (defs) {
-            const clips = defs.querySelectorAll('[id^="party-clip-"]');
-            clips.forEach(c => c.remove());
-        }
-    }
 }
 
 
