@@ -1372,7 +1372,15 @@ document.addEventListener('keydown', (e) => {
             }
         } else {
             if (debugPanel) debugPanel.style.display = 'none';
-            if (svgDoc) svgDoc.removeEventListener('click', debugClick, true);
+            if (svgDoc) {
+                svgDoc.removeEventListener('click', debugClick, true);
+                // Remover marcadores do mapa
+                const svgEl = svgDoc.querySelector('svg');
+                if (svgEl) {
+                    svgEl.querySelectorAll('.debug-marker').forEach(m => m.remove());
+                }
+            }
+            debugPoints = [];
         }
     }
 });
@@ -1413,6 +1421,7 @@ function debugClick(e) {
     circle.setAttribute('fill', 'rgba(74, 224, 74, 0.7)');
     circle.setAttribute('stroke', '#fff');
     circle.setAttribute('stroke-width', '2');
+    circle.setAttribute('class', 'debug-marker');
     svgEl.appendChild(circle);
 
     const text = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -1422,6 +1431,7 @@ function debugClick(e) {
     text.setAttribute('font-size', '10');
     text.setAttribute('font-weight', 'bold');
     text.setAttribute('fill', '#000');
+    text.setAttribute('class', 'debug-marker');
     text.textContent = debugPoints.length;
     svgEl.appendChild(text);
 }
