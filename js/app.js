@@ -1353,7 +1353,7 @@ let debugMode = false;
 let debugPoints = [];
 
 document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+    if (e.ctrlKey && e.shiftKey && e.key === 'K') {
         debugMode = !debugMode;
         let debugPanel = document.getElementById('debug-panel');
         if (debugMode) {
