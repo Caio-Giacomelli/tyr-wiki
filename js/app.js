@@ -1348,6 +1348,83 @@ function placeStopMarker(stop, index, stopsGroup, config) {
     requestAnimationFrame(() => { stopG.style.opacity = '1'; });
 }
 
+// ===== MODO DEBUG - COORDENADAS (Ctrl+Shift+D) =====
+let debugMode = false;
+let debugPoints = [];
+
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        debugMode = !debugMode;
+        let debugPanel = document.getElementById('debug-panel');
+        if (debugMode) {
+            if (!debugPanel) {
+                debugPanel = document.createElement('div');
+                debugPanel.id = 'debug-panel';
+                debugPanel.style.cssText = 'position:fixed;top:15px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.9);color:#4ae04a;font-family:monospace;font-size:14px;padding:15px 20px;border-radius:8px;border:2px solid #4ae04a;z-index:9999;text-align:center;';
+                debugPanel.innerHTML = '<div style="color:#fff;margin-bottom:5px;font-weight:bold;">MODO DEBUG ATIVO</div><div>Clique no mapa para pegar coordenadas</div><div id="debug-coords" style="margin-top:8px;"></div><div id="debug-log" style="margin-top:8px;font-size:12px;max-height:200px;overflow-y:auto;text-align:left;"></div>';
+                document.body.appendChild(debugPanel);
+            }
+            debugPanel.style.display = 'block';
+            debugPoints = [];
+            if (svgDoc) {
+                svgDoc.addEventListener('click', debugClick);
+            }
+        } else {
+            if (debugPanel) debugPanel.style.display = 'none';
+            if (svgDoc) svgDoc.removeEventListener('click', debugClick);
+        }
+    }
+});
+
+function debugClick(e) {
+    if (!debugMode || !svgDoc) return;
+    e.stopPropagation();
+    e.preventDefault();
+
+    const svgEl = svgDoc.querySelector('svg');
+    const pt = svgEl.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgPt = pt.matrixTransform(svgEl.getScreenCTM().inverse());
+
+    const x = Math.round(svgPt.x);
+    const y = Math.round(svgPt.y);
+
+    debugPoints.push({ x, y });
+
+    const coordsEl = document.getElementById('debug-coords');
+    coordsEl.innerHTML = `<span style="color:#ff0;">Último: x: ${x}, y: ${y}</span>`;
+
+    const logEl = document.getElementById('debug-log');
+    logEl.innerHTML = debugPoints.map((p, i) => `${i + 1}. x: ${p.x}, y: ${p.y}`).join('<br>');
+
+    // Copiar para clipboard
+    const copyText = debugPoints.map((p, i) =>
+        `    {\n        x: ${p.x}, y: ${p.y},\n        location: "Ponto ${i + 1}",\n        session: "",\n        summary: ""\n    }`
+    ).join(',\n');
+    navigator.clipboard.writeText(copyText).catch(() => {});
+
+    // Marcar no SVG
+    const circle = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', x);
+    circle.setAttribute('cy', y);
+    circle.setAttribute('r', '10');
+    circle.setAttribute('fill', 'rgba(74, 224, 74, 0.7)');
+    circle.setAttribute('stroke', '#fff');
+    circle.setAttribute('stroke-width', '2');
+    svgEl.appendChild(circle);
+
+    const text = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', x);
+    text.setAttribute('y', y + 4);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('font-size', '10');
+    text.setAttribute('font-weight', 'bold');
+    text.setAttribute('fill', '#000');
+    text.textContent = debugPoints.length;
+    svgEl.appendChild(text);
+}
+
 
 // ===== SELETOR DE FONTE/IDIOMA =====
 const langToggle = document.getElementById('lang-toggle');
