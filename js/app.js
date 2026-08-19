@@ -1021,24 +1021,19 @@ function removeDiacritics(text) {
         .replace(/[0-9]/g, '');            // remove números
 }
 
-// Aplica remoção de acentos em todos os nós de texto do DOM
+// Aplica remoção de acentos em todos os nós de texto visíveis
 function stripAccentsFromDOM() {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
-    const nodes = [];
     while (walker.nextNode()) {
         const node = walker.currentNode;
-        // Ignorar scripts e styles
         if (node.parentElement && (node.parentElement.tagName === 'SCRIPT' || node.parentElement.tagName === 'STYLE')) continue;
-        nodes.push(node);
-    }
-    nodes.forEach(node => {
         const original = node.textContent;
         const stripped = removeDiacritics(original);
         if (original !== stripped) {
-            node._originalText = original;
+            if (!node._originalText) node._originalText = original;
             node.textContent = stripped;
         }
-    });
+    }
 }
 
 // Restaura os textos originais
@@ -1046,6 +1041,24 @@ function restoreAccentsInDOM() {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
     const nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node => {
+        if (node._originalText) {
+            node.textContent = node._originalText;
+            delete node._originalText;
+        }
+    });
+}
+
+// Observer para aplicar strip em conteúdo dinâmico quando fonte Dragao está ativa
+let isStripping = false;
+const dragaoObserver = new MutationObserver(() => {
+    if (isDragaoFont && !isStripping) {
+        isStripping = true;
+        stripAccentsFromDOM();
+        isStripping = false;
+    }
+});
+dragaoObserver.observe(document.body, { childList: true, subtree: true });
     nodes.forEach(node => {
         if (node._originalText) {
             node.textContent = node._originalText;
