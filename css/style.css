@@ -1010,6 +1010,43 @@ body {
     fill: #d4a843;
 }
 
+.poi-image-upload {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.poi-image-upload button {
+    padding: 6px 12px;
+    background: rgba(139, 105, 20, 0.4);
+    border: 1px solid #8b6914;
+    border-radius: 6px;
+    color: #d4a843;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.poi-image-upload button:hover {
+    background: rgba(139, 105, 20, 0.7);
+}
+
+#poi-image-status {
+    font-size: 11px;
+    color: #999;
+}
+
+#poi-image-preview {
+    margin-top: 6px;
+}
+
+#poi-image-preview img {
+    max-width: 100%;
+    max-height: 120px;
+    border-radius: 6px;
+    border: 1px solid #555;
+}
+
 #lang-menu {
     position: absolute;
     bottom: 100%;

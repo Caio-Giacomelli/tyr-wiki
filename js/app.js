@@ -1866,9 +1866,13 @@ if (langToggle && langMenu) {
     let pendingCoords = null;
     let selectedIconSvg = '';
     let selectedIconId = '';
+    let selectedImage = '';
     let customPOIs = []; // carregado do Firestore
     let editingPOI = null; // POI sendo editado
     const poiDeleteBtn = document.getElementById('poi-delete-btn');
+    const poiImageBtn = document.getElementById('poi-image-btn');
+    const poiImageStatus = document.getElementById('poi-image-status');
+    const poiImagePreview = document.getElementById('poi-image-preview');
 
     // Toggle modo PIN
     pinBtn.addEventListener('click', () => {
@@ -1932,7 +1936,15 @@ if (langToggle && langMenu) {
             poiDetailsInput.value = (existingPOI.details || []).join('\n');
             selectedIconSvg = existingPOI.iconSvg || '';
             selectedIconId = existingPOI.iconId || '';
+            selectedImage = existingPOI.image || '';
             poiIconPreview.innerHTML = selectedIconSvg || 'Nenhum';
+            if (selectedImage) {
+                poiImagePreview.innerHTML = '<img src="' + selectedImage + '" alt="Preview">';
+                poiImageStatus.textContent = 'Imagem atual';
+            } else {
+                poiImagePreview.innerHTML = '';
+                poiImageStatus.textContent = 'Nenhuma';
+            }
             poiDeleteBtn.style.display = 'block';
             document.querySelector('#poi-modal h2').textContent = 'Editar Ponto de Interesse';
         } else {
@@ -1941,7 +1953,10 @@ if (langToggle && langMenu) {
             poiDetailsInput.value = '';
             selectedIconSvg = '';
             selectedIconId = '';
+            selectedImage = '';
             poiIconPreview.textContent = 'Nenhum';
+            poiImagePreview.innerHTML = '';
+            poiImageStatus.textContent = 'Nenhuma';
             poiDeleteBtn.style.display = 'none';
             document.querySelector('#poi-modal h2').textContent = 'Novo Ponto de Interesse';
         }
@@ -1958,6 +1973,27 @@ if (langToggle && langMenu) {
     poiCloseBtn.addEventListener('click', closePOIModal);
     poiOverlay.addEventListener('click', (e) => {
         if (e.target === poiOverlay) closePOIModal();
+    });
+
+    // Upload de imagem para o POI
+    poiImageBtn.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            poiImageStatus.textContent = 'Comprimindo...';
+            try {
+                const dataUrl = await compressImage(file, 600, 0.75);
+                selectedImage = dataUrl;
+                poiImageStatus.textContent = file.name;
+                poiImagePreview.innerHTML = '<img src="' + dataUrl + '" alt="Preview">';
+            } catch (err) {
+                poiImageStatus.textContent = 'Erro ao carregar';
+            }
+        });
+        input.click();
     });
 
     // Buscar icones na Iconify API
@@ -2035,6 +2071,7 @@ if (langToggle && langMenu) {
                 editingPOI.details = poiDetailsInput.value.trim().split('\n').filter(d => d.trim());
                 editingPOI.iconSvg = selectedIconSvg;
                 editingPOI.iconId = selectedIconId;
+                editingPOI.image = selectedImage;
 
                 await db.collection('customPOIs').doc(editingPOI.id).set(editingPOI, { merge: true });
 
@@ -2055,6 +2092,7 @@ if (langToggle && langMenu) {
                     details: poiDetailsInput.value.trim().split('\n').filter(d => d.trim()),
                     iconSvg: selectedIconSvg,
                     iconId: selectedIconId,
+                    image: selectedImage,
                     size: 28
                 };
 
@@ -2202,6 +2240,9 @@ if (langToggle && langMenu) {
         document.getElementById('city-region').textContent = 'Ponto de Interesse';
 
         let html = '';
+        if (poi.image) {
+            html += '<img class="info-portrait" src="' + poi.image + '" alt="' + poi.name + '">';
+        }
         if (poi.description) {
             html += '<div class="info-section"><h3>Descri\u00e7\u00e3o</h3><p>' + linkifyLocations(poi.description) + '</p></div>';
         }
