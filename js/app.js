@@ -1139,14 +1139,44 @@ function buildEntityMap() {
         });
     }
 
+    // Personagens Históricos
+    if (typeof historicalNPCs !== 'undefined') {
+        historicalNPCs.forEach((npc, index) => {
+            if (npc && npc.name) map[npc.name] = { type: 'historical', index: index };
+        });
+    }
+
+    // Aliados
+    if (typeof allies !== 'undefined') {
+        allies.forEach((ally, index) => {
+            if (ally && ally.name) map[ally.name] = { type: 'ally', index: index };
+        });
+    }
+
+    // Marcos Históricos
+    if (typeof landmarks !== 'undefined') {
+        landmarks.forEach((lm, index) => {
+            if (lm && lm.name) map[lm.name] = { type: 'landmark', index: index };
+        });
+    }
+
     return map;
 }
 
 const entityMap = buildEntityMap();
 
 function linkifyLocations(text) {
+    // Primeiro: processar links manuais com sintaxe [Nome]
+    let result = text.replace(/\[([^\]]+)\]/g, function(match, name) {
+        const entity = entityMap[name];
+        if (!entity) return name; // Remove colchetes mas nao linka se nao encontrar
+        const onclick = getEntityOnclick(entity);
+        const cssClass = entity.type === 'location' ? 'map-link' : 'wiki-link';
+        return '<a class="' + cssClass + '" href="#" onclick="' + onclick + '; return false;">' + name + '</a>';
+    });
+
+    // Segundo: linkify automatico por nome
     const names = Object.keys(entityMap).sort((a, b) => b.length - a.length);
-    let result = text;
     const alreadyLinked = new Set();
 
     names.forEach(name => {
@@ -1165,40 +1195,30 @@ function linkifyLocations(text) {
             const key = `${entity.type}-${entity.index || entity.id}`;
             if (alreadyLinked.has(key + '-' + offset)) return match;
 
-            let onclick = '';
-            let cssClass = 'map-link';
-
-            switch (entity.type) {
-                case 'location':
-                    onclick = `highlightLocation('${entity.id}')`;
-                    break;
-                case 'character':
-                    onclick = `showCharacterInfo(${entity.index})`;
-                    cssClass = 'wiki-link';
-                    break;
-                case 'legion':
-                    onclick = `showLegionInfo(${entity.index})`;
-                    cssClass = 'wiki-link';
-                    break;
-                case 'villain':
-                    onclick = `showVillainInfo(${entity.index})`;
-                    cssClass = 'wiki-link';
-                    break;
-                case 'artifact':
-                    onclick = `showArtifactInfo(${entity.index})`;
-                    cssClass = 'wiki-link';
-                    break;
-                case 'book':
-                    onclick = `showBookInfo(${entity.index})`;
-                    cssClass = 'wiki-link';
-                    break;
-            }
+            const onclick = getEntityOnclick(entity);
+            const cssClass = entity.type === 'location' ? 'map-link' : 'wiki-link';
 
             return `<a class="${cssClass}" href="#" onclick="${onclick}; return false;">${p1}</a>`;
         });
     });
 
     return result;
+}
+
+// Helper: gerar onclick string para uma entidade
+function getEntityOnclick(entity) {
+    switch (entity.type) {
+        case 'location': return "highlightLocation('" + entity.id + "')";
+        case 'character': return 'showCharacterInfo(' + entity.index + ')';
+        case 'legion': return 'showLegionInfo(' + entity.index + ')';
+        case 'villain': return 'showVillainInfo(' + entity.index + ')';
+        case 'artifact': return 'showArtifactInfo(' + entity.index + ')';
+        case 'book': return 'showBookInfo(' + entity.index + ')';
+        case 'historical': return 'showHistoricalInfo(' + entity.index + ')';
+        case 'ally': return 'showAllyInfo(' + entity.index + ')';
+        case 'landmark': return 'showLandmarkInfo(' + entity.index + ')';
+        default: return '';
+    }
 }
 
 function highlightLocation(svgId) {
@@ -2677,6 +2697,13 @@ if (langToggle && langMenu) {
             return;
         }
 
+        // Verificar nome duplicado em todas as entidades
+        const allNames = Object.keys(entityMap).map(n => n.toLowerCase());
+        if (allNames.includes(data.name.trim().toLowerCase())) {
+            alert('Ja existe uma pagina com esse nome. Escolha um nome diferente.');
+            return;
+        }
+
         const entry = def.build(data);
         const saveBtn = document.getElementById('wiki-add-save-btn');
         saveBtn.textContent = 'Salvando...';
@@ -2714,6 +2741,9 @@ if (langToggle && langMenu) {
             // Mostrar a pagina recem-criada com botao de edicao
             showFn(newIndex);
             showEditButton(currentAddType, newIndex, entry);
+
+            // Atualizar entityMap com a nova entrada
+            entityMap[entry.name] = { type: currentAddType, index: newIndex };
 
             closeAddModal();
         } catch (err) {

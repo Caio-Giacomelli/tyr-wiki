@@ -154,6 +154,21 @@ function rebuildSidebarList(collectionName, localArray) {
         });
         listEl.appendChild(newAddBtn);
     }
+
+    // Atualizar entityMap com entradas novas
+    const typeFromCollection = {
+        characters: 'character', legion: 'legion', villains: 'villain',
+        artifacts: 'artifact', books: 'book', historicalNPCs: 'historical',
+        allies: 'ally', landmarks: 'landmark'
+    };
+    const entityType = typeFromCollection[collectionName];
+    if (entityType && typeof entityMap !== 'undefined') {
+        localArray.forEach((entry, index) => {
+            if (entry && entry.name && !entityMap[entry.name]) {
+                entityMap[entry.name] = { type: entityType, index: index };
+            }
+        });
+    }
 }
 
 // ===== SALVAR ENTIDADE NO FIRESTORE =====
