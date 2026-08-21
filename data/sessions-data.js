@@ -175,3 +175,56 @@ O Rei do Fogo revelou que quem falava pela criança era alguém que se arrependi
 A sessão encerra com os três entrando no portal para o Plano Elemental da Terra.`
     }
 ];
+
+// ===== SESSÕES - SOL NEGRO T2 =====
+const sessionsDataSolNegro2 = [
+    {
+        id: 0,
+        title: "S02E01 — Livre Arbítrio",
+        quote: "Apesar da terra sofrer em agonia e corrupção, uma nova estrela há de surgir. E um novo dia irá amanhecer... novamente.",
+        quoteAuthor: "Oronis, o Redimido",
+        content: `A sessão se inicia durante o funeral de Mellanie, Xolo e da menina da águia (Tharmina). Stor conduz o rito funerário e conhece Klaus, irmão de Tharmina.
+
+Em flashback, Oronis explica ao grupo suas missões e presenteia itens mágicos. De volta ao presente, o ovo de Stor eclode — nasce uma criatura semelhante a Galaeth, batizada de Monar.
+
+Fannar retorna muito ferido. Stor descobre Fleur e reencontra Oronis disfarçado. O grupo se separa para treinar: Elandor com Oronis (Preservação), Azarran com Atlas (combate), Stor com Fleur (furtividade).
+
+Após dias de treinamento, Oronis entrega os itens finais: apito do cão espectral, colar do escaravelho Albert, e Brincos da Saudade (par de comunicação que Elandor divide com Galerion).
+
+O grupo parte para o lago indicado por Oronis. Albert sobrevoa a região e Elandor, na forma de baleia, leva todos ao ponto. Stor usa o Terceiro Olho e o lago é drenado num redemoinho. Fim da sessão.`
+    },
+    {
+        id: 1,
+        title: "S02E02 — Reencontros",
+        quote: "Não há nada mais verdadeiramente artístico do que amar as pessoas.",
+        quoteAuthor: "Vincent Willem van Gogh",
+        content: `O redemoinho traga o grupo para uma caverna mística. Separados, cada um encontra uma figura importante do passado:
+
+Stor encontra Monar (amiga falecida), que deixa um conselho sobre o Terceiro Olho. Elandor reencontra Tharion, que questiona se ele estaria disposto a se sacrificar para se tornar um Avangeon. Azarran encontra seu pai, mas evita o abraço.
+
+Reunidos diante de uma porta de pedra, entram numa gruta e encontram um esqueleto de dragão — o Hellvault de Veyrinn. Inscrição: "Seu corpo, submerso em sua própria húbris". Elandor tem uma visão: ouve "Sacrifício, morte e destruição pela minha honra" e vê asas surgindo de uma silhueta que tenta dizer "K...".
+
+Encontram a carta de Dekkar e o manuscrito de Lalali-Puy (relato de redenção e renúncia ao título de campeã). Stor evoca o cão espectral Marcius para proteger o Hellvault.
+
+Saem pelo portal para Myrrendale. A cidade está destruída mas em reconstrução. Encontram Douglas magro no estábulo — Elandor deixa vacas e comida. Passam por Elenrejo para homenagear Colt (Stor deixa o chifre de Ozul).
+
+Chegam a Hammerhold via suborno. A cidade revela enorme desigualdade. Epaminondas descobre a rede de espionagem de Salaak'nir. O grupo decide oferecer informações para negociar com o Rei Feiticeiro.`
+    },
+    {
+        id: 2,
+        title: "S02E03 — Os Últimos Calenndor",
+        quote: "Quando tudo em minha vida foi consumido pela escuridão, a lembrança dela permaneceu como uma pequena luz. E agora, diante de mim, essa luz veste vermelho.",
+        quoteAuthor: "Elandor Aranel",
+        content: `A sessão abre com Lyari percorrendo corredores nervosamente antes de se posicionar ao lado de Salaak'nir, onde carboniza pedintes com um gesto.
+
+O grupo é apresentado a Salaak'nir. Elandor reconhece Lyari e, em druídico, mostra a flauta quebrada e declara que a procurou todo esse tempo. Lyari resiste mas eventualmente desaba emocionalmente. Salaak'nir a libera momentaneamente.
+
+Stor negocia: descobre que Salaak'nir não é mais aliado da Convenção, que Lysara está com Abalach-Re (quase morta) em Arenvaalis, e que Dregoth é um Draco Lich com sua alma escondida nos escombros de Draxa. Em troca, revelam a localização do Hellvault de Veyrinn, que Oronis pode ser um Avangeon, e que Stor é protegido de Fannar.
+
+Salaak'nir liberta Sorte (Aphelios) após Zona da Verdade, mas retém Lyari. Elandor jura voltar quando tiver a localização de todos os Hellvaults. Ao sair, descobrem que Dregoth chegou a Hammerhold.
+
+Galerion (via Brinco da Saudade) ordena fuga imediata. Encontram pacote de Oronis com a Pedra Magna e passe para Orvengrad. Embarcam e após 3 dias chegam à ilha gélida.
+
+Em Orvengrad, o líder Tenno conta a história de Kalak, o Exilado, e exige que purifiquem o local de seu ritual fracassado para libertar Lucius. O grupo parte, enfrenta três Wendigos e presencia um flashback do ritual de Kalak tentando a Ascensão: "Ka..." antes de cair morto.`
+    }
+];

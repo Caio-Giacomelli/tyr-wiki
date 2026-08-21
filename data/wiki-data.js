@@ -759,3 +759,61 @@ const journeyStopsCicatriz = [
         summary: "Cidade de bronze com uma criatura tentando eclodir de uma bola de fogo. Durgan renuncia Salaak'nir e recebe a fé da Deusa. Nymira absorve seus poderes e cai. O Rei do Fogo dá a Falin o poder de abrir portais."
     }
 ];
+
+// ===== PARADAS DA JORNADA - SOL NEGRO T2 =====
+var journeyStopsSolNegro2 = [
+    {
+        x: 1590, y: 1210,
+        location: "Veyrinn",
+        session: "S02E01",
+        summary: "Funeral de Mellanie, Xolo e Tharmina. O grupo treina com mentores e recebe itens de Oronis: apito do cao espectral, colar do escaravelho Albert, e Brincos da Saudade."
+    },
+    {
+        x: 1540, y: 1150,
+        location: "Lago de Veyrinn",
+        session: "S02E01",
+        summary: "Albert guia o grupo ao Hellvault submerso. Elandor se transforma em baleia. Stor usa o Terceiro Olho e o lago e drenado num redemoinho."
+    },
+    {
+        x: 1560, y: 1180,
+        location: "Hellvault de Veyrinn",
+        session: "S02E02",
+        summary: "Cada aventureiro encontra uma figura do passado. Descobrem o esqueleto de dragao e a carta de Dekkar. Stor evoca o cao espectral Marcius."
+    },
+    {
+        x: 1040, y: 1130,
+        location: "Myrrendale",
+        session: "S02E02",
+        summary: "Atravessam o portal de Veyrinn. A cidade esta destruida mas em reconstrucao. Encontram Douglas no estabulo de Jeff."
+    },
+    {
+        x: 750, y: 1080,
+        location: "Elenrejo",
+        session: "S02E02",
+        summary: "Pausa para visitar o tumulo de Colt. Stor deixa o chifre de Ozul sobre a lapide como homenagem."
+    },
+    {
+        x: 520, y: 1081,
+        location: "Hammerhold",
+        session: "S02E02-03",
+        summary: "O grupo negocia com Salaak nir e reencontra Lyari. Recebem informacoes sobre Dregoth. Libertam Sorte (Aphelios)."
+    },
+    {
+        x: 400, y: 1200,
+        location: "Alto Mar",
+        session: "S02E03",
+        summary: "Fogem de Hammerhold apos Dregoth chegar. Embarcam rumo a Orvengrad. Tres dias de viagem."
+    },
+    {
+        x: 161, y: 860,
+        location: "Orvengrad",
+        session: "S02E03",
+        summary: "Chegam a ilha gelida. Descobrem que o lider e o Orc Tenno. Negociam a libertacao de Lucius. Tenno exige que purifiquem o local do ritual de Kalak."
+    },
+    {
+        x: 100, y: 780,
+        location: "Local do Ritual de Kalak",
+        session: "S02E03",
+        summary: "Enfrentam tres Wendigos. Presenciam um flashback do ritual de Ascensao Draconica de Kalak."
+    }
+];

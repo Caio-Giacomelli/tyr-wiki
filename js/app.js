@@ -972,7 +972,7 @@ let activeJourneys = {}; // tracks visible journey groups by key
 let journeyAnimation = null;
 let journeyMode = null;
 let currentStopIndex = 0;
-let currentJourneyKey = 'solnegro1';
+let currentJourneyKey = 'solnegro';
 const trailBtn = document.getElementById('trail-btn');
 const trailControls = document.getElementById('trail-controls');
 const trailAutoBtn = document.getElementById('trail-auto');
@@ -980,9 +980,26 @@ const trailStepBtn = document.getElementById('trail-step');
 const trailNextBtn = document.getElementById('trail-next');
 const trailSeason = document.getElementById('trail-season');
 
+// Combinar Sol Negro T1 + T2 numa unica jornada
+const solNegroStopsCombined = journeyStops.map(function(s) {
+    return Object.assign({}, s, { session: "T1 - " + s.session });
+}).concat(
+    (typeof journeyStopsSolNegro2 !== 'undefined' ? journeyStopsSolNegro2 : []).map(function(s) {
+        return Object.assign({}, s, { session: "T2 - " + s.session });
+    })
+);
+
+const solNegroSessionsCombined = (typeof sessionsData !== 'undefined' ? sessionsData : []).map(function(s) {
+    return Object.assign({}, s, { title: "[T1] " + s.title });
+}).concat(
+    (typeof sessionsDataSolNegro2 !== 'undefined' ? sessionsDataSolNegro2 : []).map(function(s, i) {
+        return Object.assign({}, s, { id: sessionsData.length + i, title: "[T2] " + s.title });
+    })
+);
+
 const journeyConfigs = {
-    solnegro1: { stops: journeyStops, sessions: typeof sessionsData !== 'undefined' ? sessionsData : [], color: '#d4a843', pathColor: '#d4a843' },
-    cicatriz1: { stops: typeof journeyStopsCicatriz !== 'undefined' ? journeyStopsCicatriz : [], sessions: typeof sessionsDataCicatriz !== 'undefined' ? sessionsDataCicatriz : [], color: '#4a9cc8', pathColor: '#4a9cc8' }
+    solnegro: { stops: solNegroStopsCombined, sessions: solNegroSessionsCombined, color: '#d4a843', pathColor: '#d4a843' },
+    cicatriz: { stops: typeof journeyStopsCicatriz !== 'undefined' ? journeyStopsCicatriz : [], sessions: typeof sessionsDataCicatriz !== 'undefined' ? sessionsDataCicatriz : [], color: '#4a9cc8', pathColor: '#4a9cc8' }
 };
 
 function getOffsetStopsFor(stops) {
@@ -1017,10 +1034,8 @@ trailBtn.addEventListener('click', () => {
     }
 });
 
-// Enable cicatriz1 option and handle season change
+// Handle campaign change
 if (trailSeason) {
-    const cicatrizOpt = trailSeason.querySelector('option[value="cicatriz1"]');
-    if (cicatrizOpt) cicatrizOpt.disabled = false;
     trailSeason.addEventListener('change', () => {
         currentJourneyKey = trailSeason.value;
     });
@@ -1052,20 +1067,37 @@ function showJourneyStop(stop, index) {
     document.getElementById('city-name').textContent = stop.location;
     document.getElementById('city-region').textContent = stop.session;
 
-    const sessionMatch = stop.session.match(/\d+/);
-    const sessionId = sessionMatch ? parseInt(sessionMatch[0]) : null;
-    const sessionsArray = config.sessions;
-    const sessionBtn = (sessionId !== null && sessionsArray && sessionsArray[sessionId])
-        ? `<button id="session-read-btn" onclick="openSessionModalFor('${currentJourneyKey}', ${sessionId})">Ler Sessão Completa</button>`
-        : '';
+    // Find session button
+    let sessionBtn = '';
+    if (config.sessions && config.sessions.length > 0) {
+        var sessionId = null;
+        if (currentJourneyKey === 'solnegro') {
+            // For Sol Negro, use stop index to determine which session range
+            var isT2 = stop.session.indexOf('T2') === 0;
+            var stopSession = stop.session.replace(/^T\d+ - /, '');
+            if (isT2) {
+                // T2 sessions: S02E01->0, S02E02->1, S02E03->2 + offset
+                var epMatch = stopSession.match(/E(\d+)/);
+                if (epMatch) {
+                    var t1Count = typeof sessionsData !== 'undefined' ? sessionsData.length : 0;
+                    sessionId = t1Count + parseInt(epMatch[1]) - 1;
+                }
+            } else {
+                // T1 sessions: "Sessao X" -> X
+                var numMatch = stopSession.match(/(\d+)/);
+                if (numMatch) sessionId = parseInt(numMatch[1]);
+            }
+        } else {
+            // Cicatrizes: S01E01->0, S01E02->1, S01E03->2
+            var epMatch2 = stop.session.match(/E(\d+)/);
+            if (epMatch2) sessionId = parseInt(epMatch2[1]) - 1;
+        }
+        if (sessionId !== null && config.sessions[sessionId]) {
+            sessionBtn = '<button id="session-read-btn" onclick="openSessionModalFor(\'' + currentJourneyKey + '\', ' + sessionId + ')">Ler Sess\u00e3o Completa</button>';
+        }
+    }
 
-    let html = `
-        <div class="info-section">
-            <h3>Parada ${index + 1} de ${config.stops.length}</h3>
-            <p>${linkifyLocations(stop.summary)}</p>
-            ${sessionBtn}
-        </div>
-    `;
+    var html = '<div class="info-section"><h3>Parada ' + (index + 1) + ' de ' + config.stops.length + '</h3><p>' + linkifyLocations(stop.summary) + '</p>' + sessionBtn + '</div>';
     document.getElementById('city-info').innerHTML = html;
     infoPanel.classList.add('open');
 }
@@ -1154,6 +1186,7 @@ function drawJourneyBase() {
     if (!svgDoc) return;
     const svgEl = svgDoc.querySelector('svg');
     const config = journeyConfigs[currentJourneyKey];
+    if (!config || !config.stops || config.stops.length === 0) return;
 
     const trailGroup = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
     trailGroup.setAttribute('id', `journey-trail-${currentJourneyKey}`);
@@ -1174,11 +1207,10 @@ function drawJourneyBase() {
     const defs = svgDoc.querySelector('defs') || svgDoc.createElementNS('http://www.w3.org/2000/svg', 'defs');
     if (!svgEl.querySelector('defs')) svgEl.insertBefore(defs, svgEl.firstChild);
 
-    const partyChars = currentJourneyKey === 'solnegro1'
+    const partyChars = currentJourneyKey === 'solnegro'
         ? [
             { name: 'Stor', img: 'img/Stor.png', offset: -36 },
             { name: 'Elandor', img: 'img/Elandor.png', offset: 36 },
-            { name: 'Flint', img: 'img/Flint.png', offset: 0 },
             { name: 'Azarran', img: 'img/Azarran.png', offset: 0 }
         ]
         : [
@@ -1210,7 +1242,8 @@ function drawJourneyBase() {
         charG.appendChild(border);
 
         const img = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-        img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', char.img);
+        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+        img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', baseUrl + char.img);
         img.setAttribute('x', '-25'); img.setAttribute('y', '-25');
         img.setAttribute('width', '50'); img.setAttribute('height', '50');
         img.setAttribute('clip-path', `url(#${clipId})`);
@@ -1264,8 +1297,8 @@ function advanceJourney() {
         linesGroup.appendChild(line);
 
         // Animate party icons along the path
-        const partyChars = currentJourneyKey === 'solnegro1'
-            ? [{ offset: -36 }, { offset: 36 }, { offset: 0 }, { offset: 0 }]
+        const partyChars = currentJourneyKey === 'solnegro'
+            ? [{ offset: -36 }, { offset: 36 }, { offset: 0 }]
             : [{ offset: -30 }, { offset: 30 }];
         const duration = 2000;
         const animStart = performance.now();
