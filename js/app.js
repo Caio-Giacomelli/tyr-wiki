@@ -182,10 +182,6 @@ function showCityInfo(id) {
             <p>${linkifyLocations(city.description)}</p>
         </div>
         <div class="info-section">
-            <h3>População</h3>
-            <p>${city.population}</p>
-        </div>
-        <div class="info-section">
             <h3>Governo</h3>
             <p>${city.government}</p>
         </div>
