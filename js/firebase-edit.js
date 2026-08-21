@@ -1,5 +1,39 @@
 // ===== FIREBASE EDIT - EDIÇÃO COLABORATIVA DA WIKI =====
 
+// Comprimir imagem usando canvas (maxWidth em px, quality 0-1)
+function compressImage(file, maxWidth, quality) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Redimensionar mantendo proporcao
+                if (width > maxWidth) {
+                    height = Math.round(height * (maxWidth / width));
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Exportar como JPEG comprimido
+                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(dataUrl);
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
 let editMode = false;
 let currentEditEntity = null; // { type, id/index, data }
 
@@ -122,15 +156,13 @@ function enterEditMode() {
                     addArtBtn.disabled = true;
                     try {
                         const char = currentEditEntity.data;
-                        const altCount = (char.altImages ? char.altImages.length : 0) + 2;
-                        const fileName = char.name + altCount + '.png';
-                        const storageRef = firebase.storage().ref('img/' + fileName);
-                        await storageRef.put(file);
-                        const downloadURL = await storageRef.getDownloadURL();
+
+                        // Comprimir imagem via canvas
+                        const dataUrl = await compressImage(file, 600, 0.75);
 
                         // Atualizar dados locais
                         if (!char.altImages) char.altImages = [];
-                        char.altImages.push(downloadURL);
+                        char.altImages.push(dataUrl);
 
                         // Salvar no Firestore
                         await saveToFirestore('characters', String(currentEditEntity.id), { altImages: char.altImages });
@@ -142,8 +174,8 @@ function enterEditMode() {
                         showCharacterInfo(currentEditEntity.id);
                         showEditButton('character', currentEditEntity.id, characters[currentEditEntity.id]);
                     } catch (err) {
-                        console.error('Erro ao fazer upload:', err);
-                        alert('Erro ao fazer upload da imagem. Tente novamente.');
+                        console.error('Erro ao adicionar arte:', err);
+                        alert('Erro ao adicionar arte. Tente novamente.');
                         addArtBtn.textContent = '+';
                         addArtBtn.disabled = false;
                     }
