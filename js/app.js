@@ -105,6 +105,11 @@ function initSvg() {
         updateTransform();
     }, { passive: false });
 
+    // Renderizar marcadores de pontos de interesse (Hellvaults)
+    if (typeof mapMarkers !== 'undefined') {
+        renderMapMarkers();
+    }
+
     fitMapToScreen();
 }
 
@@ -123,7 +128,7 @@ function selectCity(id) {
     // Mostrar overlay escuro
     overlay.style.opacity = '1';
 
-    // Desselecionar todos — mover de volta para antes do overlay
+    // Desselecionar todas as cidades — mover de volta para antes do overlay
     cityIds.forEach(cid => {
         const g = svgDoc.getElementById(cid);
         if (g) {
@@ -132,6 +137,18 @@ function selectCity(id) {
             svgEl.insertBefore(g, overlay);
         }
     });
+
+    // Desselecionar todos os markers
+    if (typeof mapMarkers !== 'undefined') {
+        mapMarkers.forEach(m => {
+            const g = svgDoc.getElementById(m.id);
+            if (g) {
+                g.classList.remove('active');
+                g.style.filter = '';
+                svgEl.insertBefore(g, overlay);
+            }
+        });
+    }
 
     // Mover a cidade selecionada para cima do overlay
     const group = svgDoc.getElementById(id);
@@ -162,6 +179,18 @@ function deselectAll() {
                 }
             }
         });
+
+        // Desselecionar markers
+        if (typeof mapMarkers !== 'undefined') {
+            mapMarkers.forEach(m => {
+                const g = svgDoc.getElementById(m.id);
+                if (g) {
+                    g.classList.remove('active');
+                    g.style.filter = '';
+                    if (overlay) svgEl.insertBefore(g, overlay);
+                }
+            });
+        }
     }
     infoPanel.classList.remove('open');
 }
@@ -196,6 +225,131 @@ function showCityInfo(id) {
             <p>${linkifyLocations(city.notes)}</p>
         </div>
     `;
+
+    document.getElementById('city-info').innerHTML = html;
+    infoPanel.classList.add('open');
+}
+
+// ===== MARCADORES NO MAPA (HELLVAULTS) =====
+function renderMapMarkers() {
+    if (!svgDoc) return;
+    const svgEl = svgDoc.querySelector('svg');
+    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+    const defs = svgDoc.querySelector('defs') || svgDoc.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    if (!svgEl.querySelector('defs')) svgEl.insertBefore(defs, svgEl.firstChild);
+
+    mapMarkers.forEach(marker => {
+        const group = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('id', marker.id);
+        group.style.cursor = 'pointer';
+        group.style.transition = 'filter 0.3s ease, transform 0.2s ease';
+
+        const r = marker.size / 2;
+
+        // Clip circular
+        const clipId = 'clip-' + marker.id;
+        const clipPath = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+        clipPath.setAttribute('id', clipId);
+        const clipCircle = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        clipCircle.setAttribute('cx', marker.x);
+        clipCircle.setAttribute('cy', marker.y);
+        clipCircle.setAttribute('r', r - 2);
+        clipPath.appendChild(clipCircle);
+        defs.appendChild(clipPath);
+
+        // Fundo escuro
+        const bg = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        bg.setAttribute('cx', marker.x);
+        bg.setAttribute('cy', marker.y);
+        bg.setAttribute('r', r);
+        bg.setAttribute('fill', '#1a1008');
+        bg.setAttribute('stroke', '#8b6914');
+        bg.setAttribute('stroke-width', '2.5');
+        group.appendChild(bg);
+
+        // Imagem do icone com clip circular
+        const img = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+        img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', baseUrl + marker.icon);
+        img.setAttribute('x', marker.x - r + 2);
+        img.setAttribute('y', marker.y - r + 2);
+        img.setAttribute('width', (r - 2) * 2);
+        img.setAttribute('height', (r - 2) * 2);
+        img.setAttribute('clip-path', 'url(#' + clipId + ')');
+        img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+        group.appendChild(img);
+
+        // Hover
+        group.addEventListener('mouseenter', () => {
+            if (!group.classList.contains('active')) {
+                group.style.filter = 'brightness(1.3) drop-shadow(0 0 4px rgba(212, 168, 67, 0.5))';
+            }
+        });
+        group.addEventListener('mouseleave', () => {
+            if (!group.classList.contains('active')) {
+                group.style.filter = '';
+            }
+        });
+
+        // Click
+        group.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showMarkerInfo(marker);
+        });
+
+        svgEl.appendChild(group);
+    });
+}
+
+function showMarkerInfo(marker) {
+    if (!svgDoc) return;
+    const svgEl = svgDoc.querySelector('svg');
+    const overlay = svgDoc.getElementById('dim-overlay');
+
+    // Mostrar overlay escuro
+    if (overlay) overlay.style.opacity = '1';
+
+    // Desselecionar cidades — mover para antes do overlay
+    cityIds.forEach(cid => {
+        const g = svgDoc.getElementById(cid);
+        if (g) {
+            g.classList.remove('active', 'city-highlighted');
+            g.style.filter = '';
+            if (overlay) svgEl.insertBefore(g, overlay);
+        }
+    });
+
+    // Desselecionar todos os markers — mover para antes do overlay
+    mapMarkers.forEach(m => {
+        const g = svgDoc.getElementById(m.id);
+        if (g) {
+            g.classList.remove('active');
+            g.style.filter = '';
+            if (overlay) svgEl.insertBefore(g, overlay);
+        }
+    });
+
+    // Destacar o marker clicado — mover para cima do overlay
+    const group = svgDoc.getElementById(marker.id);
+    if (group) {
+        group.classList.add('active');
+        group.style.filter = 'drop-shadow(0 0 6px rgba(212, 168, 67, 0.7))';
+        svgEl.appendChild(group);
+    }
+
+    document.getElementById('city-name').textContent = marker.name;
+    document.getElementById('city-region').textContent = marker.subtitle || '';
+
+    let html = '';
+
+    if (marker.image) {
+        html += buildPortraitHtml(marker, 'mapMarkers[' + mapMarkers.indexOf(marker) + ']');
+    }
+
+    html += '<div class="info-section"><h3>Descri\u00e7\u00e3o</h3><p>' + linkifyLocations(marker.description) + '</p></div>';
+
+    if (marker.details && marker.details.length > 0) {
+        html += '<div class="info-section"><h3>Detalhes</h3><ul>' + marker.details.map(function(d) { return '<li>' + linkifyLocations(d) + '</li>'; }).join('') + '</ul></div>';
+    }
 
     document.getElementById('city-info').innerHTML = html;
     infoPanel.classList.add('open');
@@ -1426,40 +1580,39 @@ function placeStopMarker(stop, index, stopsGroup, config) {
     requestAnimationFrame(() => { stopG.style.opacity = '1'; });
 }
 
-// ===== MODO DEBUG - COORDENADAS (Ctrl+Shift+D) =====
+// ===== MODO DEBUG - COORDENADAS =====
 let debugMode = false;
 let debugPoints = [];
 
-document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && (e.key === 'Q' || e.key === 'q' || e.code === 'KeyQ')) {
-        e.preventDefault();
-        debugMode = !debugMode;
-        let debugPanel = document.getElementById('debug-panel');
-        if (debugMode) {
-            if (!debugPanel) {
-                debugPanel = document.createElement('div');
-                debugPanel.id = 'debug-panel';
-                debugPanel.style.cssText = 'position:fixed;top:15px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.9);color:#4ae04a;font-family:monospace;font-size:14px;padding:15px 20px;border-radius:8px;border:2px solid #4ae04a;z-index:9999;text-align:center;';
-                debugPanel.innerHTML = '<div style="color:#fff;margin-bottom:5px;font-weight:bold;">MODO DEBUG ATIVO</div><div>Clique no mapa para pegar coordenadas</div><div id="debug-coords" style="margin-top:8px;"></div><div id="debug-log" style="margin-top:8px;font-size:12px;max-height:200px;overflow-y:auto;text-align:left;"></div>';
-                document.body.appendChild(debugPanel);
-            }
-            debugPanel.style.display = 'block';
-            debugPoints = [];
-            if (svgDoc) {
-                svgDoc.addEventListener('click', debugClick, true);
-            }
-        } else {
-            if (debugPanel) debugPanel.style.display = 'none';
-            if (svgDoc) {
-                svgDoc.removeEventListener('click', debugClick, true);
-                // Remover marcadores do mapa
-                const svgEl = svgDoc.querySelector('svg');
-                if (svgEl) {
-                    svgEl.querySelectorAll('.debug-marker').forEach(m => m.remove());
-                }
-            }
-            debugPoints = [];
+document.getElementById('debug-btn').addEventListener('click', () => {
+    debugMode = !debugMode;
+    let debugPanel = document.getElementById('debug-panel');
+    const debugBtn = document.getElementById('debug-btn');
+    if (debugMode) {
+        debugBtn.classList.add('active');
+        if (!debugPanel) {
+            debugPanel = document.createElement('div');
+            debugPanel.id = 'debug-panel';
+            debugPanel.style.cssText = 'position:fixed;top:15px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.9);color:#4ae04a;font-family:monospace;font-size:14px;padding:15px 20px;border-radius:8px;border:2px solid #4ae04a;z-index:9999;text-align:center;';
+            debugPanel.innerHTML = '<div style="color:#fff;margin-bottom:5px;font-weight:bold;">MODO DEBUG ATIVO</div><div>Clique no mapa para pegar coordenadas</div><div id="debug-coords" style="margin-top:8px;"></div><div id="debug-log" style="margin-top:8px;font-size:12px;max-height:200px;overflow-y:auto;text-align:left;"></div>';
+            document.body.appendChild(debugPanel);
         }
+        debugPanel.style.display = 'block';
+        debugPoints = [];
+        if (svgDoc) {
+            svgDoc.addEventListener('click', debugClick, true);
+        }
+    } else {
+        debugBtn.classList.remove('active');
+        if (debugPanel) debugPanel.style.display = 'none';
+        if (svgDoc) {
+            svgDoc.removeEventListener('click', debugClick, true);
+            const svgEl = svgDoc.querySelector('svg');
+            if (svgEl) {
+                svgEl.querySelectorAll('.debug-marker').forEach(m => m.remove());
+            }
+        }
+        debugPoints = [];
     }
 });
 
@@ -1692,4 +1845,410 @@ if (langToggle && langMenu) {
 
     // Carregar tempo ao iniciar
     loadMusicTime();
+})();
+
+
+// ===== PONTOS DE INTERESSE CUSTOMIZADOS =====
+(function() {
+    const pinBtn = document.getElementById('pin-btn');
+    const poiOverlay = document.getElementById('poi-modal-overlay');
+    const poiCloseBtn = document.getElementById('poi-modal-close');
+    const poiSaveBtn = document.getElementById('poi-save-btn');
+    const poiIconSearchBtn = document.getElementById('poi-icon-search-btn');
+    const poiIconResults = document.getElementById('poi-icon-results');
+    const poiIconPreview = document.getElementById('poi-icon-preview');
+    const poiIconQuery = document.getElementById('poi-icon-query');
+    const poiNameInput = document.getElementById('poi-name');
+    const poiDescInput = document.getElementById('poi-description');
+    const poiDetailsInput = document.getElementById('poi-details');
+
+    let pinMode = false;
+    let pendingCoords = null;
+    let selectedIconSvg = '';
+    let selectedIconId = '';
+    let customPOIs = []; // carregado do Firestore
+    let editingPOI = null; // POI sendo editado
+    const poiDeleteBtn = document.getElementById('poi-delete-btn');
+
+    // Toggle modo PIN
+    pinBtn.addEventListener('click', () => {
+        pinMode = !pinMode;
+        pinBtn.classList.toggle('active', pinMode);
+        if (pinMode && svgDoc) {
+            svgDoc.addEventListener('click', pinClick, true);
+        } else if (svgDoc) {
+            svgDoc.removeEventListener('click', pinClick, true);
+        }
+    });
+
+    // Clique no mapa em modo PIN
+    function pinClick(e) {
+        if (!pinMode || !svgDoc) return;
+        e.stopPropagation();
+        e.preventDefault();
+
+        // Verificar se clicou em um POI existente
+        const target = e.target;
+        let clickedPOI = null;
+        for (const poi of customPOIs) {
+            const group = svgDoc.getElementById(poi.id);
+            if (group && group.contains(target)) {
+                clickedPOI = poi;
+                break;
+            }
+        }
+
+        if (clickedPOI) {
+            // Editar POI existente
+            editingPOI = clickedPOI;
+            pinMode = false;
+            pinBtn.classList.remove('active');
+            svgDoc.removeEventListener('click', pinClick, true);
+            openPOIModal(clickedPOI);
+        } else {
+            // Criar novo POI
+            const svgEl = svgDoc.querySelector('svg');
+            const pt = svgEl.createSVGPoint();
+            pt.x = e.clientX;
+            pt.y = e.clientY;
+            const svgPt = pt.matrixTransform(svgEl.getScreenCTM().inverse());
+
+            pendingCoords = { x: Math.round(svgPt.x), y: Math.round(svgPt.y) };
+            editingPOI = null;
+
+            // Desativar modo pin e abrir modal
+            pinMode = false;
+            pinBtn.classList.remove('active');
+            svgDoc.removeEventListener('click', pinClick, true);
+            openPOIModal(null);
+        }
+    }
+
+    // Abrir/fechar modal
+    function openPOIModal(existingPOI) {
+        if (existingPOI) {
+            poiNameInput.value = existingPOI.name || '';
+            poiDescInput.value = existingPOI.description || '';
+            poiDetailsInput.value = (existingPOI.details || []).join('\n');
+            selectedIconSvg = existingPOI.iconSvg || '';
+            selectedIconId = existingPOI.iconId || '';
+            poiIconPreview.innerHTML = selectedIconSvg || 'Nenhum';
+            poiDeleteBtn.style.display = 'block';
+            document.querySelector('#poi-modal h2').textContent = 'Editar Ponto de Interesse';
+        } else {
+            poiNameInput.value = '';
+            poiDescInput.value = '';
+            poiDetailsInput.value = '';
+            selectedIconSvg = '';
+            selectedIconId = '';
+            poiIconPreview.textContent = 'Nenhum';
+            poiDeleteBtn.style.display = 'none';
+            document.querySelector('#poi-modal h2').textContent = 'Novo Ponto de Interesse';
+        }
+        poiIconQuery.value = '';
+        poiIconResults.innerHTML = '';
+        poiOverlay.classList.add('open');
+    }
+
+    function closePOIModal() {
+        poiOverlay.classList.remove('open');
+        pendingCoords = null;
+    }
+
+    poiCloseBtn.addEventListener('click', closePOIModal);
+    poiOverlay.addEventListener('click', (e) => {
+        if (e.target === poiOverlay) closePOIModal();
+    });
+
+    // Buscar icones na Iconify API
+    poiIconSearchBtn.addEventListener('click', searchIcons);
+    poiIconQuery.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') searchIcons();
+    });
+
+    async function searchIcons() {
+        const query = poiIconQuery.value.trim();
+        if (!query) return;
+        poiIconResults.innerHTML = '<div style="color:#999;font-size:12px;">Buscando...</div>';
+
+        try {
+            const resp = await fetch('https://api.iconify.design/search?query=' + encodeURIComponent(query) + '&limit=48');
+            const data = await resp.json();
+
+            if (!data.icons || data.icons.length === 0) {
+                poiIconResults.innerHTML = '<div style="color:#999;font-size:12px;">Nenhum icone encontrado. Tente em ingles (ex: cave, skull, dragon).</div>';
+                return;
+            }
+
+            poiIconResults.innerHTML = '';
+            const icons = data.icons.slice(0, 48);
+
+            // Carregar SVGs em paralelo (batch)
+            const promises = icons.map(iconName =>
+                fetch('https://api.iconify.design/' + iconName + '.svg?height=24')
+                    .then(r => r.text())
+                    .then(svgText => ({ iconName, svgText }))
+                    .catch(() => null)
+            );
+
+            const results = await Promise.all(promises);
+
+            results.forEach(result => {
+                if (!result) return;
+                const option = document.createElement('div');
+                option.className = 'poi-icon-option';
+                option.innerHTML = result.svgText;
+                option.title = result.iconName;
+                option.addEventListener('click', () => {
+                    document.querySelectorAll('.poi-icon-option.selected').forEach(el => el.classList.remove('selected'));
+                    option.classList.add('selected');
+                    selectedIconSvg = result.svgText;
+                    selectedIconId = result.iconName;
+                    poiIconPreview.innerHTML = result.svgText;
+                });
+                poiIconResults.appendChild(option);
+            });
+
+            if (poiIconResults.children.length === 0) {
+                poiIconResults.innerHTML = '<div style="color:#999;font-size:12px;">Nenhum icone carregado. Tente outro termo.</div>';
+            }
+        } catch (err) {
+            console.error('Erro na busca de icones:', err);
+            poiIconResults.innerHTML = '<div style="color:#e55;font-size:12px;">Erro na busca. Tente novamente.</div>';
+        }
+    }
+
+    // Salvar POI (criar ou editar)
+    poiSaveBtn.addEventListener('click', async () => {
+        const name = poiNameInput.value.trim();
+        if (!name) { alert('Digite um nome para o ponto.'); return; }
+        if (!selectedIconSvg) { alert('Selecione um icone.'); return; }
+
+        poiSaveBtn.textContent = 'Salvando...';
+        poiSaveBtn.disabled = true;
+
+        try {
+            if (editingPOI) {
+                // Editar existente
+                editingPOI.name = name;
+                editingPOI.description = poiDescInput.value.trim();
+                editingPOI.details = poiDetailsInput.value.trim().split('\n').filter(d => d.trim());
+                editingPOI.iconSvg = selectedIconSvg;
+                editingPOI.iconId = selectedIconId;
+
+                await db.collection('customPOIs').doc(editingPOI.id).set(editingPOI, { merge: true });
+
+                // Re-renderizar no mapa
+                const oldGroup = svgDoc.getElementById(editingPOI.id);
+                if (oldGroup) oldGroup.remove();
+                renderSinglePOI(editingPOI);
+            } else {
+                // Criar novo
+                if (!pendingCoords) { alert('Coordenadas invalidas. Tente novamente.'); return; }
+
+                const poi = {
+                    id: 'poi-' + Date.now(),
+                    x: pendingCoords.x,
+                    y: pendingCoords.y,
+                    name: name,
+                    description: poiDescInput.value.trim(),
+                    details: poiDetailsInput.value.trim().split('\n').filter(d => d.trim()),
+                    iconSvg: selectedIconSvg,
+                    iconId: selectedIconId,
+                    size: 28
+                };
+
+                await db.collection('customPOIs').doc(poi.id).set(poi);
+                customPOIs.push(poi);
+                renderSinglePOI(poi);
+            }
+            closePOIModal();
+        } catch (err) {
+            console.error('Erro ao salvar POI:', err);
+            alert('Erro ao salvar. Tente novamente.');
+        }
+
+        poiSaveBtn.textContent = 'Salvar Ponto';
+        poiSaveBtn.disabled = false;
+    });
+
+    // Excluir POI
+    poiDeleteBtn.addEventListener('click', async () => {
+        if (!editingPOI) return;
+        if (!confirm('Excluir "' + editingPOI.name + '"? Essa acao nao pode ser desfeita.')) return;
+
+        poiDeleteBtn.textContent = 'Excluindo...';
+        poiDeleteBtn.disabled = true;
+
+        try {
+            await db.collection('customPOIs').doc(editingPOI.id).delete();
+
+            // Remover do mapa
+            const group = svgDoc.getElementById(editingPOI.id);
+            if (group) group.remove();
+
+            // Remover do array local
+            customPOIs = customPOIs.filter(p => p.id !== editingPOI.id);
+
+            closePOIModal();
+            deselectAll();
+        } catch (err) {
+            console.error('Erro ao excluir POI:', err);
+            alert('Erro ao excluir. Tente novamente.');
+        }
+
+        poiDeleteBtn.textContent = 'Excluir Marcador';
+        poiDeleteBtn.disabled = false;
+    });
+
+    // Renderizar um POI no mapa
+    function renderSinglePOI(poi) {
+        if (!svgDoc) return;
+        const svgEl = svgDoc.querySelector('svg');
+        const r = poi.size / 2;
+
+        const group = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('id', poi.id);
+        group.style.cursor = 'pointer';
+        group.style.transition = 'filter 0.3s ease';
+
+        // Fundo circular
+        const bg = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        bg.setAttribute('cx', poi.x);
+        bg.setAttribute('cy', poi.y);
+        bg.setAttribute('r', r);
+        bg.setAttribute('fill', '#1a1008');
+        bg.setAttribute('stroke', '#8b6914');
+        bg.setAttribute('stroke-width', '2');
+        group.appendChild(bg);
+
+        // Icone SVG via foreignObject
+        const fo = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+        fo.setAttribute('x', poi.x - r + 4);
+        fo.setAttribute('y', poi.y - r + 4);
+        fo.setAttribute('width', (r - 4) * 2);
+        fo.setAttribute('height', (r - 4) * 2);
+        const iconDiv = document.createElement('div');
+        iconDiv.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+        iconDiv.innerHTML = poi.iconSvg.replace(/width="[^"]*"/, 'width="' + ((r - 4) * 2 - 4) + '"').replace(/height="[^"]*"/, 'height="' + ((r - 4) * 2 - 4) + '"');
+        // Colorir o icone
+        const svgIcon = iconDiv.querySelector('svg');
+        if (svgIcon) svgIcon.style.fill = '#d4a843';
+        fo.appendChild(iconDiv);
+        group.appendChild(fo);
+
+        // Hover
+        group.addEventListener('mouseenter', () => {
+            if (!group.classList.contains('active')) {
+                group.style.filter = 'brightness(1.3) drop-shadow(0 0 4px rgba(212, 168, 67, 0.5))';
+            }
+        });
+        group.addEventListener('mouseleave', () => {
+            if (!group.classList.contains('active')) {
+                group.style.filter = '';
+            }
+        });
+
+        // Click - mostrar info no painel
+        group.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showPOIInfo(poi);
+        });
+
+        svgEl.appendChild(group);
+    }
+
+    // Mostrar info do POI no painel lateral
+    function showPOIInfo(poi) {
+        if (!svgDoc) return;
+        const svgEl = svgDoc.querySelector('svg');
+        const overlay = svgDoc.getElementById('dim-overlay');
+
+        if (overlay) overlay.style.opacity = '1';
+
+        // Desselecionar cidades
+        cityIds.forEach(cid => {
+            const g = svgDoc.getElementById(cid);
+            if (g) {
+                g.classList.remove('active', 'city-highlighted');
+                g.style.filter = '';
+                if (overlay) svgEl.insertBefore(g, overlay);
+            }
+        });
+
+        // Desselecionar markers fixos
+        if (typeof mapMarkers !== 'undefined') {
+            mapMarkers.forEach(m => {
+                const g = svgDoc.getElementById(m.id);
+                if (g) { g.classList.remove('active'); g.style.filter = ''; if (overlay) svgEl.insertBefore(g, overlay); }
+            });
+        }
+
+        // Desselecionar outros POIs
+        customPOIs.forEach(p => {
+            const g = svgDoc.getElementById(p.id);
+            if (g) { g.classList.remove('active'); g.style.filter = ''; if (overlay) svgEl.insertBefore(g, overlay); }
+        });
+
+        // Destacar este POI
+        const group = svgDoc.getElementById(poi.id);
+        if (group) {
+            group.classList.add('active');
+            group.style.filter = 'drop-shadow(0 0 6px rgba(212, 168, 67, 0.7))';
+            svgEl.appendChild(group);
+        }
+
+        document.getElementById('city-name').textContent = poi.name;
+        document.getElementById('city-region').textContent = 'Ponto de Interesse';
+
+        let html = '';
+        if (poi.description) {
+            html += '<div class="info-section"><h3>Descri\u00e7\u00e3o</h3><p>' + linkifyLocations(poi.description) + '</p></div>';
+        }
+        if (poi.details && poi.details.length > 0) {
+            html += '<div class="info-section"><h3>Detalhes</h3><ul>' + poi.details.map(function(d) { return '<li>' + linkifyLocations(d) + '</li>'; }).join('') + '</ul></div>';
+        }
+
+        document.getElementById('city-info').innerHTML = html;
+        infoPanel.classList.add('open');
+    }
+
+    // Carregar POIs salvos do Firestore ao iniciar
+    async function loadCustomPOIs() {
+        if (typeof db === 'undefined') return;
+        try {
+            const snap = await db.collection('customPOIs').get();
+            snap.forEach(doc => {
+                const poi = doc.data();
+                customPOIs.push(poi);
+            });
+            // Esperar o SVG carregar antes de renderizar
+            function tryRender() {
+                if (svgDoc && svgDoc.querySelector('svg')) {
+                    customPOIs.forEach(poi => renderSinglePOI(poi));
+                } else {
+                    setTimeout(tryRender, 500);
+                }
+            }
+            tryRender();
+        } catch (err) {
+            console.log('POIs customizados indisponiveis:', err.message);
+        }
+    }
+
+    // Atualizar deselectAll para incluir POIs customizados
+    const _origDeselectAll = deselectAll;
+    deselectAll = function() {
+        _origDeselectAll();
+        if (svgDoc) {
+            const svgEl = svgDoc.querySelector('svg');
+            const overlay = svgDoc.getElementById('dim-overlay');
+            customPOIs.forEach(p => {
+                const g = svgDoc.getElementById(p.id);
+                if (g) { g.classList.remove('active'); g.style.filter = ''; if (overlay) svgEl.insertBefore(g, overlay); }
+            });
+        }
+    };
+
+    loadCustomPOIs();
 })();

@@ -735,6 +735,10 @@ body {
     bottom: 20px;
     left: 20px;
     z-index: 600;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
 }
 
 .lang-btn {
@@ -759,6 +763,251 @@ body {
 .lang-btn.active {
     border-color: #d4a843;
     background: rgba(139, 105, 20, 0.3);
+}
+
+.debug-toggle {
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+}
+
+.debug-toggle.active {
+    border-color: #4ae04a;
+    background: rgba(74, 224, 74, 0.15);
+}
+
+.debug-icon {
+    width: 18px;
+    height: 18px;
+    opacity: 0.8;
+}
+
+.debug-toggle.active .debug-icon {
+    opacity: 1;
+}
+
+/* ===== BOTÃO PIN ===== */
+.pin-toggle {
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+}
+
+.pin-toggle.active {
+    border-color: #e05555;
+    background: rgba(224, 85, 85, 0.15);
+}
+
+.pin-icon {
+    width: 18px;
+    height: 18px;
+    opacity: 0.8;
+}
+
+.pin-toggle.active .pin-icon {
+    opacity: 1;
+}
+
+/* ===== MODAL POI ===== */
+#poi-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+
+#poi-modal-overlay.open {
+    display: flex;
+}
+
+#poi-modal {
+    background: #1e1209;
+    border: 2px solid #8b6914;
+    border-radius: 12px;
+    padding: 25px;
+    width: 90%;
+    max-width: 480px;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    color: #ddd;
+}
+
+#poi-modal h2 {
+    color: #d4a843;
+    margin: 0 0 18px 0;
+    font-size: 18px;
+}
+
+#poi-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+#poi-modal-close:hover {
+    color: #fff;
+}
+
+.poi-form label {
+    display: block;
+    color: #d4a843;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    margin-top: 12px;
+}
+
+.poi-form input[type="text"],
+.poi-form textarea {
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #555;
+    border-radius: 6px;
+    color: #eee;
+    font-size: 13px;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.poi-form input[type="text"]:focus,
+.poi-form textarea:focus {
+    outline: none;
+    border-color: #d4a843;
+}
+
+.poi-form textarea {
+    min-height: 60px;
+    resize: vertical;
+}
+
+.poi-icon-search {
+    display: flex;
+    gap: 6px;
+}
+
+.poi-icon-search input {
+    flex: 1;
+}
+
+.poi-icon-search button,
+#poi-save-btn {
+    padding: 8px 14px;
+    background: rgba(139, 105, 20, 0.4);
+    border: 1px solid #8b6914;
+    border-radius: 6px;
+    color: #d4a843;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.poi-icon-search button:hover,
+#poi-save-btn:hover {
+    background: rgba(139, 105, 20, 0.7);
+}
+
+#poi-save-btn {
+    display: block;
+    width: 100%;
+    margin-top: 18px;
+    padding: 10px;
+    font-weight: 600;
+}
+
+#poi-delete-btn {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px;
+    font-weight: 600;
+    background: rgba(200, 50, 50, 0.3);
+    border: 1px solid #c44;
+    border-radius: 6px;
+    color: #e55;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+#poi-delete-btn:hover {
+    background: rgba(200, 50, 50, 0.5);
+}
+
+#poi-icon-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 6px;
+    margin-top: 10px;
+    max-height: 160px;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+.poi-icon-option {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.05);
+    transition: all 0.15s;
+}
+
+.poi-icon-option:hover {
+    border-color: #8b6914;
+    background: rgba(139, 105, 20, 0.2);
+}
+
+.poi-icon-option.selected {
+    border-color: #d4a843;
+    background: rgba(139, 105, 20, 0.3);
+}
+
+.poi-icon-option svg {
+    width: 24px;
+    height: 24px;
+    fill: #ddd;
+}
+
+#poi-icon-selected {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#poi-icon-preview {
+    display: flex;
+    align-items: center;
+}
+
+#poi-icon-preview svg {
+    width: 24px;
+    height: 24px;
+    fill: #d4a843;
 }
 
 #lang-menu {
