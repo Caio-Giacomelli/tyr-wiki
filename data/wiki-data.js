@@ -181,6 +181,8 @@ const characters = [
         name: "Stor",
         title: "Caçador Humano",
         image: "img/Stor.png",
+        altImages: ["img/Stor2.png"],
+        player: "Maiks",
         description: "Órfão criado na floresta de Elencor pelo elfo Fannar. Um caçador habilidoso e rastreador nato, com profundo respeito pela natureza. Carrega cicatrizes de uma infância brutal e a determinação de descobrir o destino de seu mentor.",
         details: [
             "Idade: 17 anos",
@@ -195,13 +197,14 @@ const characters = [
             "Olhos verdes escuros, 1 olho negro pela marca da Morte",
             "Cicatriz profunda no rosto (urso)"
         ],
-        ideal: "A natureza é dura, mas justa. O equilíbrio deve ser respeitado.",
         location: "Floresta de Elencor / Rivorhall"
     },
     {
         name: "Elandor Aranel",
         title: "Druida Élfico da Preservação",
         image: "img/Elandor.png",
+        altImages: [],
+        player: "Maiks",
         description: "Um druida com capacidades de cura, muito ligado à floresta. Escolhido pela Preservação para manter o equilíbrio do mundo. Se espelha em seu guardião Tharion, o Tigre Branco.",
         details: [
             "Druida — subclasse: Druida da Preservação",
@@ -216,13 +219,14 @@ const characters = [
             "Companheiro imaginário: Epaminondas (esquilo — real?)",
             "Jurou seu nome à Morte"
         ],
-        ideal: "Ser aquilo que Tharion acreditou que eu seria.",
         location: "Floresta de Elencor"
     },
     {
         name: "Flint",
         title: "Humano Fazendeiro (Morto)",
         image: "img/Flint.png",
+        altImages: [],
+        player: "Maiks",
         description: "Um homem gentil que carregava a enxada de seu pai como herança. Veio de uma cidade que não existe neste plano — Hearthglowhollow. Descobriu que não possui alma. Foi corrompido por Ozul e morreu no Cerco de Myrrendale.",
         details: [
             "Veio de Hearthglowhollow — cidade que não existe no plano físico",
@@ -236,13 +240,14 @@ const characters = [
             "Morreu após o fechamento do último Vórtice de Sangue",
             "Enterrado em Myrrendale pelo grupo"
         ],
-        ideal: "Ajudar os mais necessitados (ensinamento de sua mãe).",
         location: "Myrrendale (enterrado)"
     },
     {
         name: "Azarran",
         title: "Draconato Bárbaro — Arauto da Morte",
         image: "img/Azarran.png",
+        altImages: [],
+        player: "Maiks",
         description: "Um Draconato bárbaro que se juntou ao grupo durante o Cerco de Myrrendale. Seu pai Cael é chefe da guarda de Ur-Draxa. Recebeu uma segunda chance da Morte e se tornou seu Arauto.",
         details: [
             "Draconato Bárbaro",
@@ -256,13 +261,14 @@ const characters = [
             "Jurou seu nome à Morte",
             "Troveu um livro do Hellvault de Urik"
         ],
-        ideal: "Desconhecido",
         location: "Ur-Draxa (origem)"
     },
     {
         name: "Fälin",
         title: "Anão Artífice",
         image: "img/Falin.png",
+        altImages: [],
+        player: "Maiks",
         description: "Um anão artífice com mais de 200 anos. Companheiro íntimo de Durgan, a quem chama de 'criança'. Possui conhecimento profundo de magia e artefatos.",
         details: [
             "Anão Artífice — mais de 200 anos de idade",
@@ -271,13 +277,14 @@ const characters = [
             "Recebeu do Rei do Fogo o poder de abrir portais para o Plano Elemental do Fogo",
             "Descobriu que a Pedra Magna é semelhante a um coração da montanha"
         ],
-        ideal: "Desconhecido",
         location: "Veyrinn / Erëd Luin"
     },
     {
         name: "Durgan",
         title: "Meio-Orc Paladino",
         image: "img/Durgan.png",
+        altImages: [],
+        player: "Maiks",
         description: "Um meio-orc de 26 anos que fez um juramento de proteger Fälin e Nymira. Ex-adorador de Salaak'nir, renunciou sua fé e agora busca a peregrinação da Deusa.",
         details: [
             "Meio-Orc — 26 anos",
@@ -287,7 +294,6 @@ const characters = [
             "Precisa fazer a peregrinação para ser aceito como fiel",
             "Jurou livrar o mundo de todo o mal que se disfarça de bem"
         ],
-        ideal: "Livrar o mundo de todo o mal que se disfarça de bem.",
         location: "Veyrinn / Hammerhold"
     }
 ];

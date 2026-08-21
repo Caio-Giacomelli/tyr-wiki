@@ -95,6 +95,122 @@ function enterEditMode() {
     document.getElementById('city-name').classList.add('editable');
     document.getElementById('city-region').contentEditable = 'true';
     document.getElementById('city-region').classList.add('editable');
+
+    // Legenda do jogador editável
+    const caption = panel.querySelector('.portrait-caption');
+    if (caption) {
+        caption.contentEditable = 'true';
+        caption.classList.add('editable');
+    }
+
+    // Botão de adicionar arte alternativa (só para personagens)
+    if (currentEditEntity && currentEditEntity.type === 'character') {
+        const portraitContainer = panel.querySelector('.portrait-container');
+        if (portraitContainer && !panel.querySelector('.add-alt-art-btn')) {
+            const addArtBtn = document.createElement('button');
+            addArtBtn.className = 'add-alt-art-btn';
+            addArtBtn.textContent = '+';
+            addArtBtn.title = 'Adicionar arte alternativa';
+            addArtBtn.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.addEventListener('change', async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    addArtBtn.textContent = '...';
+                    addArtBtn.disabled = true;
+                    try {
+                        const char = currentEditEntity.data;
+                        const altCount = (char.altImages ? char.altImages.length : 0) + 2;
+                        const fileName = char.name + altCount + '.png';
+                        const storageRef = firebase.storage().ref('img/' + fileName);
+                        await storageRef.put(file);
+                        const downloadURL = await storageRef.getDownloadURL();
+
+                        // Atualizar dados locais
+                        if (!char.altImages) char.altImages = [];
+                        char.altImages.push(downloadURL);
+
+                        // Salvar no Firestore
+                        await saveToFirestore('characters', String(currentEditEntity.id), { altImages: char.altImages });
+
+                        // Recarregar a view do personagem
+                        addArtBtn.textContent = '+';
+                        addArtBtn.disabled = false;
+                        exitEditMode();
+                        showCharacterInfo(currentEditEntity.id);
+                        showEditButton('character', currentEditEntity.id, characters[currentEditEntity.id]);
+                    } catch (err) {
+                        console.error('Erro ao fazer upload:', err);
+                        alert('Erro ao fazer upload da imagem. Tente novamente.');
+                        addArtBtn.textContent = '+';
+                        addArtBtn.disabled = false;
+                    }
+                });
+                input.click();
+            });
+
+            // Inserir o botão dentro do alt-art-buttons ou criar o container
+            let altBtns = portraitContainer.querySelector('.alt-art-buttons');
+            if (!altBtns) {
+                altBtns = document.createElement('div');
+                altBtns.className = 'alt-art-buttons';
+                portraitContainer.appendChild(altBtns);
+            }
+            altBtns.appendChild(addArtBtn);
+        }
+    }
+
+    // Botão de adicionar detalhe e botões de remover em cada item
+    const detailLists = panel.querySelectorAll('.info-section ul');
+    detailLists.forEach(ul => {
+        // Adicionar botão de remover em cada li existente
+        Array.from(ul.querySelectorAll('li')).forEach(li => {
+            if (!li.querySelector('.remove-detail-btn')) {
+                const removeBtn = document.createElement('span');
+                removeBtn.className = 'remove-detail-btn';
+                removeBtn.textContent = '\u00d7';
+                removeBtn.title = 'Remover detalhe';
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    li.remove();
+                });
+                li.appendChild(removeBtn);
+            }
+        });
+
+        if (!ul.parentElement.querySelector('.add-detail-btn')) {
+            const addBtn = document.createElement('button');
+            addBtn.className = 'add-detail-btn';
+            addBtn.textContent = '+ Adicionar detalhe';
+            addBtn.addEventListener('click', () => {
+                const newLi = document.createElement('li');
+                newLi.contentEditable = 'true';
+                newLi.classList.add('editable');
+                newLi.textContent = 'Novo detalhe...';
+                // Adicionar botão de remover no novo item
+                const removeBtn = document.createElement('span');
+                removeBtn.className = 'remove-detail-btn';
+                removeBtn.textContent = '\u00d7';
+                removeBtn.title = 'Remover detalhe';
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    newLi.remove();
+                });
+                newLi.appendChild(removeBtn);
+                ul.appendChild(newLi);
+                // Selecionar o texto (sem o botão)
+                const range = document.createRange();
+                range.setStart(newLi.firstChild, 0);
+                range.setEnd(newLi.firstChild, newLi.firstChild.length);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            });
+            ul.parentElement.appendChild(addBtn);
+        }
+    });
 }
 
 function exitEditMode() {
@@ -112,6 +228,11 @@ function exitEditMode() {
         el.contentEditable = 'false';
         el.classList.remove('editable');
     });
+
+    // Remover botões de adicionar/remover detalhe e arte
+    panel.querySelectorAll('.add-detail-btn').forEach(btn => btn.remove());
+    panel.querySelectorAll('.remove-detail-btn').forEach(btn => btn.remove());
+    panel.querySelectorAll('.add-alt-art-btn').forEach(btn => btn.remove());
 }
 
 async function saveEdits() {
@@ -143,15 +264,29 @@ async function saveEdits() {
             editedData.government = paragraph ? paragraph.textContent.trim() : '';
         } else if (title.includes('pontos') || title.includes('detalhe')) {
             if (list) {
-                editedData.features = Array.from(list.querySelectorAll('li')).map(li => li.textContent.trim());
+                editedData.features = Array.from(list.querySelectorAll('li')).map(li => {
+                    // Remover o texto do botão de remover antes de salvar
+                    const clone = li.cloneNode(true);
+                    const removeBtn = clone.querySelector('.remove-detail-btn');
+                    if (removeBtn) removeBtn.remove();
+                    return clone.textContent.trim();
+                }).filter(t => t && t !== 'Novo detalhe...');
                 editedData.details = editedData.features;
             }
         } else if (title.includes('notas')) {
             editedData.notes = paragraph ? paragraph.textContent.trim() : '';
-        } else if (title.includes('ideal')) {
-            editedData.ideal = paragraph ? paragraph.textContent.trim().replace(/^"|"$/g, '') : '';
         }
     });
+
+    // Coletar player da legenda (se existir)
+    const caption = panel.querySelector('.portrait-caption');
+    if (caption) {
+        const captionText = caption.textContent.trim();
+        const playerMatch = captionText.match(/controlado por:\s*(.+)/i);
+        if (playerMatch) {
+            editedData.player = playerMatch[1].trim();
+        }
+    }
 
     // Determinar collection e atualizar dados locais
     let collection = '';

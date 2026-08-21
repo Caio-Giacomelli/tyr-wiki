@@ -524,8 +524,135 @@ body {
     max-width: 200px;
     border-radius: 8px;
     border: 2px solid #8b6914;
-    margin-bottom: 15px;
+    margin-bottom: 5px;
     display: block;
+}
+
+/* ===== CONTAINER DO RETRATO ===== */
+.portrait-container {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.alt-art-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.alt-art-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 2px solid #8b6914;
+    background: #1a1a1a;
+    color: #d4a843;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.alt-art-btn:hover {
+    background: #2a2210;
+    border-color: #d4a843;
+}
+
+.alt-art-btn.active {
+    background: #8b6914;
+    color: #fff;
+    border-color: #d4a843;
+}
+
+.portrait-caption {
+    font-size: 11px;
+    color: #999;
+    font-style: italic;
+    margin: 0;
+    padding: 2px 0;
+}
+
+.portrait-wrapper {
+    margin-bottom: 15px;
+}
+
+.portrait-caption.editable {
+    background: rgba(212, 168, 67, 0.08);
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+.add-detail-btn {
+    display: block;
+    margin-top: 8px;
+    padding: 5px 12px;
+    background: transparent;
+    border: 1px dashed #8b6914;
+    color: #d4a843;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.add-detail-btn:hover {
+    background: rgba(212, 168, 67, 0.1);
+    border-color: #d4a843;
+}
+
+.remove-detail-btn {
+    display: inline-block;
+    margin-left: 8px;
+    width: 18px;
+    height: 18px;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 4px;
+    background: rgba(200, 50, 50, 0.2);
+    color: #e55;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    vertical-align: middle;
+}
+
+.remove-detail-btn:hover {
+    background: rgba(200, 50, 50, 0.4);
+    color: #fff;
+}
+
+.add-alt-art-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 2px dashed #8b6914;
+    background: transparent;
+    color: #d4a843;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-alt-art-btn:hover {
+    background: rgba(212, 168, 67, 0.1);
+    border-color: #d4a843;
+}
+
+.add-alt-art-btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
 }
 
 /* ===== LINKS DE LOCAIS ===== */

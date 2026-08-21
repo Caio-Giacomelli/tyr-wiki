@@ -378,7 +378,25 @@ function showCharacterInfo(index) {
     let html = '';
 
     if (char.image) {
-        html += `<img class="info-portrait" src="${char.image}" alt="${char.name}">`;
+        html += '<div class="portrait-wrapper">';
+        // Container da imagem + botoes lado a lado
+        html += '<div class="portrait-container">';
+        html += `<img class="info-portrait" id="char-portrait" src="${char.image}" alt="${char.name}">`;
+
+        // Botoes de artes alternativas (so mostra se tiver)
+        if (char.altImages && char.altImages.length > 0) {
+            html += '<div class="alt-art-buttons">';
+            html += `<button class="alt-art-btn active" onclick="switchCharArt(${index}, -1)">1</button>`;
+            char.altImages.forEach((img, i) => {
+                html += `<button class="alt-art-btn" onclick="switchCharArt(${index}, ${i})">${i + 2}</button>`;
+            });
+            html += '</div>';
+        }
+        html += '</div>';
+
+        // Legenda do jogador
+        html += `<p class="portrait-caption" contenteditable="false">Personagem controlado por: ${char.player || 'Maiks'}</p>`;
+        html += '</div>';
     }
 
     html += `
@@ -392,14 +410,28 @@ function showCharacterInfo(index) {
                 ${char.details.map(d => `<li>${linkifyLocations(d)}</li>`).join('')}
             </ul>
         </div>
-        <div class="info-section">
-            <h3>Ideal</h3>
-            <p><em>"${char.ideal}"</em></p>
-        </div>
     `;
 
     document.getElementById('city-info').innerHTML = html;
     infoPanel.classList.add('open');
+}
+
+// Trocar arte do personagem
+function switchCharArt(charIndex, altIndex) {
+    const char = characters[charIndex];
+    const img = document.getElementById('char-portrait');
+    if (!img) return;
+
+    if (altIndex === -1) {
+        img.src = char.image;
+    } else {
+        img.src = char.altImages[altIndex];
+    }
+
+    // Atualizar botao ativo
+    document.querySelectorAll('.alt-art-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === (altIndex + 1));
+    });
 }
 
 // ===== WIKI - LEGIÃO =====
