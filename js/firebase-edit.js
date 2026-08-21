@@ -48,36 +48,111 @@ async function loadFromFirestore() {
             }
         });
 
-        // Carregar personagens
-        const charsSnap = await db.collection('characters').get();
-        charsSnap.forEach(doc => {
-            const index = parseInt(doc.id);
-            if (!isNaN(index) && characters[index]) {
-                Object.assign(characters[index], doc.data());
-            }
-        });
+        // Helper para carregar arrays
+        async function loadCollection(collectionName, localArray) {
+            const snap = await db.collection(collectionName).get();
+            snap.forEach(doc => {
+                const docId = doc.id;
+                // Entradas novas criadas pelo site usam prefixo 'new_'
+                if (docId.startsWith('new_')) {
+                    // Verificar se ja existe no array (por nome)
+                    const data = doc.data();
+                    data._docId = docId;
+                    const existing = localArray.find(e => e && e.name === data.name);
+                    if (!existing) {
+                        localArray.push(data);
+                    }
+                } else {
+                    const index = parseInt(docId);
+                    if (!isNaN(index) && localArray[index]) {
+                        // So sobrescrever se o nome bate (protecao contra docs corrompidos)
+                        const docData = doc.data();
+                        if (!docData.name || docData.name === localArray[index].name) {
+                            Object.assign(localArray[index], docData);
+                        } else {
+                            // Doc corrompido — deletar silenciosamente
+                            db.collection(collectionName).doc(docId).delete().catch(() => {});
+                        }
+                    }
+                }
+            });
+            // Rebuild sidebar list for this collection
+            rebuildSidebarList(collectionName, localArray);
+        }
 
-        // Carregar legião
-        const legionSnap = await db.collection('legion').get();
-        legionSnap.forEach(doc => {
-            const index = parseInt(doc.id);
-            if (!isNaN(index) && legion[index]) {
-                Object.assign(legion[index], doc.data());
-            }
-        });
-
-        // Carregar vilões
-        const villainsSnap = await db.collection('villains').get();
-        villainsSnap.forEach(doc => {
-            const index = parseInt(doc.id);
-            if (!isNaN(index) && villains[index]) {
-                Object.assign(villains[index], doc.data());
-            }
-        });
+        await loadCollection('characters', characters);
+        await loadCollection('legion', legion);
+        await loadCollection('villains', villains);
+        if (typeof artifacts !== 'undefined') await loadCollection('artifacts', artifacts);
+        if (typeof books !== 'undefined') await loadCollection('books', books);
+        if (typeof historicalNPCs !== 'undefined') await loadCollection('historicalNPCs', historicalNPCs);
+        if (typeof allies !== 'undefined') await loadCollection('allies', allies);
+        if (typeof landmarks !== 'undefined') await loadCollection('landmarks', landmarks);
 
         console.log('Wiki carregada do Firestore');
     } catch (error) {
         console.log('Usando dados locais (Firestore indisponível ou vazio):', error.message);
+    }
+}
+
+// Reconstruir lista do sidebar apos carregar do Firestore
+function rebuildSidebarList(collectionName, localArray) {
+    const listMap = {
+        characters: { listId: 'characters-list', showFn: showCharacterInfo },
+        legion: { listId: 'legion-list', showFn: showLegionInfo },
+        villains: { listId: 'villains-list', showFn: showVillainInfo },
+        artifacts: { listId: 'artifacts-list', showFn: showArtifactInfo },
+        books: { listId: 'books-list', showFn: showBookInfo },
+        historicalNPCs: { listId: 'historical-list', showFn: showHistoricalInfo },
+        allies: { listId: 'allies-list', showFn: showAllyInfo },
+        landmarks: { listId: 'landmarks-list', showFn: showLandmarkInfo }
+    };
+    const config = listMap[collectionName];
+    if (!config) return;
+
+    const listEl = document.getElementById(config.listId);
+    if (!listEl) return;
+
+    // Preservar botao "+ Adicionar" se existir
+    const addBtn = listEl.querySelector('.wiki-add-item');
+
+    // Limpar lista
+    listEl.innerHTML = '';
+
+    // Reconstruir items
+    localArray.forEach((entry, index) => {
+        if (!entry || !entry.name) return;
+        const item = document.createElement('div');
+        item.className = 'wiki-item';
+        item.textContent = entry.name;
+        item.dataset.searchName = entry.name.toLowerCase();
+        item.addEventListener('click', () => config.showFn(index));
+        listEl.appendChild(item);
+    });
+
+    // Re-adicionar botao "+"
+    if (addBtn) {
+        listEl.appendChild(addBtn);
+    } else {
+        const newAddBtn = document.createElement('div');
+        newAddBtn.className = 'wiki-add-item';
+        newAddBtn.textContent = '+ Adicionar';
+        newAddBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Tipo baseado no listId
+            const typeMap = {
+                'characters-list': 'character',
+                'legion-list': 'legion',
+                'villains-list': 'villain',
+                'artifacts-list': 'artifact',
+                'books-list': 'book',
+                'historical-list': 'historical',
+                'allies-list': 'ally',
+                'landmarks-list': 'landmark'
+            };
+            if (typeof openAddModal === 'function') openAddModal(typeMap[config.listId]);
+        });
+        listEl.appendChild(newAddBtn);
     }
 }
 
@@ -321,6 +396,85 @@ function enterEditMode() {
             ul.parentElement.appendChild(addBtn);
         }
     });
+
+    // Botão de remover página (no final do conteúdo)
+    if (currentEditEntity && currentEditEntity.type !== 'city' && !panel.querySelector('.delete-page-btn')) {
+        const cityInfo = document.getElementById('city-info');
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-page-btn';
+        deleteBtn.textContent = 'Remover Pagina';
+        deleteBtn.addEventListener('click', async () => {
+            const entity = currentEditEntity;
+            if (!confirm('Remover "' + (entity.data.name || entity.data.displayName || '') + '"? Essa acao nao pode ser desfeita.')) return;
+
+            deleteBtn.textContent = 'Removendo...';
+            deleteBtn.disabled = true;
+
+            try {
+                let collection = '';
+                switch (entity.type) {
+                    case 'character': collection = 'characters'; break;
+                    case 'legion': collection = 'legion'; break;
+                    case 'villain': collection = 'villains'; break;
+                    case 'artifact': collection = 'artifacts'; break;
+                    case 'book': collection = 'books'; break;
+                    case 'historical': collection = 'historicalNPCs'; break;
+                    case 'ally': collection = 'allies'; break;
+                    case 'landmark': collection = 'landmarks'; break;
+                }
+
+                if (collection) {
+                    // Usar _docId se disponivel (entradas criadas pelo site), senao usar index
+                    const firestoreDocId = entity.data._docId || String(entity.id);
+                    await db.collection(collection).doc(firestoreDocId).delete();
+                }
+
+                // Remover do array local
+                const typeArrays = {
+                    character: characters,
+                    legion: legion,
+                    villain: villains,
+                    artifact: (typeof artifacts !== 'undefined' ? artifacts : []),
+                    book: (typeof books !== 'undefined' ? books : []),
+                    historical: (typeof historicalNPCs !== 'undefined' ? historicalNPCs : []),
+                    ally: (typeof allies !== 'undefined' ? allies : []),
+                    landmark: (typeof landmarks !== 'undefined' ? landmarks : [])
+                };
+
+                const arr = typeArrays[entity.type];
+                if (arr && typeof entity.id === 'number') {
+                    arr.splice(entity.id, 1);
+                }
+
+                // Remover item do sidebar e recarregar a lista
+                const listIds = {
+                    character: 'characters-list',
+                    legion: 'legion-list',
+                    villain: 'villains-list',
+                    artifact: 'artifacts-list',
+                    book: 'books-list',
+                    historical: 'historical-list',
+                    ally: 'allies-list',
+                    landmark: 'landmarks-list'
+                };
+                const listEl = document.getElementById(listIds[entity.type]);
+                if (listEl) {
+                    const items = listEl.querySelectorAll('.wiki-item');
+                    if (items[entity.id]) items[entity.id].remove();
+                }
+
+                exitEditMode();
+                hideEditButton();
+                infoPanel.classList.remove('open');
+            } catch (err) {
+                console.error('Erro ao remover:', err);
+                alert('Erro ao remover. Tente novamente.');
+                deleteBtn.textContent = 'Remover Pagina';
+                deleteBtn.disabled = false;
+            }
+        });
+        cityInfo.appendChild(deleteBtn);
+    }
 }
 
 function exitEditMode() {
@@ -344,6 +498,7 @@ function exitEditMode() {
     panel.querySelectorAll('.remove-detail-btn').forEach(btn => btn.remove());
     panel.querySelectorAll('.add-alt-art-btn').forEach(btn => btn.remove());
     panel.querySelectorAll('.add-image-btn').forEach(btn => btn.remove());
+    panel.querySelectorAll('.delete-page-btn').forEach(btn => btn.remove());
 }
 
 // Recarregar a view de uma entidade apos alteracoes de imagem

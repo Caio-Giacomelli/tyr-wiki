@@ -633,6 +633,32 @@ body {
     border-color: #d4a843;
 }
 
+.delete-page-btn {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    padding: 8px;
+    background: transparent;
+    border: 1px solid #633;
+    border-radius: 6px;
+    color: #c55;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+}
+
+.delete-page-btn:hover {
+    background: rgba(200, 50, 50, 0.15);
+    border-color: #c44;
+    opacity: 1;
+}
+
+.delete-page-btn:disabled {
+    opacity: 0.4;
+    cursor: wait;
+}
+
 .remove-detail-btn {
     display: inline-block;
     margin-left: 8px;
@@ -1045,6 +1071,159 @@ body {
     max-height: 120px;
     border-radius: 6px;
     border: 1px solid #555;
+}
+
+/* ===== BOTÃO ADICIONAR WIKI ENTRY ===== */
+.wiki-add-item {
+    padding: 6px 10px;
+    color: #8b6914;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    text-align: center;
+}
+
+.wiki-add-item:hover {
+    opacity: 1;
+    color: #d4a843;
+}
+
+/* ===== MODAL WIKI ADD ===== */
+#wiki-add-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+
+#wiki-add-overlay.open {
+    display: flex;
+}
+
+#wiki-add-modal {
+    background: #1e1209;
+    border: 2px solid #8b6914;
+    border-radius: 12px;
+    padding: 25px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    color: #ddd;
+}
+
+#wiki-add-modal h2 {
+    color: #d4a843;
+    margin: 0 0 18px 0;
+    font-size: 18px;
+}
+
+#wiki-add-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+#wiki-add-close:hover {
+    color: #fff;
+}
+
+#wiki-add-form label {
+    display: block;
+    color: #d4a843;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    margin-top: 12px;
+}
+
+#wiki-add-form input[type="text"],
+#wiki-add-form textarea {
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #555;
+    border-radius: 6px;
+    color: #eee;
+    font-size: 13px;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+#wiki-add-form input[type="text"]:focus,
+#wiki-add-form textarea:focus {
+    outline: none;
+    border-color: #d4a843;
+}
+
+#wiki-add-form textarea {
+    min-height: 60px;
+    resize: vertical;
+}
+
+#wiki-add-form textarea.fulltext-area {
+    min-height: 200px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+#wiki-add-form .wiki-add-save {
+    display: block;
+    width: 100%;
+    margin-top: 18px;
+    padding: 10px;
+    font-weight: 600;
+    background: rgba(139, 105, 20, 0.4);
+    border: 1px solid #8b6914;
+    border-radius: 6px;
+    color: #d4a843;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+#wiki-add-form .wiki-add-save:hover {
+    background: rgba(139, 105, 20, 0.7);
+}
+
+/* ===== BOTOES FULLTEXT MODAL ===== */
+.fulltext-modal-btn {
+    position: absolute;
+    top: 15px;
+    right: 60px;
+    padding: 6px 14px;
+    background: rgba(139, 105, 20, 0.4);
+    border: 1px solid #8b6914;
+    border-radius: 6px;
+    color: #d4a843;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.fulltext-modal-btn:hover {
+    background: rgba(139, 105, 20, 0.7);
+}
+
+.fulltext-modal-btn.fulltext-save {
+    right: 120px;
+    border-color: #4ae04a;
+    color: #4ae04a;
+    background: rgba(74, 224, 74, 0.1);
+}
+
+.fulltext-modal-btn.fulltext-save:hover {
+    background: rgba(74, 224, 74, 0.25);
 }
 
 #lang-menu {

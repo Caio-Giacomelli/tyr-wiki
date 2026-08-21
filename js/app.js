@@ -829,6 +829,8 @@ function showBookInfo(index) {
 
     if (book.fullText) {
         html += `<button id="session-read-btn" onclick="openBookModal(${index})">Ler na Integra</button>`;
+    } else {
+        html += `<button id="session-read-btn" onclick="openBookModalNew(${index})">Adicionar Texto Completo</button>`;
     }
 
     document.getElementById('city-info').innerHTML = html;
@@ -844,7 +846,92 @@ function openBookModal(index) {
     document.getElementById('session-modal-quote').textContent = 'Livro / Relato';
     document.getElementById('session-modal-content').textContent = book.fullText;
 
+    // Adicionar botao de editar dentro do modal
+    const modalContent = document.getElementById('session-modal-content');
+    modalContent.contentEditable = 'false';
+
+    // Remover botoes antigos se existirem
+    const oldEditBtn = document.getElementById('fulltext-edit-btn');
+    if (oldEditBtn) oldEditBtn.remove();
+    const oldSaveBtn = document.getElementById('fulltext-save-btn');
+    if (oldSaveBtn) oldSaveBtn.remove();
+
+    const modal = document.getElementById('session-modal');
+    const editBtn = document.createElement('button');
+    editBtn.id = 'fulltext-edit-btn';
+    editBtn.textContent = 'Editar';
+    editBtn.className = 'fulltext-modal-btn';
+    editBtn.addEventListener('click', () => {
+        modalContent.contentEditable = 'true';
+        modalContent.classList.add('editable');
+        editBtn.style.display = 'none';
+        saveBtn.style.display = 'inline-block';
+        modalContent.focus();
+    });
+
+    const saveBtn = document.createElement('button');
+    saveBtn.id = 'fulltext-save-btn';
+    saveBtn.textContent = 'Salvar';
+    saveBtn.className = 'fulltext-modal-btn fulltext-save';
+    saveBtn.style.display = 'none';
+    saveBtn.addEventListener('click', async () => {
+        const newText = modalContent.textContent.trim();
+        book.fullText = newText;
+        await saveToFirestore('books', String(index), { fullText: newText });
+        modalContent.contentEditable = 'false';
+        modalContent.classList.remove('editable');
+        saveBtn.style.display = 'none';
+        editBtn.style.display = 'inline-block';
+        editBtn.textContent = 'Salvo!';
+        setTimeout(() => { editBtn.textContent = 'Editar'; }, 1500);
+    });
+
+    modal.appendChild(editBtn);
+    modal.appendChild(saveBtn);
+
     document.getElementById('session-modal-overlay').classList.add('open');
+}
+
+// Abre modal para adicionar texto completo a um livro sem fullText
+function openBookModalNew(index) {
+    const book = books[index];
+    if (!book) return;
+
+    document.getElementById('session-modal-title').textContent = book.name;
+    document.getElementById('session-modal-quote').textContent = 'Livro / Relato';
+    document.getElementById('session-modal-content').textContent = '';
+    document.getElementById('session-modal-content').contentEditable = 'true';
+    document.getElementById('session-modal-content').classList.add('editable');
+    document.getElementById('session-modal-content').setAttribute('placeholder', 'Digite o texto completo aqui...');
+
+    const modal = document.getElementById('session-modal');
+    // Remover botoes antigos
+    const oldEditBtn = document.getElementById('fulltext-edit-btn');
+    if (oldEditBtn) oldEditBtn.remove();
+    const oldSaveBtn = document.getElementById('fulltext-save-btn');
+    if (oldSaveBtn) oldSaveBtn.remove();
+
+    const saveBtn = document.createElement('button');
+    saveBtn.id = 'fulltext-save-btn';
+    saveBtn.textContent = 'Salvar';
+    saveBtn.className = 'fulltext-modal-btn fulltext-save';
+    saveBtn.addEventListener('click', async () => {
+        const newText = document.getElementById('session-modal-content').textContent.trim();
+        if (!newText) { alert('Digite o texto.'); return; }
+        book.fullText = newText;
+        await saveToFirestore('books', String(index), { fullText: newText });
+        document.getElementById('session-modal-content').contentEditable = 'false';
+        document.getElementById('session-modal-content').classList.remove('editable');
+        saveBtn.textContent = 'Salvo!';
+        setTimeout(() => {
+            document.getElementById('session-modal-overlay').classList.remove('open');
+            showBookInfo(index);
+        }, 1000);
+    });
+    modal.appendChild(saveBtn);
+
+    document.getElementById('session-modal-overlay').classList.add('open');
+    document.getElementById('session-modal-content').focus();
 }
 
 // ===== WIKI - MARCOS HISTÓRICOS =====
@@ -1327,6 +1414,16 @@ function openSessionModalFor(journeyKey, sessionId) {
 
 function closeSessionModal() {
     document.getElementById('session-modal-overlay').classList.remove('open');
+    // Limpar estado de edicao fulltext
+    const content = document.getElementById('session-modal-content');
+    if (content) {
+        content.contentEditable = 'false';
+        content.classList.remove('editable');
+    }
+    const editBtn = document.getElementById('fulltext-edit-btn');
+    if (editBtn) editBtn.remove();
+    const saveBtn = document.getElementById('fulltext-save-btn');
+    if (saveBtn) saveBtn.remove();
 }
 
 // Fechar modal
@@ -2292,4 +2389,353 @@ if (langToggle && langMenu) {
     };
 
     loadCustomPOIs();
+})();
+
+
+// ===== ADICIONAR NOVAS ENTRADAS NA WIKI =====
+(function() {
+    const addOverlay = document.getElementById('wiki-add-overlay');
+    const addModal = document.getElementById('wiki-add-modal');
+    const addClose = document.getElementById('wiki-add-close');
+    const addTitle = document.getElementById('wiki-add-title');
+    const addForm = document.getElementById('wiki-add-form');
+
+    // Definicoes de formulario por tipo
+    const formDefs = {
+        character: {
+            title: 'Novo Personagem',
+            collection: 'characters',
+            fields: [
+                { key: 'name', label: 'Nome', type: 'text' },
+                { key: 'charTitle', label: 'Titulo / Classe', type: 'text' },
+                { key: 'player', label: 'Controlado por', type: 'text', default: 'Maiks' },
+                { key: 'description', label: 'Descricao', type: 'textarea' },
+                { key: 'details', label: 'Detalhes (um por linha)', type: 'textarea' },
+                { key: 'image', label: 'Imagem', type: 'image' }
+            ],
+            build: function(data) {
+                return {
+                    name: data.name,
+                    title: data.charTitle || '',
+                    player: data.player || 'Maiks',
+                    image: data.image || null,
+                    altImages: [],
+                    description: data.description || '',
+                    details: (data.details || '').split('\n').filter(d => d.trim())
+                };
+            }
+        },
+        historical: {
+            title: 'Novo Personagem Historico',
+            collection: 'historicalNPCs',
+            fields: [
+                { key: 'name', label: 'Nome', type: 'text' },
+                { key: 'entryTitle', label: 'Titulo', type: 'text' },
+                { key: 'description', label: 'Descricao', type: 'textarea' },
+                { key: 'details', label: 'Detalhes (um por linha)', type: 'textarea' },
+                { key: 'image', label: 'Imagem', type: 'image' }
+            ],
+            build: function(data) {
+                return {
+                    name: data.name,
+                    title: data.entryTitle || '',
+                    image: data.image || null,
+                    description: data.description || '',
+                    details: (data.details || '').split('\n').filter(d => d.trim())
+                };
+            }
+        },
+        ally: {
+            title: 'Novo Aliado',
+            collection: 'allies',
+            fields: [
+                { key: 'name', label: 'Nome', type: 'text' },
+                { key: 'entryTitle', label: 'Titulo', type: 'text' },
+                { key: 'description', label: 'Descricao', type: 'textarea' },
+                { key: 'details', label: 'Detalhes (um por linha)', type: 'textarea' },
+                { key: 'image', label: 'Imagem', type: 'image' }
+            ],
+            build: function(data) {
+                return {
+                    name: data.name,
+                    title: data.entryTitle || '',
+                    image: data.image || null,
+                    description: data.description || '',
+                    details: (data.details || '').split('\n').filter(d => d.trim())
+                };
+            }
+        },
+        legion: {
+            title: 'Novo Membro da Legiao',
+            collection: 'legion',
+            fields: [
+                { key: 'name', label: 'Nome', type: 'text' },
+                { key: 'entryTitle', label: 'Titulo', type: 'text' },
+                { key: 'description', label: 'Descricao', type: 'textarea' },
+                { key: 'details', label: 'Detalhes (um por linha)', type: 'textarea' },
+                { key: 'image', label: 'Imagem', type: 'image' }
+            ],
+            build: function(data) {
+                return {
+                    name: data.name,
+                    title: data.entryTitle || '',
+                    image: data.image || null,
+                    description: data.description || '',
+                    details: (data.details || '').split('\n').filter(d => d.trim()),
+                    location: ''
+                };
+            }
+        },
+        villain: {
+            title: 'Novo Vilao',
+            collection: 'villains',
+            fields: [
+                { key: 'name', label: 'Nome', type: 'text' },
+                { key: 'entryTitle', label: 'Titulo', type: 'text' },
+                { key: 'description', label: 'Descricao', type: 'textarea' },
+                { key: 'details', label: 'Detalhes (um por linha)', type: 'textarea' },
+                { key: 'image', label: 'Imagem', type: 'image' }
+            ],
+            build: function(data) {
+                return {
+                    name: data.name,
+                    title: data.entryTitle || '',
+                    image: data.image || null,
+                    description: data.description || '',
+                    details: (data.details || '').split('\n').filter(d => d.trim()),
+                    location: ''
+                };
+            }
+        },
+        artifact: {
+            title: 'Novo Artefato',
+            collection: 'artifacts',
+            fields: [
+                { key: 'name', label: 'Nome', type: 'text' },
+                { key: 'description', label: 'Descricao', type: 'textarea' },
+                { key: 'details', label: 'Detalhes (um por linha)', type: 'textarea' },
+                { key: 'image', label: 'Imagem', type: 'image' }
+            ],
+            build: function(data) {
+                return {
+                    name: data.name,
+                    image: data.image || null,
+                    description: data.description || '',
+                    details: (data.details || '').split('\n').filter(d => d.trim())
+                };
+            }
+        },
+        book: {
+            title: 'Novo Livro / Relato',
+            collection: 'books',
+            fields: [
+                { key: 'name', label: 'Nome', type: 'text' },
+                { key: 'description', label: 'Descricao', type: 'textarea' },
+                { key: 'details', label: 'Detalhes (um por linha)', type: 'textarea' },
+                { key: 'fullText', label: 'Documento na Integra', type: 'fulltext' },
+                { key: 'image', label: 'Imagem', type: 'image' }
+            ],
+            build: function(data) {
+                return {
+                    name: data.name,
+                    image: data.image || null,
+                    description: data.description || '',
+                    details: (data.details || '').split('\n').filter(d => d.trim()),
+                    fullText: data.fullText || ''
+                };
+            }
+        },
+        landmark: {
+            title: 'Novo Marco Historico',
+            collection: 'landmarks',
+            fields: [
+                { key: 'name', label: 'Nome', type: 'text' },
+                { key: 'description', label: 'Descricao', type: 'textarea' },
+                { key: 'details', label: 'Detalhes (um por linha)', type: 'textarea' }
+            ],
+            build: function(data) {
+                return {
+                    name: data.name,
+                    description: data.description || '',
+                    details: (data.details || '').split('\n').filter(d => d.trim())
+                };
+            }
+        }
+    };
+
+    // Mapeamento de list IDs para tipos
+    const listTypeMap = {
+        'characters-list': 'character',
+        'historical-list': 'historical',
+        'allies-list': 'ally',
+        'legion-list': 'legion',
+        'villains-list': 'villain',
+        'artifacts-list': 'artifact',
+        'books-list': 'book',
+        'landmarks-list': 'landmark'
+    };
+
+    // Mapeamento de tipo para array/funcao de display
+    const typeArrayMap = {
+        character: { arr: () => characters, show: showCharacterInfo, listEl: () => document.getElementById('characters-list') },
+        historical: { arr: () => (typeof historicalNPCs !== 'undefined' ? historicalNPCs : []), show: showHistoricalInfo, listEl: () => document.getElementById('historical-list') },
+        ally: { arr: () => (typeof allies !== 'undefined' ? allies : []), show: showAllyInfo, listEl: () => document.getElementById('allies-list') },
+        legion: { arr: () => legion, show: showLegionInfo, listEl: () => document.getElementById('legion-list') },
+        villain: { arr: () => villains, show: showVillainInfo, listEl: () => document.getElementById('villains-list') },
+        artifact: { arr: () => (typeof artifacts !== 'undefined' ? artifacts : []), show: showArtifactInfo, listEl: () => document.getElementById('artifacts-list') },
+        book: { arr: () => (typeof books !== 'undefined' ? books : []), show: showBookInfo, listEl: () => document.getElementById('books-list') },
+        landmark: { arr: () => (typeof landmarks !== 'undefined' ? landmarks : []), show: showLandmarkInfo, listEl: () => document.getElementById('landmarks-list') }
+    };
+
+    // Adicionar botao "+" em cada lista
+    Object.keys(listTypeMap).forEach(listId => {
+        const listEl = document.getElementById(listId);
+        if (!listEl) return;
+        const addItem = document.createElement('div');
+        addItem.className = 'wiki-add-item';
+        addItem.textContent = '+ Adicionar';
+        addItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openAddModal(listTypeMap[listId]);
+        });
+        listEl.appendChild(addItem);
+    });
+
+    let currentAddType = null;
+    let addImageData = '';
+
+    function openAddModal(type) {
+        const def = formDefs[type];
+        if (!def) return;
+        currentAddType = type;
+        addImageData = '';
+        addTitle.textContent = def.title;
+
+        let html = '';
+        def.fields.forEach(field => {
+            html += '<label>' + field.label + '</label>';
+            if (field.type === 'text') {
+                html += '<input type="text" id="wiki-add-' + field.key + '" value="' + (field.default || '') + '">';
+            } else if (field.type === 'textarea') {
+                html += '<textarea id="wiki-add-' + field.key + '"></textarea>';
+            } else if (field.type === 'fulltext') {
+                html += '<textarea id="wiki-add-' + field.key + '" class="fulltext-area" placeholder="Cole o texto completo aqui..."></textarea>';
+            } else if (field.type === 'image') {
+                html += '<div class="poi-image-upload"><button type="button" id="wiki-add-image-btn">Escolher imagem...</button><span id="wiki-add-image-status">Nenhuma</span></div>';
+                html += '<div id="wiki-add-image-preview"></div>';
+            }
+        });
+        html += '<button class="wiki-add-save" id="wiki-add-save-btn">Salvar</button>';
+        addForm.innerHTML = html;
+
+        // Bind image button if exists
+        const imgBtn = document.getElementById('wiki-add-image-btn');
+        if (imgBtn) {
+            imgBtn.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.addEventListener('change', async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    document.getElementById('wiki-add-image-status').textContent = 'Comprimindo...';
+                    try {
+                        addImageData = await compressImage(file, 600, 0.75);
+                        document.getElementById('wiki-add-image-status').textContent = file.name;
+                        document.getElementById('wiki-add-image-preview').innerHTML = '<img src="' + addImageData + '" style="max-width:100%;max-height:100px;border-radius:6px;border:1px solid #555;margin-top:6px;">';
+                    } catch (err) {
+                        document.getElementById('wiki-add-image-status').textContent = 'Erro';
+                    }
+                });
+                input.click();
+            });
+        }
+
+        // Bind save button
+        document.getElementById('wiki-add-save-btn').addEventListener('click', saveNewEntry);
+
+        addOverlay.classList.add('open');
+    }
+
+    async function saveNewEntry() {
+        const def = formDefs[currentAddType];
+        if (!def) return;
+
+        // Coletar dados
+        const data = {};
+        def.fields.forEach(field => {
+            if (field.type === 'image') {
+                data.image = addImageData || null;
+            } else {
+                const el = document.getElementById('wiki-add-' + field.key);
+                data[field.key] = el ? el.value : '';
+            }
+        });
+
+        if (!data.name || !data.name.trim()) {
+            alert('Digite um nome.');
+            return;
+        }
+
+        const entry = def.build(data);
+        const saveBtn = document.getElementById('wiki-add-save-btn');
+        saveBtn.textContent = 'Salvando...';
+        saveBtn.disabled = true;
+
+        try {
+            const arr = typeArrayMap[currentAddType].arr();
+            const newIndex = arr.length;
+
+            // Salvar no Firestore com ID unico (prefixo new_ para nao colidir com indexes base)
+            const docId = 'new_' + Date.now();
+            entry._docId = docId;
+            await db.collection(def.collection).doc(docId).set(entry, { merge: true });
+
+            // Adicionar ao array local
+            arr.push(entry);
+
+            // Adicionar item na lista do sidebar
+            const listEl = typeArrayMap[currentAddType].listEl();
+            const showFn = typeArrayMap[currentAddType].show;
+            const item = document.createElement('div');
+            item.className = 'wiki-item';
+            item.textContent = entry.name;
+            item.dataset.searchName = entry.name.toLowerCase();
+            item.addEventListener('click', () => showFn(newIndex));
+
+            // Inserir antes do botao "+"
+            const addBtn = listEl.querySelector('.wiki-add-item');
+            if (addBtn) {
+                listEl.insertBefore(item, addBtn);
+            } else {
+                listEl.appendChild(item);
+            }
+
+            // Mostrar a pagina recem-criada com botao de edicao
+            showFn(newIndex);
+            showEditButton(currentAddType, newIndex, entry);
+
+            closeAddModal();
+        } catch (err) {
+            console.error('Erro ao salvar entrada:', err);
+            alert('Erro ao salvar. Tente novamente.');
+        }
+
+        saveBtn.textContent = 'Salvar';
+        saveBtn.disabled = false;
+    }
+
+    function closeAddModal() {
+        addOverlay.classList.remove('open');
+        currentAddType = null;
+        addImageData = '';
+    }
+
+    addClose.addEventListener('click', closeAddModal);
+    addOverlay.addEventListener('click', (e) => {
+        if (e.target === addOverlay) closeAddModal();
+    });
+
+    // Expor para uso externo (rebuildSidebarList)
+    window.openAddModal = openAddModal;
 })();
