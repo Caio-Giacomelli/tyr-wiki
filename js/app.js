@@ -978,6 +978,13 @@ if (wikiSearch) {
 
         if (!query) {
             allItems.forEach(item => item.classList.remove('hidden'));
+            // Retrair todos os menus ao limpar a pesquisa
+            document.querySelectorAll('.wiki-section').forEach(section => {
+                const list = section.querySelector('.wiki-section-list');
+                const header = section.querySelector('.wiki-section-header');
+                if (list) list.classList.remove('open');
+                if (header) header.classList.remove('open');
+            });
             return;
         }
 
