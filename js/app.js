@@ -175,7 +175,7 @@ function showCityInfo(id) {
     document.getElementById('city-region').textContent = city.region;
 
     let html = '';
-    if (city.image) html = '<img class="info-portrait" src="' + city.image + '" alt="' + name + '">';
+    if (city.image) html = buildPortraitHtml(city, 'cities["' + id + '"]');
     html += `
         <div class="info-section">
             <h3>Descrição</h3>
@@ -378,25 +378,7 @@ function showCharacterInfo(index) {
     let html = '';
 
     if (char.image) {
-        html += '<div class="portrait-wrapper">';
-        // Container da imagem + botoes lado a lado
-        html += '<div class="portrait-container">';
-        html += `<img class="info-portrait" id="char-portrait" src="${char.image}" alt="${char.name}">`;
-
-        // Botoes de artes alternativas (so mostra se tiver)
-        if (char.altImages && char.altImages.length > 0) {
-            html += '<div class="alt-art-buttons">';
-            html += `<button class="alt-art-btn active" onclick="switchCharArt(${index}, -1)">1</button>`;
-            char.altImages.forEach((img, i) => {
-                html += `<button class="alt-art-btn" onclick="switchCharArt(${index}, ${i})">${i + 2}</button>`;
-            });
-            html += '</div>';
-        }
-        html += '</div>';
-
-        // Legenda do jogador
-        html += `<p class="portrait-caption" contenteditable="false">Personagem controlado por: ${char.player || 'Maiks'}</p>`;
-        html += '</div>';
+        html += buildPortraitHtml(char, 'characters[' + index + ']');
     }
 
     html += `
@@ -416,22 +398,50 @@ function showCharacterInfo(index) {
     infoPanel.classList.add('open');
 }
 
-// Trocar arte do personagem
-function switchCharArt(charIndex, altIndex) {
-    const char = characters[charIndex];
+// Trocar arte de qualquer entidade
+function switchEntityArt(entityData, altIndex) {
     const img = document.getElementById('char-portrait');
     if (!img) return;
 
     if (altIndex === -1) {
-        img.src = char.image;
+        img.src = entityData.image;
     } else {
-        img.src = char.altImages[altIndex];
+        img.src = entityData.altImages[altIndex];
     }
 
     // Atualizar botao ativo
     document.querySelectorAll('.alt-art-btn').forEach((btn, i) => {
         btn.classList.toggle('active', i === (altIndex + 1));
     });
+}
+
+// Helper: gera HTML do retrato com botoes de arte alternativa
+// entityRef: expressao JS que referencia a entidade (ex: 'characters[0]', 'cities["Veyrinn"]')
+function buildPortraitHtml(entity, entityRef) {
+    let html = '';
+    if (!entity.image) return html;
+
+    html += '<div class="portrait-wrapper">';
+    html += '<div class="portrait-container">';
+    html += '<img class="info-portrait" id="char-portrait" src="' + entity.image + '" alt="' + (entity.name || '') + '">';
+
+    if (entity.altImages && entity.altImages.length > 0) {
+        html += '<div class="alt-art-buttons">';
+        html += '<button class="alt-art-btn active" onclick="switchEntityArt(' + entityRef + ', -1)">1</button>';
+        for (var i = 0; i < entity.altImages.length; i++) {
+            html += '<button class="alt-art-btn" onclick="switchEntityArt(' + entityRef + ', ' + i + ')">' + (i + 2) + '</button>';
+        }
+        html += '</div>';
+    }
+
+    html += '</div>';
+
+    if (entity.player) {
+        html += '<p class="portrait-caption" contenteditable="false">Personagem controlado por: ' + entity.player + '</p>';
+    }
+
+    html += '</div>';
+    return html;
 }
 
 // ===== WIKI - LEGIÃO =====
@@ -471,7 +481,7 @@ function showLegionInfo(index) {
     let html = '';
 
     if (member.image) {
-        html += `<img class="info-portrait" src="${member.image}" alt="${member.name}">`;
+        html += buildPortraitHtml(member, 'legion[' + index + ']');
     }
 
     html += `
@@ -530,7 +540,7 @@ function showVillainInfo(index) {
     let html = '';
 
     if (villain.image) {
-        html += `<img class="info-portrait" src="${villain.image}" alt="${villain.name}">`;
+        html += buildPortraitHtml(villain, 'villains[' + index + ']');
     }
 
     const desc = linkifyLocations(villain.description);
@@ -592,7 +602,7 @@ function showArtifactInfo(index) {
     let html = '';
 
     if (artifact.image) {
-        html += `<img class="info-portrait" src="${artifact.image}" alt="${artifact.name}">`;
+        html += buildPortraitHtml(artifact, 'artifacts[' + index + ']');
     }
 
     html += `
@@ -651,7 +661,7 @@ function showBookInfo(index) {
     let html = '';
 
     if (book.image) {
-        html += `<img class="info-portrait" src="${book.image}" alt="${book.name}">`;
+        html += buildPortraitHtml(book, 'books[' + index + ']');
     }
 
     html += `
@@ -766,7 +776,7 @@ function showHistoricalInfo(index) {
     document.getElementById('city-region').textContent = npc.title;
 
     let html = '';
-    if (npc.image) html += `<img class="info-portrait" src="${npc.image}" alt="${npc.name}">`;
+    if (npc.image) html += buildPortraitHtml(npc, 'historicalNPCs[' + index + ']');
     html += `
         <div class="info-section">
             <h3>Descrição</h3>
@@ -815,7 +825,7 @@ function showAllyInfo(index) {
     document.getElementById('city-region').textContent = ally.title;
 
     let html = '';
-    if (ally.image) html += `<img class="info-portrait" src="${ally.image}" alt="${ally.name}">`;
+    if (ally.image) html += buildPortraitHtml(ally, 'allies[' + index + ']');
     html += `
         <div class="info-section">
             <h3>Descrição</h3>
@@ -1599,3 +1609,84 @@ if (langToggle && langMenu) {
         }
     });
 }
+
+
+// ===== PLAYER DE MUSICA =====
+(function() {
+    const musicBtn = document.getElementById('music-btn');
+    const musicTimer = document.getElementById('music-timer');
+    const audio = new Audio('assets/songs/boa noite meu consagrado - Geovanna Lorena (youtube).mp3');
+    audio.loop = true;
+
+    let isPlaying = false;
+    let totalSeconds = 0;
+    let timerInterval = null;
+    let lastSaveTime = 0;
+
+    // Formatar segundos em H:MM:SS
+    function formatTime(sec) {
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = sec % 60;
+        return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    // Carregar tempo total do Firestore
+    function loadMusicTime() {
+        if (typeof db === 'undefined') return;
+        db.collection('stats').doc('music').get().then(function(doc) {
+            if (doc.exists && doc.data().totalSeconds) {
+                totalSeconds = doc.data().totalSeconds;
+                musicTimer.textContent = formatTime(totalSeconds);
+                musicTimer.style.display = 'block';
+            } else {
+                musicTimer.style.display = 'block';
+                musicTimer.textContent = formatTime(0);
+            }
+        }).catch(function() {
+            musicTimer.style.display = 'block';
+            musicTimer.textContent = formatTime(0);
+        });
+    }
+
+    // Salvar tempo no Firestore (a cada 10 segundos para nao onerar)
+    function saveMusicTime() {
+        if (typeof db === 'undefined') return;
+        db.collection('stats').doc('music').set({ totalSeconds: totalSeconds }, { merge: true }).catch(function() {});
+    }
+
+    // Toggle play/pause
+    musicBtn.addEventListener('click', function() {
+        if (isPlaying) {
+            audio.pause();
+            isPlaying = false;
+            musicBtn.classList.remove('playing');
+            clearInterval(timerInterval);
+            timerInterval = null;
+            saveMusicTime();
+        } else {
+            audio.play();
+            isPlaying = true;
+            musicBtn.classList.add('playing');
+            timerInterval = setInterval(function() {
+                totalSeconds++;
+                musicTimer.textContent = formatTime(totalSeconds);
+                // Salvar a cada 10 segundos
+                if (totalSeconds - lastSaveTime >= 10) {
+                    lastSaveTime = totalSeconds;
+                    saveMusicTime();
+                }
+            }, 1000);
+        }
+    });
+
+    // Salvar ao sair da pagina
+    window.addEventListener('beforeunload', function() {
+        if (isPlaying) {
+            saveMusicTime();
+        }
+    });
+
+    // Carregar tempo ao iniciar
+    loadMusicTime();
+})();

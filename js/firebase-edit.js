@@ -137,10 +137,12 @@ function enterEditMode() {
         caption.classList.add('editable');
     }
 
-    // Botão de adicionar arte alternativa (só para personagens)
-    if (currentEditEntity && currentEditEntity.type === 'character') {
-        const portraitContainer = panel.querySelector('.portrait-container');
-        if (portraitContainer && !panel.querySelector('.add-alt-art-btn')) {
+    // Botão de adicionar arte alternativa (qualquer entidade com imagem)
+    if (currentEditEntity && panel.querySelector('.info-portrait')) {
+        const portrait = panel.querySelector('.info-portrait');
+        const portraitParent = portrait.parentElement;
+
+        if (!panel.querySelector('.add-alt-art-btn')) {
             const addArtBtn = document.createElement('button');
             addArtBtn.className = 'add-alt-art-btn';
             addArtBtn.textContent = '+';
@@ -155,24 +157,35 @@ function enterEditMode() {
                     addArtBtn.textContent = '...';
                     addArtBtn.disabled = true;
                     try {
-                        const char = currentEditEntity.data;
-
-                        // Comprimir imagem via canvas
+                        const entity = currentEditEntity;
                         const dataUrl = await compressImage(file, 600, 0.75);
 
                         // Atualizar dados locais
-                        if (!char.altImages) char.altImages = [];
-                        char.altImages.push(dataUrl);
+                        if (!entity.data.altImages) entity.data.altImages = [];
+                        entity.data.altImages.push(dataUrl);
+
+                        // Determinar collection
+                        let collection = '';
+                        switch (entity.type) {
+                            case 'character': collection = 'characters'; break;
+                            case 'legion': collection = 'legion'; break;
+                            case 'villain': collection = 'villains'; break;
+                            case 'artifact': collection = 'artifacts'; break;
+                            case 'book': collection = 'books'; break;
+                            case 'historical': collection = 'historicalNPCs'; break;
+                            case 'ally': collection = 'allies'; break;
+                            case 'landmark': collection = 'landmarks'; break;
+                            case 'city': collection = 'cities'; break;
+                        }
 
                         // Salvar no Firestore
-                        await saveToFirestore('characters', String(currentEditEntity.id), { altImages: char.altImages });
+                        await saveToFirestore(collection, String(entity.id), { altImages: entity.data.altImages });
 
-                        // Recarregar a view do personagem
+                        // Recarregar a view
                         addArtBtn.textContent = '+';
                         addArtBtn.disabled = false;
                         exitEditMode();
-                        showCharacterInfo(currentEditEntity.id);
-                        showEditButton('character', currentEditEntity.id, characters[currentEditEntity.id]);
+                        refreshEntityView(entity);
                     } catch (err) {
                         console.error('Erro ao adicionar arte:', err);
                         alert('Erro ao adicionar arte. Tente novamente.');
@@ -184,14 +197,79 @@ function enterEditMode() {
             });
 
             // Inserir o botão dentro do alt-art-buttons ou criar o container
-            let altBtns = portraitContainer.querySelector('.alt-art-buttons');
+            let altBtns = portraitParent.querySelector('.alt-art-buttons');
             if (!altBtns) {
-                altBtns = document.createElement('div');
-                altBtns.className = 'alt-art-buttons';
-                portraitContainer.appendChild(altBtns);
+                // Se não tem portrait-container, criar estrutura
+                if (!portraitParent.classList.contains('portrait-container')) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'portrait-container';
+                    portrait.parentNode.insertBefore(wrapper, portrait);
+                    wrapper.appendChild(portrait);
+                    altBtns = document.createElement('div');
+                    altBtns.className = 'alt-art-buttons';
+                    wrapper.appendChild(altBtns);
+                } else {
+                    altBtns = document.createElement('div');
+                    altBtns.className = 'alt-art-buttons';
+                    portraitParent.appendChild(altBtns);
+                }
             }
             altBtns.appendChild(addArtBtn);
         }
+    }
+
+    // Botão de adicionar imagem quando a entidade não tem nenhuma
+    if (currentEditEntity && !panel.querySelector('.info-portrait') && !panel.querySelector('.add-image-btn')) {
+        const cityInfo = document.getElementById('city-info');
+        const addImageBtn = document.createElement('button');
+        addImageBtn.className = 'add-image-btn';
+        addImageBtn.textContent = '+ Adicionar imagem';
+        addImageBtn.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                addImageBtn.textContent = 'Enviando...';
+                addImageBtn.disabled = true;
+                try {
+                    const dataUrl = await compressImage(file, 600, 0.75);
+                    const entity = currentEditEntity;
+
+                    // Atualizar dados locais
+                    entity.data.image = dataUrl;
+
+                    // Determinar collection
+                    let collection = '';
+                    switch (entity.type) {
+                        case 'character': collection = 'characters'; break;
+                        case 'legion': collection = 'legion'; break;
+                        case 'villain': collection = 'villains'; break;
+                        case 'artifact': collection = 'artifacts'; break;
+                        case 'book': collection = 'books'; break;
+                        case 'historical': collection = 'historicalNPCs'; break;
+                        case 'ally': collection = 'allies'; break;
+                        case 'landmark': collection = 'landmarks'; break;
+                        case 'city': collection = 'cities'; break;
+                    }
+
+                    // Salvar no Firestore
+                    await saveToFirestore(collection, String(entity.id), { image: dataUrl });
+
+                    // Recarregar a view
+                    exitEditMode();
+                    refreshEntityView(entity);
+                } catch (err) {
+                    console.error('Erro ao adicionar imagem:', err);
+                    alert('Erro ao adicionar imagem. Tente novamente.');
+                    addImageBtn.textContent = '+ Adicionar imagem';
+                    addImageBtn.disabled = false;
+                }
+            });
+            input.click();
+        });
+        cityInfo.insertBefore(addImageBtn, cityInfo.firstChild);
     }
 
     // Botão de adicionar detalhe e botões de remover em cada item
@@ -265,6 +343,48 @@ function exitEditMode() {
     panel.querySelectorAll('.add-detail-btn').forEach(btn => btn.remove());
     panel.querySelectorAll('.remove-detail-btn').forEach(btn => btn.remove());
     panel.querySelectorAll('.add-alt-art-btn').forEach(btn => btn.remove());
+    panel.querySelectorAll('.add-image-btn').forEach(btn => btn.remove());
+}
+
+// Recarregar a view de uma entidade apos alteracoes de imagem
+function refreshEntityView(entity) {
+    switch (entity.type) {
+        case 'character':
+            showCharacterInfo(entity.id);
+            showEditButton('character', entity.id, characters[entity.id]);
+            break;
+        case 'legion':
+            showLegionInfo(entity.id);
+            showEditButton('legion', entity.id, legion[entity.id]);
+            break;
+        case 'villain':
+            showVillainInfo(entity.id);
+            showEditButton('villain', entity.id, villains[entity.id]);
+            break;
+        case 'artifact':
+            showArtifactInfo(entity.id);
+            showEditButton('artifact', entity.id, artifacts[entity.id]);
+            break;
+        case 'book':
+            showBookInfo(entity.id);
+            showEditButton('book', entity.id, books[entity.id]);
+            break;
+        case 'historical':
+            showHistoricalInfo(entity.id);
+            showEditButton('historical', entity.id, historicalNPCs[entity.id]);
+            break;
+        case 'ally':
+            showAllyInfo(entity.id);
+            showEditButton('ally', entity.id, allies[entity.id]);
+            break;
+        case 'landmark':
+            showLandmarkInfo(entity.id);
+            showEditButton('landmark', entity.id, landmarks[entity.id]);
+            break;
+        case 'city':
+            showCityInfo(entity.id);
+            break;
+    }
 }
 
 async function saveEdits() {
