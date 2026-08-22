@@ -207,7 +207,7 @@ function showCityInfo(id) {
     document.getElementById('city-region').textContent = city.region;
 
     let html = '';
-    if (city.image) html = buildPortraitHtml(city, 'cities["' + id + '"]');
+    if (city.image) html = buildPortraitHtml(city, 'cities["' + id + '"]', 'cities', id);
     html += `
         <div class="info-section">
             <h3>Descrição</h3>
@@ -532,7 +532,7 @@ function showCharacterInfo(index) {
     let html = '';
 
     if (char.image) {
-        html += buildPortraitHtml(char, 'characters[' + index + ']');
+        html += buildPortraitHtml(char, 'characters[' + index + ']', 'characters', index);
     }
 
     html += `
@@ -552,8 +552,8 @@ function showCharacterInfo(index) {
     infoPanel.classList.add('open');
 }
 
-// Trocar arte de qualquer entidade
-function switchEntityArt(entityData, altIndex) {
+// Trocar arte de qualquer entidade e salvar como padrao
+function switchEntityArt(entityData, altIndex, collection, docId) {
     const img = document.getElementById('char-portrait');
     if (!img) return;
 
@@ -563,27 +563,49 @@ function switchEntityArt(entityData, altIndex) {
         img.src = entityData.altImages[altIndex];
     }
 
+    // Salvar como arte padrao
+    entityData.selectedArt = altIndex;
+    if (collection && docId !== undefined && typeof db !== 'undefined') {
+        db.collection(collection).doc(String(docId)).set({ selectedArt: altIndex }, { merge: true }).catch(() => {});
+    }
+
     // Atualizar botao ativo
     document.querySelectorAll('.alt-art-btn').forEach((btn, i) => {
         btn.classList.toggle('active', i === (altIndex + 1));
     });
 }
 
+// Obter a imagem atual (default) de uma entidade considerando selectedArt
+function getEntityDefaultImage(entity) {
+    if (!entity || !entity.image) return '';
+    if (typeof entity.selectedArt === 'number' && entity.selectedArt >= 0 && entity.altImages && entity.altImages[entity.selectedArt]) {
+        return entity.altImages[entity.selectedArt];
+    }
+    return entity.image;
+}
+
 // Helper: gera HTML do retrato com botoes de arte alternativa
 // entityRef: expressao JS que referencia a entidade (ex: 'characters[0]', 'cities["Veyrinn"]')
-function buildPortraitHtml(entity, entityRef) {
+// collection e docId: usados para salvar selectedArt no Firestore
+function buildPortraitHtml(entity, entityRef, collection, docId) {
     let html = '';
     if (!entity.image) return html;
 
+    // Usar arte selecionada como padrao
+    const displayImage = getEntityDefaultImage(entity);
+    const selectedArt = typeof entity.selectedArt === 'number' ? entity.selectedArt : -1;
+
     html += '<div class="portrait-wrapper">';
     html += '<div class="portrait-container">';
-    html += '<img class="info-portrait" id="char-portrait" src="' + entity.image + '" alt="' + (entity.name || '') + '">';
+    html += '<img class="info-portrait" id="char-portrait" src="' + displayImage + '" alt="' + (entity.name || '') + '">';
 
     if (entity.altImages && entity.altImages.length > 0) {
+        const colArg = collection ? ", '" + collection + "'" : ", null";
+        const docArg = docId !== undefined ? ", '" + docId + "'" : ", null";
         html += '<div class="alt-art-buttons">';
-        html += '<button class="alt-art-btn active" onclick="switchEntityArt(' + entityRef + ', -1)">1</button>';
+        html += '<button class="alt-art-btn' + (selectedArt === -1 ? ' active' : '') + '" onclick="switchEntityArt(' + entityRef + ', -1' + colArg + docArg + ')">1</button>';
         for (var i = 0; i < entity.altImages.length; i++) {
-            html += '<button class="alt-art-btn" onclick="switchEntityArt(' + entityRef + ', ' + i + ')">' + (i + 2) + '</button>';
+            html += '<button class="alt-art-btn' + (selectedArt === i ? ' active' : '') + '" onclick="switchEntityArt(' + entityRef + ', ' + i + colArg + docArg + ')">' + (i + 2) + '</button>';
         }
         html += '</div>';
     }
@@ -635,7 +657,7 @@ function showLegionInfo(index) {
     let html = '';
 
     if (member.image) {
-        html += buildPortraitHtml(member, 'legion[' + index + ']');
+        html += buildPortraitHtml(member, 'legion[' + index + ']', 'legion', index);
     }
 
     html += `
@@ -694,7 +716,7 @@ function showVillainInfo(index) {
     let html = '';
 
     if (villain.image) {
-        html += buildPortraitHtml(villain, 'villains[' + index + ']');
+        html += buildPortraitHtml(villain, 'villains[' + index + ']', 'villains', index);
     }
 
     const desc = linkifyLocations(villain.description);
@@ -756,7 +778,7 @@ function showArtifactInfo(index) {
     let html = '';
 
     if (artifact.image) {
-        html += buildPortraitHtml(artifact, 'artifacts[' + index + ']');
+        html += buildPortraitHtml(artifact, 'artifacts[' + index + ']', 'artifacts', index);
     }
 
     html += `
@@ -815,7 +837,7 @@ function showBookInfo(index) {
     let html = '';
 
     if (book.image) {
-        html += buildPortraitHtml(book, 'books[' + index + ']');
+        html += buildPortraitHtml(book, 'books[' + index + ']', 'books', index);
     }
 
     html += `
@@ -1017,7 +1039,7 @@ function showHistoricalInfo(index) {
     document.getElementById('city-region').textContent = npc.title;
 
     let html = '';
-    if (npc.image) html += buildPortraitHtml(npc, 'historicalNPCs[' + index + ']');
+    if (npc.image) html += buildPortraitHtml(npc, 'historicalNPCs[' + index + ']', 'historicalNPCs', index);
     html += `
         <div class="info-section">
             <h3>Descrição</h3>
@@ -1066,7 +1088,7 @@ function showAllyInfo(index) {
     document.getElementById('city-region').textContent = ally.title;
 
     let html = '';
-    if (ally.image) html += buildPortraitHtml(ally, 'allies[' + index + ']');
+    if (ally.image) html += buildPortraitHtml(ally, 'allies[' + index + ']', 'allies', index);
     html += `
         <div class="info-section">
             <h3>Descrição</h3>
@@ -1548,7 +1570,19 @@ function drawJourneyBase() {
     const firstStop = offsetStops[0];
 
     partyChars.forEach((char, i) => {
-        if (!char.img) return;
+        // Buscar imagem padrao do personagem pela lista de entidades
+        let charImg = char.img || '';
+        const allEntities = [
+            ...(typeof characters !== 'undefined' ? characters : []),
+            ...(typeof legion !== 'undefined' ? legion : []),
+            ...(typeof allies !== 'undefined' ? allies : []),
+            ...(typeof villains !== 'undefined' ? villains : []),
+            ...(typeof historicalNPCs !== 'undefined' ? historicalNPCs : [])
+        ];
+        const charData = allEntities.find(e => e && e.name === char.name);
+        if (charData) charImg = getEntityDefaultImage(charData);
+        if (!charImg) return;
+
         const clipId = `party-clip-${currentJourneyKey}-${i}`;
         const clipPath = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
         clipPath.setAttribute('id', clipId);
@@ -1569,7 +1603,7 @@ function drawJourneyBase() {
 
         const img = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
         const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-        const imgSrc = char.img.startsWith('data:') ? char.img : baseUrl + char.img;
+        const imgSrc = charImg.startsWith('data:') ? charImg : baseUrl + charImg;
         img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', imgSrc);
         img.setAttribute('x', '-25'); img.setAttribute('y', '-25');
         img.setAttribute('width', '50'); img.setAttribute('height', '50');
@@ -3018,56 +3052,18 @@ document.addEventListener('click', (e) => {
             const div = document.createElement('div');
             div.className = 'journey-party-item';
 
-            const nameInput = document.createElement('input');
-            nameInput.type = 'text';
-            nameInput.className = 'party-name';
-            nameInput.value = member.name;
-            nameInput.placeholder = 'Nome';
-            nameInput.addEventListener('input', (e) => {
-                journeyParty[i].name = e.target.value;
-            });
-
-            const imgWrapper = document.createElement('div');
-            imgWrapper.className = 'party-img-wrapper';
-
+            // Preview da imagem do personagem
             const imgPreview = document.createElement('img');
             imgPreview.className = 'party-img-preview';
-            imgPreview.src = member.img || '';
-            imgPreview.style.display = member.img ? 'block' : 'none';
+            const charData = findCharacterByName(member.name);
+            const imgSrc = charData ? getEntityDefaultImage(charData) : member.img || '';
+            imgPreview.src = imgSrc;
+            imgPreview.style.display = imgSrc ? 'block' : 'none';
 
-            const imgLabel = document.createElement('label');
-            imgLabel.className = 'party-img-btn';
-            imgLabel.textContent = member.img ? 'Trocar' : 'Imagem';
-            imgLabel.title = 'Selecionar imagem';
-
-            const imgInput = document.createElement('input');
-            imgInput.type = 'file';
-            imgInput.accept = 'image/*';
-            imgInput.style.display = 'none';
-            imgInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                imgLabel.textContent = '...';
-                try {
-                    // Comprimir e converter para data URL
-                    const dataUrl = await compressImage(file, 200, 0.8);
-                    journeyParty[i].img = dataUrl;
-                    imgPreview.src = dataUrl;
-                    imgPreview.style.display = 'block';
-                    imgLabel.textContent = 'Trocar';
-                } catch (err) {
-                    // Fallback: tentar usar caminho local
-                    const imgPath = 'img/' + file.name;
-                    journeyParty[i].img = imgPath;
-                    imgPreview.src = imgPath;
-                    imgPreview.style.display = 'block';
-                    imgLabel.textContent = 'Trocar';
-                }
-            });
-
-            imgLabel.appendChild(imgInput);
-            imgWrapper.appendChild(imgPreview);
-            imgWrapper.appendChild(imgLabel);
+            // Nome (read-only, vem do personagem selecionado)
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'party-member-name';
+            nameSpan.textContent = member.name || '(selecionar)';
 
             const removeBtn = document.createElement('span');
             removeBtn.className = 'party-remove';
@@ -3078,20 +3074,71 @@ document.addEventListener('click', (e) => {
                 renderPartyList();
             });
 
-            div.appendChild(nameInput);
-            div.appendChild(imgWrapper);
+            div.appendChild(imgPreview);
+            div.appendChild(nameSpan);
             div.appendChild(removeBtn);
             journeyPartyList.appendChild(div);
         });
     }
 
-    // Adicionar membro
+    // Helper: buscar personagem pelo nome em todas as listas
+    function findCharacterByName(name) {
+        if (!name) return null;
+        const allEntities = [
+            ...(typeof characters !== 'undefined' ? characters : []),
+            ...(typeof legion !== 'undefined' ? legion : []),
+            ...(typeof villains !== 'undefined' ? villains : []),
+            ...(typeof allies !== 'undefined' ? allies : []),
+            ...(typeof historicalNPCs !== 'undefined' ? historicalNPCs : [])
+        ];
+        return allEntities.find(e => e && e.name === name) || null;
+    }
+
+    // Adicionar membro — mostra dropdown com personagens disponiveis
     journeyAddMember.addEventListener('click', () => {
-        journeyParty.push({ name: '', img: '' });
-        renderPartyList();
-        // Focar no novo input de nome
-        const inputs = journeyPartyList.querySelectorAll('.party-name');
-        if (inputs.length) inputs[inputs.length - 1].focus();
+        // Apenas personagens do menu "Personagens"
+        const allChars = (typeof characters !== 'undefined' ? characters : []).filter(c => c && c.name);
+
+        // Filtrar os que ja estao na party
+        const currentNames = journeyParty.map(m => m.name);
+        const available = allChars.filter(c => !currentNames.includes(c.name));
+
+        if (available.length === 0) {
+            alert('Todos os personagens ja estao na party.');
+            return;
+        }
+
+        // Criar dropdown temporario
+        const existing = journeyPartyList.parentElement.querySelector('.party-char-picker');
+        if (existing) existing.remove();
+
+        const picker = document.createElement('div');
+        picker.className = 'party-char-picker';
+
+        available.forEach(char => {
+            const option = document.createElement('div');
+            option.className = 'party-char-option';
+
+            const optImg = document.createElement('img');
+            optImg.src = getEntityDefaultImage(char) || '';
+            optImg.className = 'party-char-option-img';
+
+            const optName = document.createElement('span');
+            optName.textContent = char.name;
+
+            option.appendChild(optImg);
+            option.appendChild(optName);
+            option.addEventListener('click', () => {
+                journeyParty.push({ name: char.name });
+                picker.remove();
+                renderPartyList();
+            });
+
+            picker.appendChild(option);
+        });
+
+        // Inserir picker apos o botao
+        journeyAddMember.parentElement.insertBefore(picker, journeyAddMember.nextSibling);
     });
 
     // ===== STOPS LIST (compact: number + title + edit/delete) =====
@@ -3431,11 +3478,11 @@ document.addEventListener('click', (e) => {
         // Se o sub-modal estiver aberto, salvar dados pendentes
         if (editingStopIndex >= 0) saveStopEditToMemory();
 
-        const party = journeyParty.filter(m => m.name.trim()).map((member, i, arr) => {
+        const party = journeyParty.filter(m => m.name && m.name.trim()).map((member, i, arr) => {
             const spacing = 36;
             const totalWidth = (arr.length - 1) * spacing;
             const offset = -totalWidth / 2 + i * spacing;
-            return { name: member.name.trim(), img: member.img || '', offset: Math.round(offset) };
+            return { name: member.name.trim(), offset: Math.round(offset) };
         });
 
         const key = editingJourneyKey || 'custom_' + Date.now();

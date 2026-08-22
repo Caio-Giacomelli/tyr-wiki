@@ -328,6 +328,15 @@ function enterEditMode() {
                 // Remover do array local
                 entity.data.altImages.splice(altIndex, 1);
 
+                // Se a arte excluida era a selecionada, resetar para a original
+                if (entity.data.selectedArt !== undefined) {
+                    if (entity.data.selectedArt === altIndex) {
+                        entity.data.selectedArt = -1;
+                    } else if (entity.data.selectedArt > altIndex) {
+                        entity.data.selectedArt--;
+                    }
+                }
+
                 // Determinar collection
                 let collection = '';
                 switch (entity.type) {
@@ -343,7 +352,9 @@ function enterEditMode() {
                 }
 
                 // Salvar no Firestore
-                saveToFirestore(collection, String(entity.id), { altImages: entity.data.altImages }).then(() => {
+                const saveData = { altImages: entity.data.altImages };
+                if (entity.data.selectedArt !== undefined) saveData.selectedArt = entity.data.selectedArt;
+                saveToFirestore(collection, String(entity.id), saveData).then(() => {
                     exitEditMode();
                     refreshEntityView(entity);
                 });
