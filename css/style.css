@@ -509,7 +509,8 @@ body {
 }
 
 .wiki-section-list.open {
-    max-height: 500px;
+    max-height: 3000px;
+    overflow-y: auto;
 }
 
 .wiki-item {
@@ -533,6 +534,128 @@ body {
 
 .wiki-item.hidden {
     display: none;
+}
+
+.wiki-sub-header {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #8b6914;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 6px;
+}
+
+.session-quote {
+    color: #999;
+    font-size: 12px;
+    margin-bottom: 12px;
+    border-left: 2px solid #8b6914;
+    padding-left: 10px;
+}
+
+/* Campos separados de citacao e autor */
+.session-quote-fields {
+    margin-bottom: 14px;
+}
+
+.session-field-label {
+    display: block;
+    color: #8b6914;
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 2px;
+    margin-top: 10px;
+}
+
+.session-field-label:first-child {
+    margin-top: 0;
+}
+
+.session-quote-text {
+    color: #999;
+    font-size: 12px;
+    font-style: italic;
+    border-left: 2px solid #8b6914;
+    padding-left: 10px;
+    margin: 4px 0;
+    min-height: 1em;
+}
+
+.session-quote-author {
+    color: #888;
+    font-size: 12px;
+    margin: 4px 0;
+    min-height: 1em;
+}
+
+.session-quote-text.editable,
+.session-quote-author.editable {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 6px 10px;
+    border-left: 1px solid #555;
+    outline: none;
+}
+
+.session-quote-text.editable:focus,
+.session-quote-author.editable:focus {
+    border-color: #d4a843;
+}
+
+/* Bloco unico de conteudo de sessao */
+.session-content-block {
+    color: #ccc;
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.session-content-block.editable {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 10px;
+    min-height: 150px;
+    outline: none;
+}
+
+.session-content-block.editable:focus {
+    border-color: #d4a843;
+}
+
+/* Dropdown de jornada no edit mode */
+.session-journey-dropdown {
+    width: 100%;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #555;
+    border-radius: 6px;
+    color: #eee;
+    font-size: 12px;
+    font-family: inherit;
+    box-sizing: border-box;
+    margin-top: 4px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23d4a843' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+    cursor: pointer;
+}
+
+.session-journey-dropdown option {
+    background: #1e1209;
+    color: #eee;
+}
+
+.session-journey-dropdown:focus {
+    outline: none;
+    border-color: #d4a843;
 }
 
 /* Seção vazia (Marcos Históricos) */
@@ -1039,9 +1162,22 @@ body {
 }
 
 .poi-form input[type="text"]:focus,
-.poi-form textarea:focus {
+.poi-form textarea:focus,
+.poi-form select:focus {
     outline: none;
     border-color: #d4a843;
+}
+
+.poi-form select {
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #555;
+    border-radius: 6px;
+    color: #eee;
+    font-size: 13px;
+    font-family: inherit;
+    box-sizing: border-box;
 }
 
 .poi-form textarea {
@@ -1273,7 +1409,8 @@ body {
 }
 
 #wiki-add-form input[type="text"],
-#wiki-add-form textarea {
+#wiki-add-form textarea,
+#wiki-add-form select {
     width: 100%;
     padding: 8px 10px;
     background: rgba(255, 255, 255, 0.05);
@@ -1283,10 +1420,27 @@ body {
     font-size: 13px;
     font-family: inherit;
     box-sizing: border-box;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+#wiki-add-form select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23d4a843' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+    cursor: pointer;
+}
+
+#wiki-add-form select option {
+    background: #1e1209;
+    color: #eee;
 }
 
 #wiki-add-form input[type="text"]:focus,
-#wiki-add-form textarea:focus {
+#wiki-add-form textarea:focus,
+#wiki-add-form select:focus {
     outline: none;
     border-color: #d4a843;
 }
@@ -1601,27 +1755,32 @@ body {
     line-height: 1.5;
 }
 
-.stop-session-fields {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.stop-session-fields input,
-.stop-session-fields textarea {
+.stop-session-select {
     width: 100%;
-    padding: 6px 8px;
+    padding: 8px 10px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid #555;
-    border-radius: 4px;
+    border-radius: 6px;
     color: #eee;
     font-size: 12px;
     font-family: inherit;
     box-sizing: border-box;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23d4a843' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+    cursor: pointer;
 }
 
-.stop-session-fields input:focus,
-.stop-session-fields textarea:focus {
+.stop-session-select option {
+    background: #1e1209;
+    color: #eee;
+}
+
+.stop-session-select:focus {
     outline: none;
     border-color: #d4a843;
 }

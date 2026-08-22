@@ -93,12 +93,9 @@
                 <label>Personagens presentes</label>
                 <div id="stop-edit-participants"></div>
                 <label>Sessao Completa</label>
-                <div id="stop-edit-session-fields" class="stop-session-fields">
-                    <input type="text" id="stop-edit-session-title" placeholder="Titulo (ex: Sessao 0 — Onde estavamos...)">
-                    <input type="text" id="stop-edit-session-quote" placeholder="Citacao">
-                    <input type="text" id="stop-edit-session-quoteauthor" placeholder="Autor da citacao">
-                    <textarea id="stop-edit-session-content" class="stop-edit-fulltext" placeholder="Conteudo completo da sessao..."></textarea>
-                </div>
+                <select id="stop-edit-session-ref" class="stop-session-select">
+                    <option value="">(nenhuma)</option>
+                </select>
                 <button type="button" id="stop-edit-save" class="journey-save-btn">Confirmar</button>
             </div>
         </div>
@@ -168,6 +165,15 @@
                     <span class="arrow">&#9654;</span>
                 </div>
                 <div class="wiki-section-list" id="landmarks-list"></div>
+            </div>
+            <div class="wiki-section">
+                <div class="wiki-section-header" onclick="toggleWikiSection(this)">
+                    <span>Resumo das Sessões</span>
+                    <span class="arrow">&#9654;</span>
+                </div>
+                <div class="wiki-section-list" id="sessions-list">
+                    <div class="wiki-add-item" onclick="if(window.openAddModal)window.openAddModal('session')">+ Adicionar</div>
+                </div>
             </div>
         </div>
     </div>

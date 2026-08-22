@@ -228,3 +228,51 @@ Galerion (via Brinco da Saudade) ordena fuga imediata. Encontram pacote de Oroni
 Em Orvengrad, o líder Tenno conta a história de Kalak, o Exilado, e exige que purifiquem o local de seu ritual fracassado para libertar Lucius. O grupo parte, enfrenta três Wendigos e presencia um flashback do ritual de Kalak tentando a Ascensão: "Ka..." antes de cair morto.`
     }
 ];
+
+
+// ===== WIKI SESSIONS (estrutura unificada com referencia a jornada) =====
+// Construido dinamicamente a partir dos dados existentes
+var wikiSessions = [];
+
+// Montar wikiSessions a partir dos dados locais existentes
+(function() {
+    // Sol Negro T1
+    if (typeof sessionsData !== 'undefined') {
+        sessionsData.forEach(function(s, i) {
+            wikiSessions.push({
+                id: 'solnegro_t1_' + i,
+                journeyKey: 'solnegro',
+                title: s.title,
+                quote: s.quote || '',
+                quoteAuthor: s.quoteAuthor || '',
+                content: s.content || ''
+            });
+        });
+    }
+    // Sol Negro T2
+    if (typeof sessionsDataSolNegro2 !== 'undefined') {
+        sessionsDataSolNegro2.forEach(function(s, i) {
+            wikiSessions.push({
+                id: 'solnegro_t2_' + i,
+                journeyKey: 'solnegro',
+                title: s.title,
+                quote: s.quote || '',
+                quoteAuthor: s.quoteAuthor || '',
+                content: s.content || ''
+            });
+        });
+    }
+    // Cicatrizes do Eclipse
+    if (typeof sessionsDataCicatriz !== 'undefined') {
+        sessionsDataCicatriz.forEach(function(s, i) {
+            wikiSessions.push({
+                id: 'cicatriz_' + i,
+                journeyKey: 'cicatriz',
+                title: s.title,
+                quote: s.quote || '',
+                quoteAuthor: s.quoteAuthor || '',
+                content: s.content || ''
+            });
+        });
+    }
+})();

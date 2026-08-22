@@ -1346,6 +1346,72 @@ const journeyConfigs = {
     ]}
 };
 
+// ===== WIKI - RESUMO DAS SESSÕES =====
+const sessionsList = document.getElementById('sessions-list');
+if (sessionsList && typeof wikiSessions !== 'undefined') {
+    const sessionsByJourney = {};
+    wikiSessions.forEach((session, index) => {
+        const key = session.journeyKey || 'outros';
+        if (!sessionsByJourney[key]) sessionsByJourney[key] = [];
+        sessionsByJourney[key].push({ session, index });
+    });
+
+    const sessAddBtn = sessionsList.querySelector('.wiki-add-item');
+
+    Object.keys(sessionsByJourney).forEach(journeyKey => {
+        const config = journeyConfigs[journeyKey] || null;
+        const journeyName = config && config.displayName ? config.displayName : journeyKey;
+
+        const subHeader = document.createElement('div');
+        subHeader.className = 'wiki-sub-header';
+        subHeader.textContent = journeyName;
+        if (sessAddBtn) sessionsList.insertBefore(subHeader, sessAddBtn);
+        else sessionsList.appendChild(subHeader);
+
+        sessionsByJourney[journeyKey].forEach(({ session, index }) => {
+            const item = document.createElement('div');
+            item.className = 'wiki-item';
+            item.textContent = session.title;
+            item.dataset.searchName = session.title.toLowerCase();
+            item.addEventListener('click', () => showSessionPageInfo(index));
+            if (sessAddBtn) sessionsList.insertBefore(item, sessAddBtn);
+            else sessionsList.appendChild(item);
+        });
+    });
+
+    // O botao "+ Adicionar" sera adicionado pelo loop de listTypeMap na IIFE abaixo
+}
+
+function showSessionPageInfo(index) {
+    const session = wikiSessions[index];
+    if (!session) return;
+
+    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
+
+    document.getElementById('city-name').textContent = session.title;
+    const config = journeyConfigs[session.journeyKey] || null;
+    document.getElementById('city-region').textContent = config && config.displayName ? config.displayName : session.journeyKey;
+
+    let quoteHtml = '';
+    quoteHtml = '<div class="session-quote-fields">' +
+        '<label class="session-field-label">Citacao</label>' +
+        '<p class="session-quote-text" data-field="quote">' + (session.quote || '') + '</p>' +
+        '<label class="session-field-label">Autor da Citacao</label>' +
+        '<p class="session-quote-author" data-field="quoteAuthor">' + (session.quoteAuthor || '') + '</p>' +
+        '</div>';
+
+    const html = '<div class="info-section">' + quoteHtml +
+        '<div class="info-section"><h3>Conteudo</h3><div class="session-content-block">' + (session.content || '').replace(/\n/g, '<br>') + '</div></div>' +
+        '</div>';
+    document.getElementById('city-info').innerHTML = html;
+    infoPanel.classList.add('open');
+
+    // Mostrar botao de edicao
+    if (typeof showEditButton === 'function') {
+        showEditButton('session', index, session);
+    }
+}
+
 function getOffsetStopsFor(stops) {
     const counts = {};
     return stops.map((stop) => {
@@ -1413,14 +1479,22 @@ function showJourneyStop(stop, index) {
 
     // Find session button
     let sessionBtn = '';
-    if (config.sessions && config.sessions.length > 0) {
+
+    // Novo sistema: buscar por sessionRef no wikiSessions
+    if (stop.sessionRef && typeof wikiSessions !== 'undefined') {
+        const wikiSessionIndex = wikiSessions.findIndex(s => s.id === stop.sessionRef);
+        if (wikiSessionIndex >= 0) {
+            sessionBtn = '<button id="session-read-btn" onclick="openSessionFromWiki(' + wikiSessionIndex + ')">Ler Sess\u00e3o Completa</button>';
+        }
+    }
+
+    // Fallback: sistema antigo (config.sessions)
+    if (!sessionBtn && config.sessions && config.sessions.length > 0) {
         var sessionId = null;
 
-        // Primeiro: tentar usar indice direto (funciona para todas as jornadas salvas via editor)
         if (config.sessions[index] && config.sessions[index].content) {
             sessionId = index;
         } else if (currentJourneyKey === 'solnegro') {
-            // Fallback Sol Negro: parsing do campo session
             var isT2 = stop.session.indexOf('T2') === 0;
             var stopSession = stop.session.replace(/^T\d+ - /, '');
             if (isT2) {
@@ -1447,6 +1521,17 @@ function showJourneyStop(stop, index) {
     var html = '<div class="info-section"><h3>Parada ' + (index + 1) + ' de ' + config.stops.length + '</h3><p>' + linkifyLocations(stop.summary) + '</p>' + sessionBtn + '</div>';
     document.getElementById('city-info').innerHTML = html;
     infoPanel.classList.add('open');
+}
+
+// Abrir sessao da wiki no modal de leitura
+function openSessionFromWiki(wikiSessionIndex) {
+    const session = wikiSessions[wikiSessionIndex];
+    if (!session) return;
+    document.getElementById('session-modal-title').textContent = session.title;
+    const quoteText = session.quote + (session.quoteAuthor ? ' \u2014 ' + session.quoteAuthor : '');
+    document.getElementById('session-modal-quote').textContent = quoteText;
+    document.getElementById('session-modal-content').textContent = session.content;
+    document.getElementById('session-modal-overlay').classList.add('open');
 }
 
 // ===== MODAL DE SESSÃO =====
@@ -1579,7 +1664,8 @@ function drawJourneyBase() {
             ...(typeof villains !== 'undefined' ? villains : []),
             ...(typeof historicalNPCs !== 'undefined' ? historicalNPCs : [])
         ];
-        const charData = allEntities.find(e => e && e.name === char.name);
+        const normName = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        const charData = allEntities.find(e => e && e.name && normName(e.name) === normName(char.name));
         if (charData) charImg = getEntityDefaultImage(charData);
         if (!charImg) return;
 
@@ -2683,6 +2769,34 @@ if (langToggle && langMenu) {
                     details: (data.details || '').split('\n').filter(d => d.trim())
                 };
             }
+        },
+        session: {
+            title: 'Novo Resumo de Sessao',
+            collection: 'wikiSessionsFS',
+            fields: [
+                { key: 'name', label: 'Titulo da Sessao', type: 'text' },
+                { key: 'journeyKey', label: 'Jornada', type: 'select', options: function() {
+                    var opts = [];
+                    if (typeof journeyConfigs !== 'undefined') {
+                        Object.keys(journeyConfigs).forEach(function(k) {
+                            opts.push({ value: k, label: journeyConfigs[k].displayName || k });
+                        });
+                    }
+                    return opts;
+                }},
+                { key: 'quote', label: 'Citacao', type: 'text' },
+                { key: 'quoteAuthor', label: 'Autor da Citacao', type: 'text' },
+                { key: 'content', label: 'Conteudo Completo', type: 'fulltext' }
+            ],
+            build: function(data) {
+                return {
+                    title: data.name,
+                    journeyKey: data.journeyKey || '',
+                    quote: data.quote || '',
+                    quoteAuthor: data.quoteAuthor || '',
+                    content: data.content || ''
+                };
+            }
         }
     };
 
@@ -2707,7 +2821,8 @@ if (langToggle && langMenu) {
         villain: { arr: () => villains, show: showVillainInfo, listEl: () => document.getElementById('villains-list') },
         artifact: { arr: () => (typeof artifacts !== 'undefined' ? artifacts : []), show: showArtifactInfo, listEl: () => document.getElementById('artifacts-list') },
         book: { arr: () => (typeof books !== 'undefined' ? books : []), show: showBookInfo, listEl: () => document.getElementById('books-list') },
-        landmark: { arr: () => (typeof landmarks !== 'undefined' ? landmarks : []), show: showLandmarkInfo, listEl: () => document.getElementById('landmarks-list') }
+        landmark: { arr: () => (typeof landmarks !== 'undefined' ? landmarks : []), show: showLandmarkInfo, listEl: () => document.getElementById('landmarks-list') },
+        session: { arr: () => wikiSessions, show: showSessionPageInfo, listEl: () => document.getElementById('sessions-list') }
     };
 
     // Adicionar botao "+" em cada lista
@@ -2743,6 +2858,13 @@ if (langToggle && langMenu) {
                 html += '<textarea id="wiki-add-' + field.key + '"></textarea>';
             } else if (field.type === 'fulltext') {
                 html += '<textarea id="wiki-add-' + field.key + '" class="fulltext-area" placeholder="Cole o texto completo aqui..."></textarea>';
+            } else if (field.type === 'select') {
+                const options = typeof field.options === 'function' ? field.options() : (field.options || []);
+                html += '<select id="wiki-add-' + field.key + '">';
+                options.forEach(opt => {
+                    html += '<option value="' + opt.value + '">' + opt.label + '</option>';
+                });
+                html += '</select>';
             } else if (field.type === 'image') {
                 html += '<div class="poi-image-upload"><button type="button" id="wiki-add-image-btn">Escolher imagem...</button><span id="wiki-add-image-status">Nenhuma</span></div>';
                 html += '<div id="wiki-add-image-preview"></div>';
@@ -2780,6 +2902,9 @@ if (langToggle && langMenu) {
         addOverlay.classList.add('open');
     }
 
+    // Expor openAddModal globalmente para ser acessivel de outros scripts
+    window.openAddModal = openAddModal;
+
     async function saveNewEntry() {
         const def = formDefs[currentAddType];
         if (!def) return;
@@ -2800,11 +2925,13 @@ if (langToggle && langMenu) {
             return;
         }
 
-        // Verificar nome duplicado em todas as entidades
-        const allNames = Object.keys(entityMap).map(n => n.toLowerCase());
-        if (allNames.includes(data.name.trim().toLowerCase())) {
-            alert('Ja existe uma pagina com esse nome. Escolha um nome diferente.');
-            return;
+        // Verificar nome duplicado (exceto para sessions que podem ter nomes repetidos entre jornadas)
+        if (currentAddType !== 'session') {
+            const allNames = Object.keys(entityMap).map(n => n.toLowerCase());
+            if (allNames.includes(data.name.trim().toLowerCase())) {
+                alert('Ja existe uma pagina com esse nome. Escolha um nome diferente.');
+                return;
+            }
         }
 
         const entry = def.build(data);
@@ -2819,6 +2946,7 @@ if (langToggle && langMenu) {
             // Salvar no Firestore com ID unico (prefixo new_ para nao colidir com indexes base)
             const docId = 'new_' + Date.now();
             entry._docId = docId;
+            entry.id = docId;
             await db.collection(def.collection).doc(docId).set(entry, { merge: true });
 
             // Adicionar ao array local
@@ -2829,8 +2957,9 @@ if (langToggle && langMenu) {
             const showFn = typeArrayMap[currentAddType].show;
             const item = document.createElement('div');
             item.className = 'wiki-item';
-            item.textContent = entry.name;
-            item.dataset.searchName = entry.name.toLowerCase();
+            const displayName = currentAddType === 'session' ? (entry.title || entry.name || '') : entry.name;
+            item.textContent = displayName;
+            item.dataset.searchName = displayName.toLowerCase();
             item.addEventListener('click', () => showFn(newIndex));
 
             // Inserir antes do botao "+"
@@ -2841,12 +2970,12 @@ if (langToggle && langMenu) {
                 listEl.appendChild(item);
             }
 
-            // Mostrar a pagina recem-criada com botao de edicao
+            // Mostrar a pagina recem-criada
             showFn(newIndex);
-            showEditButton(currentAddType, newIndex, entry);
-
-            // Atualizar entityMap com a nova entrada
-            entityMap[entry.name] = { type: currentAddType, index: newIndex };
+            if (currentAddType !== 'session') {
+                showEditButton(currentAddType, newIndex, entry);
+                entityMap[entry.name] = { type: currentAddType, index: newIndex };
+            }
 
             closeAddModal();
         } catch (err) {
@@ -2920,10 +3049,7 @@ document.addEventListener('click', (e) => {
     const stopEditCoordsDisplay = document.getElementById('stop-edit-coords-display');
     const stopEditRelocate = document.getElementById('stop-edit-relocate');
     const stopEditParticipants = document.getElementById('stop-edit-participants');
-    const stopEditSessionTitle = document.getElementById('stop-edit-session-title');
-    const stopEditSessionQuote = document.getElementById('stop-edit-session-quote');
-    const stopEditSessionQuoteAuthor = document.getElementById('stop-edit-session-quoteauthor');
-    const stopEditSessionContent = document.getElementById('stop-edit-session-content');
+    const stopEditSessionRef = document.getElementById('stop-edit-session-ref');
     const stopEditSave = document.getElementById('stop-edit-save');
 
     let editingJourneyKey = null;
@@ -2971,24 +3097,9 @@ document.addEventListener('click', (e) => {
 
         // Preencher paradas
         journeyStops = (config.stops || []).map((s, idx) => {
-            // Tentar preencher sessionData a partir de config.sessions se existir
-            let sessionData = s.sessionData || {};
-            if (!sessionData.content && config.sessions) {
-                // Buscar sessao pelo indice ou pelo match de titulo
-                const matchedSession = config.sessions[idx] || null;
-                if (matchedSession) {
-                    sessionData = {
-                        title: matchedSession.title || '',
-                        quote: matchedSession.quote || '',
-                        quoteAuthor: matchedSession.quoteAuthor || '',
-                        content: matchedSession.content || ''
-                    };
-                }
-            }
             // Preencher participants a partir da party se nao definido
             let participants = s.participants || [];
             if (participants.length === 0 && config.party) {
-                // Por padrao, todos participam
                 participants = config.party.map(p => p.name);
             }
             return {
@@ -3000,7 +3111,7 @@ document.addEventListener('click', (e) => {
                 subtitle: s.subtitle || s.session || '',
                 description: s.description || s.summary || '',
                 participants: participants,
-                sessionData: sessionData
+                sessionRef: s.sessionRef || ''
             };
         });
 
@@ -3081,6 +3192,8 @@ document.addEventListener('click', (e) => {
     // Helper: buscar personagem pelo nome em todas as listas
     function findCharacterByName(name) {
         if (!name) return null;
+        const normalize = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        const needle = normalize(name);
         const allEntities = [
             ...(typeof characters !== 'undefined' ? characters : []),
             ...(typeof legion !== 'undefined' ? legion : []),
@@ -3088,7 +3201,7 @@ document.addEventListener('click', (e) => {
             ...(typeof allies !== 'undefined' ? allies : []),
             ...(typeof historicalNPCs !== 'undefined' ? historicalNPCs : [])
         ];
-        return allEntities.find(e => e && e.name === name) || null;
+        return allEntities.find(e => e && e.name && normalize(e.name) === needle) || null;
     }
 
     // Adicionar membro — mostra dropdown com personagens disponiveis
@@ -3231,12 +3344,20 @@ document.addEventListener('click', (e) => {
         stopEditSubtitle.value = stop.subtitle || stop.session || '';
         stopEditDescription.value = stop.description || stop.summary || '';
         stopEditCoordsDisplay.textContent = '(' + stop.x + ', ' + stop.y + ')';
-        // Preencher campos de sessao completa
-        const sess = stop.sessionData || {};
-        stopEditSessionTitle.value = sess.title || '';
-        stopEditSessionQuote.value = sess.quote || '';
-        stopEditSessionQuoteAuthor.value = sess.quoteAuthor || '';
-        stopEditSessionContent.value = sess.content || '';
+
+        // Preencher dropdown de sessao com sessoes da mesma jornada
+        stopEditSessionRef.innerHTML = '<option value="">(nenhuma)</option>';
+        const journeyKey = editingJourneyKey || currentJourneyKey;
+        wikiSessions.forEach((s, i) => {
+            if (s.journeyKey === journeyKey) {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.title;
+                stopEditSessionRef.appendChild(opt);
+            }
+        });
+        stopEditSessionRef.value = stop.sessionRef || '';
+
         renderStopParticipants(stop);
         stopEditPanel.classList.add('open');
     }
@@ -3308,13 +3429,8 @@ document.addEventListener('click', (e) => {
         stop.description = stopEditDescription.value.trim();
         stop.summary = stopEditDescription.value.trim();
 
-        // Sessao completa estruturada
-        stop.sessionData = {
-            title: stopEditSessionTitle.value.trim(),
-            quote: stopEditSessionQuote.value.trim(),
-            quoteAuthor: stopEditSessionQuoteAuthor.value.trim(),
-            content: stopEditSessionContent.value
-        };
+        // Referencia a sessao da wiki
+        stop.sessionRef = stopEditSessionRef.value || '';
 
         // Coletar participantes marcados
         const checkboxes = stopEditParticipants.querySelectorAll('input[type="checkbox"]');
@@ -3457,7 +3573,7 @@ document.addEventListener('click', (e) => {
                 description: '',
                 summary: '',
                 participants: [],
-                sessionData: { title: '', quote: '', quoteAuthor: '', content: '' }
+                sessionRef: ''
             });
             exitMapClickMode();
             renderStopsList();
@@ -3484,26 +3600,15 @@ document.addEventListener('click', (e) => {
 
         const key = editingJourneyKey || 'custom_' + Date.now();
 
-        // Construir array de sessions a partir do sessionData de cada stop
-        const sessions = journeyStops.map((stop, i) => {
-            const sd = stop.sessionData || {};
-            return {
-                id: i,
-                title: sd.title || '',
-                quote: sd.quote || '',
-                quoteAuthor: sd.quoteAuthor || '',
-                content: sd.content || ''
-            };
-        });
-
-        // Limpar stops para salvar (remover dados redundantes que ja estao em sessions)
+        // Limpar stops para salvar (remover dados redundantes)
         const stopsToSave = journeyStops.map(stop => ({
             x: stop.x,
             y: stop.y,
             location: stop.location || '',
             session: stop.session || stop.subtitle || '',
             summary: stop.summary || stop.description || '',
-            participants: stop.participants || []
+            participants: stop.participants || [],
+            sessionRef: stop.sessionRef || ''
         }));
 
         const journeyData = {
@@ -3512,8 +3617,7 @@ document.addEventListener('click', (e) => {
             color: journeyColorInput.value,
             pathColor: journeyColorInput.value,
             party: party,
-            stops: stopsToSave,
-            sessions: sessions
+            stops: stopsToSave
         };
 
         journeySaveBtn.textContent = 'Salvando...';

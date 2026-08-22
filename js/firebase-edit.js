@@ -89,12 +89,75 @@ async function loadFromFirestore() {
         if (typeof allies !== 'undefined') await loadCollection('allies', allies);
         if (typeof landmarks !== 'undefined') await loadCollection('landmarks', landmarks);
 
+        // Carregar sessoes da wiki
+        if (typeof wikiSessions !== 'undefined') {
+            const sessSnap = await db.collection('wikiSessionsFS').get();
+            sessSnap.forEach(doc => {
+                const data = doc.data();
+                data.id = data.id || doc.id;
+                // Verificar se ja existe no array local (pelo id)
+                const existing = wikiSessions.find(s => s.id === data.id);
+                if (!existing) {
+                    wikiSessions.push(data);
+                } else {
+                    Object.assign(existing, data);
+                }
+            });
+            // Rebuild da lista de sessoes no sidebar
+            rebuildSessionsSidebar();
+        }
+
         console.log('Wiki carregada do Firestore');
         // Reconstruir entityMap com dados carregados do Firestore
         if (typeof rebuildEntityMap === 'function') rebuildEntityMap();
     } catch (error) {
         console.log('Usando dados locais (Firestore indisponível ou vazio):', error.message);
     }
+}
+
+// Reconstruir lista do sidebar apos carregar do Firestore
+function rebuildSessionsSidebar() {
+    const listEl = document.getElementById('sessions-list');
+    if (!listEl || typeof wikiSessions === 'undefined') return;
+
+    listEl.innerHTML = '';
+
+    // Agrupar por jornada
+    const sessionsByJourney = {};
+    wikiSessions.forEach((session, index) => {
+        const key = session.journeyKey || 'outros';
+        if (!sessionsByJourney[key]) sessionsByJourney[key] = [];
+        sessionsByJourney[key].push({ session, index });
+    });
+
+    Object.keys(sessionsByJourney).forEach(journeyKey => {
+        const config = typeof journeyConfigs !== 'undefined' ? journeyConfigs[journeyKey] : null;
+        const journeyName = config && config.displayName ? config.displayName : journeyKey;
+
+        const subHeader = document.createElement('div');
+        subHeader.className = 'wiki-sub-header';
+        subHeader.textContent = journeyName;
+        listEl.appendChild(subHeader);
+
+        sessionsByJourney[journeyKey].forEach(({ session, index }) => {
+            const item = document.createElement('div');
+            item.className = 'wiki-item';
+            item.textContent = session.title;
+            item.dataset.searchName = session.title.toLowerCase();
+            item.addEventListener('click', () => showSessionPageInfo(index));
+            listEl.appendChild(item);
+        });
+    });
+
+    // Recriar botao "+"
+    const addBtn = document.createElement('div');
+    addBtn.className = 'wiki-add-item';
+    addBtn.textContent = '+ Adicionar';
+    addBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof openAddModal === 'function') openAddModal('session');
+    });
+    listEl.appendChild(addBtn);
 }
 
 // Reconstruir lista do sidebar apos carregar do Firestore
@@ -164,13 +227,15 @@ function rebuildSidebarList(collectionName, localArray) {
         allies: 'ally', landmarks: 'landmark'
     };
     const entityType = typeFromCollection[collectionName];
-    if (entityType && typeof entityMap !== 'undefined') {
-        localArray.forEach((entry, index) => {
-            if (entry && entry.name && !entityMap[entry.name]) {
-                entityMap[entry.name] = { type: entityType, index: index };
-            }
-        });
-    }
+    try {
+        if (entityType && entityMap) {
+            localArray.forEach((entry, index) => {
+                if (entry && entry.name && !entityMap[entry.name]) {
+                    entityMap[entry.name] = { type: entityType, index: index };
+                }
+            });
+        }
+    } catch(e) { /* entityMap pode nao estar disponivel ainda */ }
 }
 
 // ===== SALVAR ENTIDADE NO FIRESTORE =====
@@ -219,8 +284,36 @@ function enterEditMode() {
     // Nome e região editáveis
     document.getElementById('city-name').contentEditable = 'true';
     document.getElementById('city-name').classList.add('editable');
-    document.getElementById('city-region').contentEditable = 'true';
-    document.getElementById('city-region').classList.add('editable');
+
+    // Para sessions, substituir regiao por dropdown de jornada
+    if (currentEditEntity && currentEditEntity.type === 'session') {
+        const regionEl = document.getElementById('city-region');
+        const currentKey = currentEditEntity.data.journeyKey || '';
+        const select = document.createElement('select');
+        select.id = 'session-journey-select';
+        select.className = 'session-journey-dropdown';
+        if (typeof journeyConfigs !== 'undefined') {
+            Object.keys(journeyConfigs).forEach(function(k) {
+                const opt = document.createElement('option');
+                opt.value = k;
+                opt.textContent = journeyConfigs[k].displayName || k;
+                if (k === currentKey) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+        regionEl.style.display = 'none';
+        regionEl.parentNode.insertBefore(select, regionEl.nextSibling);
+
+        // Tornar bloco de conteudo editavel como um unico bloco
+        const contentBlock = panel.querySelector('.session-content-block');
+        if (contentBlock) {
+            contentBlock.contentEditable = 'true';
+            contentBlock.classList.add('editable');
+        }
+    } else {
+        document.getElementById('city-region').contentEditable = 'true';
+        document.getElementById('city-region').classList.add('editable');
+    }
 
     // Legenda do jogador editável
     const caption = panel.querySelector('.portrait-caption');
@@ -362,8 +455,8 @@ function enterEditMode() {
         });
     }
 
-    // Botão de adicionar imagem quando a entidade não tem nenhuma
-    if (currentEditEntity && !panel.querySelector('.info-portrait') && !panel.querySelector('.add-image-btn')) {
+    // Botão de adicionar imagem quando a entidade não tem nenhuma (exceto sessions)
+    if (currentEditEntity && currentEditEntity.type !== 'session' && !panel.querySelector('.info-portrait') && !panel.querySelector('.add-image-btn')) {
         const cityInfo = document.getElementById('city-info');
         const addImageBtn = document.createElement('button');
         addImageBtn.className = 'add-image-btn';
@@ -474,7 +567,7 @@ function enterEditMode() {
         deleteBtn.textContent = 'Remover Pagina';
         deleteBtn.addEventListener('click', async () => {
             const entity = currentEditEntity;
-            if (!confirm('Remover "' + (entity.data.name || entity.data.displayName || '') + '"? Essa acao nao pode ser desfeita.')) return;
+            if (!confirm('Remover "' + (entity.data.name || entity.data.title || entity.data.displayName || '') + '"? Essa acao nao pode ser desfeita.')) return;
 
             deleteBtn.textContent = 'Removendo...';
             deleteBtn.disabled = true;
@@ -490,6 +583,7 @@ function enterEditMode() {
                     case 'historical': collection = 'historicalNPCs'; break;
                     case 'ally': collection = 'allies'; break;
                     case 'landmark': collection = 'landmarks'; break;
+                    case 'session': collection = 'wikiSessionsFS'; break;
                 }
 
                 if (collection) {
@@ -507,7 +601,8 @@ function enterEditMode() {
                     book: (typeof books !== 'undefined' ? books : []),
                     historical: (typeof historicalNPCs !== 'undefined' ? historicalNPCs : []),
                     ally: (typeof allies !== 'undefined' ? allies : []),
-                    landmark: (typeof landmarks !== 'undefined' ? landmarks : [])
+                    landmark: (typeof landmarks !== 'undefined' ? landmarks : []),
+                    session: (typeof wikiSessions !== 'undefined' ? wikiSessions : [])
                 };
 
                 const arr = typeArrays[entity.type];
@@ -524,12 +619,17 @@ function enterEditMode() {
                     book: 'books-list',
                     historical: 'historical-list',
                     ally: 'allies-list',
-                    landmark: 'landmarks-list'
+                    landmark: 'landmarks-list',
+                    session: 'sessions-list'
                 };
                 const listEl = document.getElementById(listIds[entity.type]);
                 if (listEl) {
-                    const items = listEl.querySelectorAll('.wiki-item');
-                    if (items[entity.id]) items[entity.id].remove();
+                    if (entity.type === 'session' && typeof rebuildSessionsSidebar === 'function') {
+                        rebuildSessionsSidebar();
+                    } else {
+                        const items = listEl.querySelectorAll('.wiki-item');
+                        if (items[entity.id]) items[entity.id].remove();
+                    }
                 }
 
                 exitEditMode();
@@ -568,6 +668,14 @@ function exitEditMode() {
     panel.querySelectorAll('.add-alt-art-btn').forEach(btn => btn.remove());
     panel.querySelectorAll('.add-image-btn').forEach(btn => btn.remove());
     panel.querySelectorAll('.delete-page-btn').forEach(btn => btn.remove());
+
+    // Remover dropdown de jornada (sessions)
+    const journeySelect = document.getElementById('session-journey-select');
+    if (journeySelect) {
+        const regionEl = document.getElementById('city-region');
+        if (regionEl) regionEl.style.display = '';
+        journeySelect.remove();
+    }
 }
 
 // Recarregar a view de uma entidade apos alteracoes de imagem
@@ -607,6 +715,9 @@ function refreshEntityView(entity) {
             break;
         case 'city':
             showCityInfo(entity.id);
+            break;
+        case 'session':
+            showSessionPageInfo(entity.id);
             break;
     }
 }
@@ -752,6 +863,39 @@ async function saveEdits() {
             }
             Object.assign(landmarks[entity.id], editedData);
             break;
+        case 'session':
+            collection = 'wikiSessionsFS';
+            editedData.title = newName;
+            // Jornada vem do dropdown
+            const journeySelect = document.getElementById('session-journey-select');
+            if (journeySelect) {
+                editedData.journeyKey = journeySelect.value;
+            }
+            // Conteudo da sessao vem do bloco unico
+            const contentBlock = panel.querySelector('.session-content-block');
+            if (contentBlock) {
+                // Converter <br> e divs de volta para \n
+                const rawHtml = contentBlock.innerHTML;
+                editedData.content = rawHtml
+                    .replace(/<div>/gi, '\n')
+                    .replace(/<\/div>/gi, '')
+                    .replace(/<br\s*\/?>/gi, '\n')
+                    .replace(/&nbsp;/g, ' ')
+                    .replace(/<[^>]+>/g, '')
+                    .trim();
+            }
+            // Quote e autor vem de campos separados
+            const quoteTextField = panel.querySelector('.session-quote-text');
+            const quoteAuthorField = panel.querySelector('.session-quote-author');
+            if (quoteTextField) {
+                editedData.quote = quoteTextField.textContent.trim();
+            }
+            if (quoteAuthorField) {
+                editedData.quoteAuthor = quoteAuthorField.textContent.trim();
+            }
+            docId = entity.data.id || entity.data._docId || String(entity.id);
+            Object.assign(wikiSessions[entity.id], editedData);
+            break;
     }
 
     const success = await saveToFirestore(collection, docId, editedData);
@@ -761,6 +905,10 @@ async function saveEdits() {
         exitEditMode();
         // Refresh da view para renderizar links atualizados
         refreshEntityView(entity);
+        // Reconstruir sidebar de sessoes se mudou a jornada
+        if (entity.type === 'session' && typeof rebuildSessionsSidebar === 'function') {
+            rebuildSessionsSidebar();
+        }
         // Feedback visual
         editBtn.textContent = '✓';
         setTimeout(() => { editBtn.textContent = '✎'; }, 1500);
@@ -845,52 +993,83 @@ deselectAll = function() {
 // ===== CARREGAR DADOS AO INICIAR =====
 loadFromFirestore();
 
-// ===== SEED: Salvar jornadas locais no Firestore (se nao existir ou estiver incompleto) =====
+// ===== SEED: Salvar dados locais no Firestore (se nao existirem) =====
 async function seedLocalJourneys() {
     if (typeof db === 'undefined') return;
     try {
-        // Sol Negro: salvar se nao existir OU se tiver dados incompletos (sem sessions)
+        // Seed das sessoes da wiki (wikiSessionsFS collection)
+        if (typeof wikiSessions !== 'undefined' && wikiSessions.length > 0) {
+            const firstSessionDoc = await db.collection('wikiSessionsFS').doc(wikiSessions[0].id).get();
+            if (!firstSessionDoc.exists) {
+                // Sessoes ainda nao existem no Firestore, salvar todas
+                const batch = db.batch();
+                wikiSessions.forEach(s => {
+                    const ref = db.collection('wikiSessionsFS').doc(s.id);
+                    batch.set(ref, {
+                        id: s.id,
+                        journeyKey: s.journeyKey,
+                        title: s.title,
+                        quote: s.quote || '',
+                        quoteAuthor: s.quoteAuthor || '',
+                        content: s.content || ''
+                    });
+                });
+                await batch.commit();
+                console.log('Sessoes da wiki salvas no Firestore (' + wikiSessions.length + ' sessoes)');
+            }
+        }
+
+        // Sol Negro: salvar jornada (sem sessions embutidos)
         const solNegroDoc = await db.collection('journeys').doc('solnegro').get();
-        const solData = solNegroDoc.exists ? solNegroDoc.data() : null;
-        if (!solData || !solData.sessions || solData.sessions.length === 0) {
+        if (!solNegroDoc.exists) {
             await db.collection('journeys').doc('solnegro').set({
                 key: 'solnegro',
                 displayName: 'Sol Negro',
                 color: '#d4a843',
                 pathColor: '#d4a843',
                 party: [
-                    { name: 'Stor', img: 'img/Stor.png', offset: -36 },
-                    { name: 'Elandor', img: 'img/Elandor.png', offset: 36 },
-                    { name: 'Azarran', img: 'img/Azarran.png', offset: 0 }
+                    { name: 'Stor', offset: -36 },
+                    { name: 'Elandor', offset: 36 },
+                    { name: 'Azarran', offset: 0 }
                 ],
-                stops: solNegroStopsCombined,
-                sessions: solNegroSessionsCombined
+                stops: solNegroStopsCombined.map((s, i) => ({
+                    x: s.x, y: s.y,
+                    location: s.location || '',
+                    session: s.session || '',
+                    summary: s.summary || '',
+                    participants: [],
+                    sessionRef: 'solnegro_t1_' + i
+                }))
             });
-            console.log('Sol Negro salvo/atualizado no Firestore');
+            console.log('Sol Negro salvo no Firestore');
         }
 
-        // Cicatrizes: salvar se nao existir OU se tiver dados incompletos
+        // Cicatrizes do Eclipse
         const cicatrizDoc = await db.collection('journeys').doc('cicatriz').get();
-        const cicData = cicatrizDoc.exists ? cicatrizDoc.data() : null;
-        const cicatrizSessions = typeof sessionsDataCicatriz !== 'undefined' ? sessionsDataCicatriz : [];
-        const cicatrizStops = typeof journeyStopsCicatriz !== 'undefined' ? journeyStopsCicatriz : [];
-        if (!cicData || !cicData.sessions || cicData.sessions.length === 0) {
+        if (!cicatrizDoc.exists) {
+            const cicatrizStops = typeof journeyStopsCicatriz !== 'undefined' ? journeyStopsCicatriz : [];
             await db.collection('journeys').doc('cicatriz').set({
                 key: 'cicatriz',
                 displayName: 'Cicatrizes do Eclipse',
                 color: '#4a9cc8',
                 pathColor: '#4a9cc8',
                 party: [
-                    { name: 'Falin', img: 'img/Falin.png', offset: -30 },
-                    { name: 'Durgan', img: 'img/Durgan.png', offset: 30 }
+                    { name: 'Falin', offset: -30 },
+                    { name: 'Durgan', offset: 30 }
                 ],
-                stops: cicatrizStops,
-                sessions: cicatrizSessions
+                stops: cicatrizStops.map((s, i) => ({
+                    x: s.x, y: s.y,
+                    location: s.location || '',
+                    session: s.session || '',
+                    summary: s.summary || '',
+                    participants: [],
+                    sessionRef: 'cicatriz_' + i
+                }))
             });
-            console.log('Cicatrizes do Eclipse salvo/atualizado no Firestore');
+            console.log('Cicatrizes do Eclipse salvo no Firestore');
         }
     } catch (err) {
-        console.log('Seed de jornadas:', err.message);
+        console.log('Seed:', err.message);
     }
 }
 
