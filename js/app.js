@@ -12,6 +12,7 @@ let isDragging = false;
 let startX, startY;
 let lastTranslateX, lastTranslateY;
 let svgDoc = null;
+let mapClickActive = false; // Flag global para modo de selecao de ponto no mapa
 
 // ===== INICIALIZAR SVG =====
 function initSvg() {
@@ -46,6 +47,7 @@ function initSvg() {
 
     // Clique no fundo para desselecionar
     svgDoc.addEventListener('click', (e) => {
+        if (mapClickActive) return; // Nao desselecionar durante selecao de ponto
         let isCity = false;
         cityIds.forEach(id => {
             const group = svgDoc.getElementById(id);
@@ -122,6 +124,7 @@ if (mapSvg.contentDocument && mapSvg.contentDocument.querySelector('svg')) {
 
 // ===== SELEÇÃO DE CIDADES =====
 function selectCity(id) {
+    if (mapClickActive) return; // Nao interagir com cidades durante selecao de ponto
     const svgEl = svgDoc.querySelector('svg');
     const overlay = svgDoc.getElementById('dim-overlay');
 
@@ -302,6 +305,7 @@ function renderMapMarkers() {
 
 function showMarkerInfo(marker) {
     if (!svgDoc) return;
+    if (mapClickActive) return; // Nao interagir com markers durante selecao de ponto
     const svgEl = svgDoc.querySelector('svg');
     const overlay = svgDoc.getElementById('dim-overlay');
 
@@ -1163,7 +1167,12 @@ function buildEntityMap() {
     return map;
 }
 
-const entityMap = buildEntityMap();
+let entityMap = buildEntityMap();
+
+// Reconstruir entityMap (chamado apos salvar/adicionar entidades)
+function rebuildEntityMap() {
+    entityMap = buildEntityMap();
+}
 
 function linkifyLocations(text) {
     // Primeiro: processar links manuais com sintaxe [Nome]
@@ -1304,8 +1313,15 @@ const solNegroSessionsCombined = (typeof sessionsData !== 'undefined' ? sessions
 );
 
 const journeyConfigs = {
-    solnegro: { stops: solNegroStopsCombined, sessions: solNegroSessionsCombined, color: '#d4a843', pathColor: '#d4a843' },
-    cicatriz: { stops: typeof journeyStopsCicatriz !== 'undefined' ? journeyStopsCicatriz : [], sessions: typeof sessionsDataCicatriz !== 'undefined' ? sessionsDataCicatriz : [], color: '#4a9cc8', pathColor: '#4a9cc8' }
+    solnegro: { displayName: 'Sol Negro', stops: solNegroStopsCombined, sessions: solNegroSessionsCombined, color: '#d4a843', pathColor: '#d4a843', party: [
+        { name: 'Stor', img: 'img/Stor.png', offset: -36 },
+        { name: 'Elandor', img: 'img/Elandor.png', offset: 36 },
+        { name: 'Azarran', img: 'img/Azarran.png', offset: 0 }
+    ]},
+    cicatriz: { displayName: 'Cicatrizes do Eclipse', stops: typeof journeyStopsCicatriz !== 'undefined' ? journeyStopsCicatriz : [], sessions: typeof sessionsDataCicatriz !== 'undefined' ? sessionsDataCicatriz : [], color: '#4a9cc8', pathColor: '#4a9cc8', party: [
+        { name: 'Falin', img: 'img/Falin.png', offset: -30 },
+        { name: 'Durgan', img: 'img/Durgan.png', offset: 30 }
+    ]}
 };
 
 function getOffsetStopsFor(stops) {
@@ -1393,10 +1409,13 @@ function showJourneyStop(stop, index) {
                 var numMatch = stopSession.match(/(\d+)/);
                 if (numMatch) sessionId = parseInt(numMatch[1]);
             }
-        } else {
+        } else if (currentJourneyKey === 'cicatriz') {
             // Cicatrizes: S01E01->0, S01E02->1, S01E03->2
             var epMatch2 = stop.session.match(/E(\d+)/);
             if (epMatch2) sessionId = parseInt(epMatch2[1]) - 1;
+        } else {
+            // Jornadas custom: cada parada tem sua sessao pelo indice
+            sessionId = index;
         }
         if (sessionId !== null && config.sessions[sessionId]) {
             sessionBtn = '<button id="session-read-btn" onclick="openSessionModalFor(\'' + currentJourneyKey + '\', ' + sessionId + ')">Ler Sess\u00e3o Completa</button>';
@@ -1523,16 +1542,7 @@ function drawJourneyBase() {
     const defs = svgDoc.querySelector('defs') || svgDoc.createElementNS('http://www.w3.org/2000/svg', 'defs');
     if (!svgEl.querySelector('defs')) svgEl.insertBefore(defs, svgEl.firstChild);
 
-    const partyChars = currentJourneyKey === 'solnegro'
-        ? [
-            { name: 'Stor', img: 'img/Stor.png', offset: -36 },
-            { name: 'Elandor', img: 'img/Elandor.png', offset: 36 },
-            { name: 'Azarran', img: 'img/Azarran.png', offset: 0 }
-        ]
-        : [
-            { name: 'Falin', img: 'img/Falin.png', offset: -30 },
-            { name: 'Durgan', img: 'img/Durgan.png', offset: 30 }
-        ];
+    const partyChars = config.party || [];
 
     const offsetStops = getOffsetStopsFor(config.stops);
     const firstStop = offsetStops[0];
@@ -1613,9 +1623,7 @@ function advanceJourney() {
         linesGroup.appendChild(line);
 
         // Animate party icons along the path
-        const partyChars = currentJourneyKey === 'solnegro'
-            ? [{ offset: -36 }, { offset: 36 }, { offset: 0 }]
-            : [{ offset: -30 }, { offset: 30 }];
+        const partyChars = (config.party || []).map(p => ({ offset: p.offset || 0 }));
         const duration = 2000;
         const animStart = performance.now();
 
@@ -2768,4 +2776,697 @@ if (langToggle && langMenu) {
 
     // Expor para uso externo (rebuildSidebarList)
     window.openAddModal = openAddModal;
+})();
+
+
+// ===== SIDEBAR DE CONFIGURAÇÕES =====
+const settingsToggle = document.getElementById('settings-toggle');
+const settingsSidebar = document.getElementById('settings-sidebar');
+
+settingsToggle.addEventListener('click', () => {
+    settingsToggle.classList.toggle('open');
+    settingsSidebar.classList.toggle('open');
+});
+
+// Fechar sidebar ao clicar fora
+document.addEventListener('click', (e) => {
+    if (settingsSidebar.classList.contains('open') &&
+        !settingsSidebar.contains(e.target) &&
+        !settingsToggle.contains(e.target)) {
+        settingsToggle.classList.remove('open');
+        settingsSidebar.classList.remove('open');
+    }
+});
+
+// ===== EDITOR DE JORNADAS =====
+(function() {
+    const journeyOverlay = document.getElementById('journey-modal-overlay');
+    const journeyModalClose = document.getElementById('journey-modal-close');
+    const journeyModalTitle = document.getElementById('journey-modal-title');
+    const journeyNameInput = document.getElementById('journey-name');
+    const journeyColorInput = document.getElementById('journey-color');
+    const journeyPartyList = document.getElementById('journey-party-list');
+    const journeyAddMember = document.getElementById('journey-add-member');
+    const journeyStopsList = document.getElementById('journey-stops-list');
+    const journeyAddStop = document.getElementById('journey-add-stop');
+    const journeyReorderBtn = document.getElementById('journey-reorder-stops');
+    const journeySaveBtn = document.getElementById('journey-save');
+    const journeyDeleteBtn = document.getElementById('journey-delete');
+    const trailEditBtn = document.getElementById('trail-edit');
+    const trailNewBtn = document.getElementById('trail-new');
+
+    // Stop edit panel elements
+    const stopEditPanel = document.getElementById('stop-edit-panel');
+    const stopEditClose = document.getElementById('stop-edit-close');
+    const stopEditTitle = document.getElementById('stop-edit-title');
+    const stopEditLocation = document.getElementById('stop-edit-location');
+    const stopEditSubtitle = document.getElementById('stop-edit-subtitle');
+    const stopEditDescription = document.getElementById('stop-edit-description');
+    const stopEditCoordsDisplay = document.getElementById('stop-edit-coords-display');
+    const stopEditRelocate = document.getElementById('stop-edit-relocate');
+    const stopEditParticipants = document.getElementById('stop-edit-participants');
+    const stopEditSessionTitle = document.getElementById('stop-edit-session-title');
+    const stopEditSessionQuote = document.getElementById('stop-edit-session-quote');
+    const stopEditSessionQuoteAuthor = document.getElementById('stop-edit-session-quoteauthor');
+    const stopEditSessionContent = document.getElementById('stop-edit-session-content');
+    const stopEditSave = document.getElementById('stop-edit-save');
+
+    let editingJourneyKey = null;
+    let journeyStops = [];
+    let journeyParty = [];
+    let addingStop = false;
+    let relocatingStopIndex = -1;
+    let editingStopIndex = -1; // indice da parada sendo editada no sub-modal
+    let reorderMode = false;
+
+    // Abrir modal para nova jornada
+    if (trailNewBtn) trailNewBtn.addEventListener('click', () => {
+        editingJourneyKey = null;
+        journeyModalTitle.textContent = 'Nova Jornada';
+        journeyNameInput.value = '';
+        journeyColorInput.value = '#d4a843';
+        journeyParty = [];
+        journeyStops = [];
+        journeyDeleteBtn.style.display = 'none';
+        closeStopEditPanel();
+        renderPartyList();
+        renderStopsList();
+        journeyOverlay.classList.add('open');
+        // Fechar sidebar
+        settingsToggle.classList.remove('open');
+        settingsSidebar.classList.remove('open');
+    });
+
+    // Abrir modal para editar jornada atual
+    if (trailEditBtn) trailEditBtn.addEventListener('click', () => {
+        const key = currentJourneyKey;
+        const config = journeyConfigs[key];
+        if (!config) return;
+
+        editingJourneyKey = key;
+        journeyModalTitle.textContent = 'Editar Jornada';
+        journeyNameInput.value = config.displayName || key;
+        journeyColorInput.value = config.color || '#d4a843';
+
+        // Preencher party
+        journeyParty = (config.party || []).map(p => ({
+            name: p.name || '',
+            img: p.img || ''
+        }));
+
+        // Preencher paradas
+        journeyStops = (config.stops || []).map((s, idx) => {
+            // Tentar preencher sessionData a partir de config.sessions se existir
+            let sessionData = s.sessionData || {};
+            if (!sessionData.content && config.sessions) {
+                // Buscar sessao pelo indice ou pelo match de titulo
+                const matchedSession = config.sessions[idx] || null;
+                if (matchedSession) {
+                    sessionData = {
+                        title: matchedSession.title || '',
+                        quote: matchedSession.quote || '',
+                        quoteAuthor: matchedSession.quoteAuthor || '',
+                        content: matchedSession.content || ''
+                    };
+                }
+            }
+            // Preencher participants a partir da party se nao definido
+            let participants = s.participants || [];
+            if (participants.length === 0 && config.party) {
+                // Por padrao, todos participam
+                participants = config.party.map(p => p.name);
+            }
+            return {
+                x: s.x,
+                y: s.y,
+                location: s.location || '',
+                session: s.session || '',
+                summary: s.summary || '',
+                subtitle: s.subtitle || s.session || '',
+                description: s.description || s.summary || '',
+                participants: participants,
+                sessionData: sessionData
+            };
+        });
+
+        // Mostrar botao de excluir apenas para jornadas que nao sao as base
+        journeyDeleteBtn.style.display = (key !== 'solnegro' && key !== 'cicatriz') ? 'block' : 'none';
+
+        closeStopEditPanel();
+        renderPartyList();
+        renderStopsList();
+        journeyOverlay.classList.add('open');
+        // Fechar sidebar
+        settingsToggle.classList.remove('open');
+        settingsSidebar.classList.remove('open');
+    });
+
+    // Fechar modal
+    function closeJourneyModal() {
+        journeyOverlay.classList.remove('open');
+        addingStop = false;
+        relocatingStopIndex = -1;
+        editingStopIndex = -1;
+        mapClickActive = false;
+        mapContainer.style.cursor = '';
+        if (mapSvg && mapSvg.contentDocument) {
+            mapSvg.contentDocument.documentElement.style.cursor = '';
+        }
+        // Restaurar interacoes SVG
+        if (svgDoc) {
+            svgDoc.querySelectorAll('[data-old-cursor]').forEach(el => {
+                el.style.cursor = el.dataset.oldCursor || 'pointer';
+                el.style.pointerEvents = '';
+                delete el.dataset.oldCursor;
+            });
+        }
+        closeStopEditPanel();
+        if (svgDoc) svgDoc.removeEventListener('click', stopMapClick, true);
+        mapContainer.removeEventListener('mouseup', stopMapClickFallback, true);
+    }
+
+    journeyModalClose.addEventListener('click', closeJourneyModal);
+    journeyOverlay.addEventListener('click', (e) => {
+        if (e.target === journeyOverlay) closeJourneyModal();
+    });
+
+    // ===== PARTY LIST =====
+    function renderPartyList() {
+        journeyPartyList.innerHTML = '';
+        journeyParty.forEach((member, i) => {
+            const div = document.createElement('div');
+            div.className = 'journey-party-item';
+
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.className = 'party-name';
+            nameInput.value = member.name;
+            nameInput.placeholder = 'Nome';
+            nameInput.addEventListener('input', (e) => {
+                journeyParty[i].name = e.target.value;
+            });
+
+            const imgWrapper = document.createElement('div');
+            imgWrapper.className = 'party-img-wrapper';
+
+            const imgPreview = document.createElement('img');
+            imgPreview.className = 'party-img-preview';
+            imgPreview.src = member.img || '';
+            imgPreview.style.display = member.img ? 'block' : 'none';
+
+            const imgLabel = document.createElement('label');
+            imgLabel.className = 'party-img-btn';
+            imgLabel.textContent = member.img ? 'Trocar' : 'Imagem';
+            imgLabel.title = 'Selecionar imagem';
+
+            const imgInput = document.createElement('input');
+            imgInput.type = 'file';
+            imgInput.accept = 'image/*';
+            imgInput.style.display = 'none';
+            imgInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                // Usar o caminho relativo baseado no nome do arquivo
+                const imgPath = 'img/' + file.name;
+                journeyParty[i].img = imgPath;
+                imgPreview.src = imgPath;
+                imgPreview.style.display = 'block';
+                imgLabel.textContent = 'Trocar';
+            });
+
+            imgLabel.appendChild(imgInput);
+            imgWrapper.appendChild(imgPreview);
+            imgWrapper.appendChild(imgLabel);
+
+            const removeBtn = document.createElement('span');
+            removeBtn.className = 'party-remove';
+            removeBtn.title = 'Remover';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.addEventListener('click', () => {
+                journeyParty.splice(i, 1);
+                renderPartyList();
+            });
+
+            div.appendChild(nameInput);
+            div.appendChild(imgWrapper);
+            div.appendChild(removeBtn);
+            journeyPartyList.appendChild(div);
+        });
+    }
+
+    // Adicionar membro
+    journeyAddMember.addEventListener('click', () => {
+        journeyParty.push({ name: '', img: '' });
+        renderPartyList();
+        // Focar no novo input de nome
+        const inputs = journeyPartyList.querySelectorAll('.party-name');
+        if (inputs.length) inputs[inputs.length - 1].focus();
+    });
+
+    // ===== STOPS LIST (compact: number + title + edit/delete) =====
+    function renderStopsList() {
+        journeyStopsList.innerHTML = '';
+        journeyStops.forEach((stop, i) => {
+            const div = document.createElement('div');
+            div.className = 'journey-stop-item';
+
+            const num = document.createElement('span');
+            num.className = 'stop-num';
+            num.textContent = (i + 1);
+
+            const title = document.createElement('span');
+            title.className = 'stop-title';
+            title.textContent = stop.location || '(sem nome)';
+
+            const actions = document.createElement('span');
+            actions.className = 'stop-actions';
+
+            if (reorderMode) {
+                // Modo reordenar: botoes up/down
+                const upBtn = document.createElement('button');
+                upBtn.className = 'stop-move-btn';
+                upBtn.innerHTML = '&#9650;';
+                upBtn.title = 'Mover para cima';
+                upBtn.disabled = (i === 0);
+                upBtn.addEventListener('click', () => {
+                    const temp = journeyStops[i];
+                    journeyStops[i] = journeyStops[i - 1];
+                    journeyStops[i - 1] = temp;
+                    renderStopsList();
+                });
+
+                const downBtn = document.createElement('button');
+                downBtn.className = 'stop-move-btn';
+                downBtn.innerHTML = '&#9660;';
+                downBtn.title = 'Mover para baixo';
+                downBtn.disabled = (i === journeyStops.length - 1);
+                downBtn.addEventListener('click', () => {
+                    const temp = journeyStops[i];
+                    journeyStops[i] = journeyStops[i + 1];
+                    journeyStops[i + 1] = temp;
+                    renderStopsList();
+                });
+
+                actions.appendChild(upBtn);
+                actions.appendChild(downBtn);
+            } else {
+                // Modo normal: botoes edit/delete
+                const editBtn = document.createElement('button');
+                editBtn.className = 'stop-edit-btn';
+                editBtn.title = 'Editar parada';
+                editBtn.innerHTML = '&#9998;';
+                editBtn.addEventListener('click', () => openStopEdit(i));
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'stop-delete-btn';
+                removeBtn.title = 'Excluir parada';
+                removeBtn.innerHTML = '&times;';
+                removeBtn.addEventListener('click', () => {
+                    journeyStops.splice(i, 1);
+                    if (editingStopIndex === i) closeStopEditPanel();
+                    else if (editingStopIndex > i) editingStopIndex--;
+                    renderStopsList();
+                });
+
+                actions.appendChild(editBtn);
+                actions.appendChild(removeBtn);
+            }
+
+            div.appendChild(num);
+            div.appendChild(title);
+            div.appendChild(actions);
+            journeyStopsList.appendChild(div);
+        });
+    }
+
+    // Toggle reorder mode
+    journeyReorderBtn.addEventListener('click', () => {
+        reorderMode = !reorderMode;
+        journeyReorderBtn.classList.toggle('active', reorderMode);
+        closeStopEditPanel();
+        renderStopsList();
+    });
+
+    // ===== STOP EDIT PANEL =====
+    function openStopEdit(index) {
+        editingStopIndex = index;
+        const stop = journeyStops[index];
+        stopEditTitle.textContent = 'Editar Parada ' + (index + 1);
+        stopEditLocation.value = stop.location || '';
+        stopEditSubtitle.value = stop.subtitle || stop.session || '';
+        stopEditDescription.value = stop.description || stop.summary || '';
+        stopEditCoordsDisplay.textContent = '(' + stop.x + ', ' + stop.y + ')';
+        // Preencher campos de sessao completa
+        const sess = stop.sessionData || {};
+        stopEditSessionTitle.value = sess.title || '';
+        stopEditSessionQuote.value = sess.quote || '';
+        stopEditSessionQuoteAuthor.value = sess.quoteAuthor || '';
+        stopEditSessionContent.value = sess.content || '';
+        renderStopParticipants(stop);
+        stopEditPanel.classList.add('open');
+    }
+
+    function closeStopEditPanel() {
+        stopEditPanel.classList.remove('open');
+        editingStopIndex = -1;
+    }
+
+    stopEditClose.addEventListener('click', closeStopEditPanel);
+
+    // Renderizar selecao de participantes baseados na party atual
+    function renderStopParticipants(stop) {
+        stopEditParticipants.innerHTML = '';
+        const participants = stop.participants || [];
+        journeyParty.forEach((member) => {
+            if (!member.name.trim()) return;
+            const label = document.createElement('label');
+            label.className = 'stop-participant-label';
+            if (participants.includes(member.name)) label.classList.add('checked');
+
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = member.name;
+            cb.checked = participants.includes(member.name);
+
+            const checkMark = document.createElement('span');
+            checkMark.className = 'check-mark';
+            checkMark.textContent = '\u2714';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = member.name;
+
+            cb.addEventListener('change', () => {
+                label.classList.toggle('checked', cb.checked);
+            });
+
+            label.appendChild(cb);
+            label.appendChild(checkMark);
+            label.appendChild(nameSpan);
+            stopEditParticipants.appendChild(label);
+        });
+
+        // Se nao houver membros na party, mostrar mensagem
+        if (journeyParty.filter(m => m.name.trim()).length === 0) {
+            const msg = document.createElement('span');
+            msg.className = 'stop-no-party';
+            msg.textContent = 'Adicione membros na party primeiro.';
+            stopEditParticipants.appendChild(msg);
+        }
+    }
+
+    // Reposicionar parada a partir do sub-modal
+    stopEditRelocate.addEventListener('click', () => {
+        if (editingStopIndex < 0) return;
+        relocatingStopIndex = editingStopIndex;
+        addingStop = false;
+        saveStopEditToMemory();
+        enterMapClickMode('Clique no mapa para reposicionar parada ' + (editingStopIndex + 1) + '...');
+    });
+
+    // Salvar edicao do stop no array em memoria
+    function saveStopEditToMemory() {
+        if (editingStopIndex < 0) return;
+        const stop = journeyStops[editingStopIndex];
+        stop.location = stopEditLocation.value.trim();
+        stop.subtitle = stopEditSubtitle.value.trim();
+        stop.session = stopEditSubtitle.value.trim();
+        stop.description = stopEditDescription.value.trim();
+        stop.summary = stopEditDescription.value.trim();
+
+        // Sessao completa estruturada
+        stop.sessionData = {
+            title: stopEditSessionTitle.value.trim(),
+            quote: stopEditSessionQuote.value.trim(),
+            quoteAuthor: stopEditSessionQuoteAuthor.value.trim(),
+            content: stopEditSessionContent.value
+        };
+
+        // Coletar participantes marcados
+        const checkboxes = stopEditParticipants.querySelectorAll('input[type="checkbox"]');
+        stop.participants = [];
+        checkboxes.forEach(cb => {
+            if (cb.checked) stop.participants.push(cb.value);
+        });
+    }
+
+    // Botao confirmar do sub-modal
+    stopEditSave.addEventListener('click', () => {
+        saveStopEditToMemory();
+        closeStopEditPanel();
+        renderStopsList();
+    });
+
+    // ===== MAP CLICK MODE =====
+
+    function enterMapClickMode(buttonText) {
+        journeyAddStop.textContent = buttonText || 'Clique no mapa...';
+        journeyAddStop.disabled = true;
+        mapClickActive = true;
+        // Esconder o overlay completamente para liberar o mapa
+        journeyOverlay.classList.remove('open');
+        // Cursor crosshair no mapa
+        mapContainer.style.cursor = 'crosshair';
+        if (mapSvg && mapSvg.contentDocument) {
+            mapSvg.contentDocument.documentElement.style.cursor = 'crosshair';
+        }
+        // Desabilitar interacoes com cidades/markers no SVG
+        if (svgDoc) {
+            svgDoc.querySelectorAll('[style*="cursor: pointer"], [style*="cursor:pointer"]').forEach(el => {
+                el.dataset.oldCursor = el.style.cursor;
+                el.style.cursor = 'crosshair';
+                el.style.pointerEvents = 'none';
+            });
+        }
+        // Registrar no svgDoc (dentro do <object>)
+        if (svgDoc) svgDoc.addEventListener('click', stopMapClick, true);
+        // Tambem no container como fallback
+        mapContainer.addEventListener('mouseup', stopMapClickFallback, true);
+    }
+
+    function exitMapClickMode() {
+        journeyAddStop.textContent = '+ Adicionar parada (clique no mapa)';
+        journeyAddStop.disabled = false;
+        mapClickActive = false;
+        // Restaurar o overlay
+        journeyOverlay.classList.add('open');
+        // Restaurar cursor
+        mapContainer.style.cursor = '';
+        if (mapSvg && mapSvg.contentDocument) {
+            mapSvg.contentDocument.documentElement.style.cursor = '';
+        }
+        // Restaurar interacoes com cidades/markers no SVG
+        if (svgDoc) {
+            svgDoc.querySelectorAll('[data-old-cursor]').forEach(el => {
+                el.style.cursor = el.dataset.oldCursor || 'pointer';
+                el.style.pointerEvents = '';
+                delete el.dataset.oldCursor;
+            });
+        }
+        addingStop = false;
+        relocatingStopIndex = -1;
+        if (svgDoc) svgDoc.removeEventListener('click', stopMapClick, true);
+        mapContainer.removeEventListener('mouseup', stopMapClickFallback, true);
+    }
+
+    // Adicionar parada via clique no mapa
+    journeyAddStop.addEventListener('click', () => {
+        addingStop = true;
+        relocatingStopIndex = -1;
+        enterMapClickMode('Clique no mapa para adicionar parada...');
+    });
+
+    // Handler principal: click dentro do svgDoc
+    function stopMapClick(e) {
+        if (!mapClickActive) return;
+        if (!addingStop && relocatingStopIndex < 0) return;
+
+        e.stopPropagation();
+        e.preventDefault();
+
+        processMapClick(e.clientX, e.clientY);
+    }
+
+    // Fallback: mouseup no mapContainer (caso o click nao bubble do object)
+    function stopMapClickFallback(e) {
+        if (!mapClickActive) return;
+        if (!addingStop && relocatingStopIndex < 0) return;
+        // Apenas aceitar se foi um clique simples (sem arrastar muito)
+        if (Math.abs(e.clientX - startX) > 8 || Math.abs(e.clientY - startY) > 8) return;
+
+        processMapClick(e.clientX, e.clientY);
+    }
+
+    function processMapClick(clientX, clientY) {
+        if (!mapClickActive) return; // Evitar dupla execucao
+        mapClickActive = false; // Desativar imediatamente
+
+        // Calcular coordenadas SVG a partir da posicao do clique
+        let svgX = 0, svgY = 0;
+        try {
+            const svgEl = svgDoc.querySelector('svg');
+            const pt = svgEl.createSVGPoint();
+            pt.x = clientX;
+            pt.y = clientY;
+            const ctm = svgEl.getScreenCTM();
+            if (ctm) {
+                const svgPt = pt.matrixTransform(ctm.inverse());
+                svgX = Math.round(svgPt.x);
+                svgY = Math.round(svgPt.y);
+            } else {
+                // Fallback: calcular via bounding rect
+                const rect = mapSvg.getBoundingClientRect();
+                const viewBox = svgEl.viewBox.baseVal;
+                svgX = Math.round(((clientX - rect.left) / rect.width) * viewBox.width);
+                svgY = Math.round(((clientY - rect.top) / rect.height) * viewBox.height);
+            }
+        } catch (err) {
+            console.warn('Erro ao calcular coordenadas SVG:', err);
+            exitMapClickMode();
+            return;
+        }
+
+        if (relocatingStopIndex >= 0) {
+            var savedIndex = relocatingStopIndex;
+            journeyStops[savedIndex].x = svgX;
+            journeyStops[savedIndex].y = svgY;
+            exitMapClickMode();
+            renderStopsList();
+            openStopEdit(savedIndex);
+        } else {
+            journeyStops.push({
+                x: svgX,
+                y: svgY,
+                location: '',
+                subtitle: '',
+                session: '',
+                description: '',
+                summary: '',
+                participants: [],
+                sessionData: { title: '', quote: '', quoteAuthor: '', content: '' }
+            });
+            exitMapClickMode();
+            renderStopsList();
+            openStopEdit(journeyStops.length - 1);
+            journeyStopsList.scrollTop = journeyStopsList.scrollHeight;
+        }
+    }
+
+    // ===== SALVAR JORNADA =====
+    journeySaveBtn.addEventListener('click', async () => {
+        const name = journeyNameInput.value.trim();
+        if (!name) { alert('Digite um nome para a jornada.'); return; }
+        if (journeyStops.length === 0) { alert('Adicione pelo menos uma parada.'); return; }
+
+        // Se o sub-modal estiver aberto, salvar dados pendentes
+        if (editingStopIndex >= 0) saveStopEditToMemory();
+
+        const party = journeyParty.filter(m => m.name.trim()).map((member, i, arr) => {
+            const spacing = 36;
+            const totalWidth = (arr.length - 1) * spacing;
+            const offset = -totalWidth / 2 + i * spacing;
+            return { name: member.name.trim(), img: member.img || '', offset: Math.round(offset) };
+        });
+
+        const key = editingJourneyKey || 'custom_' + Date.now();
+
+        // Construir array de sessions a partir do sessionData de cada stop
+        const sessions = journeyStops.map((stop, i) => {
+            const sd = stop.sessionData || {};
+            return {
+                id: i,
+                title: sd.title || '',
+                quote: sd.quote || '',
+                quoteAuthor: sd.quoteAuthor || '',
+                content: sd.content || ''
+            };
+        });
+
+        const journeyData = {
+            key: key,
+            displayName: name,
+            color: journeyColorInput.value,
+            pathColor: journeyColorInput.value,
+            party: party,
+            stops: journeyStops,
+            sessions: sessions
+        };
+
+        journeySaveBtn.textContent = 'Salvando...';
+        journeySaveBtn.disabled = true;
+
+        try {
+            await db.collection('journeys').doc(key).set(journeyData);
+            journeyConfigs[key] = journeyData;
+
+            if (!editingJourneyKey) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = name;
+                trailSeason.appendChild(option);
+            } else {
+                const opt = trailSeason.querySelector('option[value="' + key + '"]');
+                if (opt) opt.textContent = name;
+            }
+
+            currentJourneyKey = key;
+            trailSeason.value = key;
+            closeJourneyModal();
+        } catch (err) {
+            console.error('Erro ao salvar jornada:', err);
+            alert('Erro ao salvar. Tente novamente.');
+        }
+
+        journeySaveBtn.textContent = 'Salvar Jornada';
+        journeySaveBtn.disabled = false;
+    });
+
+    // ===== EXCLUIR JORNADA =====
+    journeyDeleteBtn.addEventListener('click', async () => {
+        if (!editingJourneyKey) return;
+        if (!confirm('Excluir esta jornada? Essa acao nao pode ser desfeita.')) return;
+
+        journeyDeleteBtn.textContent = 'Excluindo...';
+        journeyDeleteBtn.disabled = true;
+
+        try {
+            await db.collection('journeys').doc(editingJourneyKey).delete();
+            delete journeyConfigs[editingJourneyKey];
+
+            const opt = trailSeason.querySelector('option[value="' + editingJourneyKey + '"]');
+            if (opt) opt.remove();
+
+            currentJourneyKey = trailSeason.value;
+            closeJourneyModal();
+        } catch (err) {
+            console.error('Erro ao excluir jornada:', err);
+            alert('Erro ao excluir. Tente novamente.');
+        }
+
+        journeyDeleteBtn.textContent = 'Excluir Jornada';
+        journeyDeleteBtn.disabled = false;
+    });
+
+    // ===== CARREGAR JORNADAS DO FIRESTORE =====
+    async function loadCustomJourneys() {
+        if (typeof db === 'undefined') return;
+        try {
+            const snap = await db.collection('journeys').get();
+            snap.forEach(doc => {
+                const data = doc.data();
+                const key = data.key || doc.id;
+                journeyConfigs[key] = data;
+
+                if (!trailSeason.querySelector('option[value="' + key + '"]')) {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = data.displayName || key;
+                    trailSeason.appendChild(option);
+                }
+            });
+        } catch (err) {
+            console.log('Jornadas indisponiveis:', err.message);
+        }
+    }
+
+    loadCustomJourneys();
 })();

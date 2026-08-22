@@ -597,6 +597,31 @@ body {
     border-color: #d4a843;
 }
 
+.alt-art-btn.deleteable {
+    border-color: #c55;
+    position: relative;
+}
+
+.alt-art-btn.deleteable::after {
+    content: '\00d7';
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 12px;
+    height: 12px;
+    background: #c55;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 9px;
+    line-height: 12px;
+    text-align: center;
+}
+
+.alt-art-btn.deleteable:hover {
+    border-color: #f77;
+    background: rgba(200, 50, 50, 0.2);
+}
+
 .portrait-caption {
     font-size: 11px;
     color: #999;
@@ -765,6 +790,106 @@ body {
     flex-direction: row;
     align-items: center;
     gap: 6px;
+}
+
+/* ===== SIDEBAR DE CONFIGURAÇÕES ===== */
+#settings-toggle {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 38px;
+    height: 38px;
+    background: rgba(44, 24, 16, 0.9);
+    border: 2px solid #8b6914;
+    border-radius: 8px;
+    color: #d4a843;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.3s;
+}
+
+#settings-toggle:hover {
+    background: rgba(139, 105, 20, 0.5);
+}
+
+#settings-toggle.open {
+    transform: rotate(90deg);
+}
+
+#settings-sidebar {
+    position: fixed;
+    top: 0;
+    right: -240px;
+    width: 220px;
+    height: 100vh;
+    background: rgba(20, 12, 6, 0.95);
+    border-left: 2px solid #8b6914;
+    z-index: 650;
+    padding: 60px 12px 20px;
+    transition: right 0.3s ease;
+    overflow-y: auto;
+}
+
+#settings-sidebar.open {
+    right: 0;
+}
+
+.settings-section {
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(139, 105, 20, 0.2);
+}
+
+.settings-section:last-child {
+    border-bottom: none;
+}
+
+.settings-section-title {
+    color: #8b6914;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.settings-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    background: transparent;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #ccc;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 6px;
+    text-align: left;
+}
+
+.settings-btn:hover {
+    background: rgba(139, 105, 20, 0.2);
+    border-color: #8b6914;
+    color: #d4a843;
+}
+
+.settings-btn.active {
+    background: rgba(139, 105, 20, 0.3);
+    border-color: #d4a843;
+    color: #d4a843;
+}
+
+.settings-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.8;
 }
 
 .lang-btn {
@@ -1224,6 +1349,442 @@ body {
 
 .fulltext-modal-btn.fulltext-save:hover {
     background: rgba(74, 224, 74, 0.25);
+}
+
+/* ===== MODAL JORNADA ===== */
+#journey-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+}
+
+#journey-modal-overlay.open {
+    display: flex;
+}
+
+#journey-modal {
+    background: #1e1209;
+    border: 2px solid #8b6914;
+    border-radius: 12px;
+    padding: 25px;
+    width: 90%;
+    max-width: 520px;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    color: #ddd;
+}
+
+#journey-modal h2 {
+    color: #d4a843;
+    margin: 0 0 18px 0;
+    font-size: 18px;
+}
+
+#journey-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+#journey-modal-close:hover {
+    color: #fff;
+}
+
+#journey-color {
+    width: 50px;
+    height: 34px;
+    border: 2px solid #8b6914;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+}
+
+#journey-stops-list {
+    max-height: 250px;
+    overflow-y: auto;
+    margin-bottom: 8px;
+}
+
+.journey-stop-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    margin-bottom: 4px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #333;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.journey-stop-item .stop-num {
+    color: #8b6914;
+    font-weight: bold;
+    min-width: 20px;
+}
+
+.journey-stop-item .stop-title {
+    flex: 1;
+    color: #ddd;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.journey-stop-item .stop-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.journey-stop-item .stop-edit-btn,
+.journey-stop-item .stop-delete-btn {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    transition: all 0.2s;
+}
+
+.journey-stop-item .stop-edit-btn {
+    color: #8b6914;
+}
+
+.journey-stop-item .stop-edit-btn:hover {
+    color: #d4a843;
+    border-color: #8b6914;
+    background: rgba(139, 105, 20, 0.15);
+}
+
+.journey-stop-item .stop-delete-btn {
+    color: #944;
+}
+
+.journey-stop-item .stop-delete-btn:hover {
+    color: #f77;
+    border-color: #944;
+    background: rgba(200, 50, 50, 0.1);
+}
+
+.journey-stop-item .stop-move-btn {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 6px;
+    color: #8b6914;
+    transition: all 0.2s;
+}
+
+.journey-stop-item .stop-move-btn:hover:not(:disabled) {
+    color: #d4a843;
+    border-color: #8b6914;
+    background: rgba(139, 105, 20, 0.15);
+}
+
+.journey-stop-item .stop-move-btn:disabled {
+    opacity: 0.2;
+    cursor: default;
+}
+
+/* Header de paradas com botao de reordenar */
+.stops-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stops-header label {
+    margin-top: 12px;
+    margin-bottom: 4px;
+}
+
+.reorder-btn {
+    background: none;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #888;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+    transition: all 0.2s;
+    margin-top: 8px;
+}
+
+.reorder-btn:hover {
+    border-color: #8b6914;
+    color: #d4a843;
+}
+
+.reorder-btn.active {
+    border-color: #d4a843;
+    color: #d4a843;
+    background: rgba(139, 105, 20, 0.2);
+}
+
+/* ===== STOP EDIT PANEL (side modal) ===== */
+.stop-edit-panel {
+    display: none;
+    background: #1e1209;
+    border: 2px solid #8b6914;
+    border-radius: 12px;
+    padding: 20px;
+    width: 340px;
+    max-height: 80vh;
+    overflow-y: auto;
+    color: #ddd;
+    position: relative;
+    transition: opacity 0.2s;
+}
+
+.stop-edit-panel.open {
+    display: block;
+}
+
+.stop-edit-panel h3 {
+    color: #d4a843;
+    margin: 0 0 14px 0;
+    font-size: 15px;
+}
+
+#stop-edit-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+#stop-edit-close:hover {
+    color: #fff;
+}
+
+.stop-edit-coords-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stop-edit-coords-row span {
+    color: #999;
+    font-size: 12px;
+    font-family: monospace;
+}
+
+.stop-edit-coords-row button {
+    font-size: 11px;
+    padding: 4px 10px;
+}
+
+.stop-edit-fulltext {
+    min-height: 120px;
+    resize: vertical;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.stop-session-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.stop-session-fields input,
+.stop-session-fields textarea {
+    width: 100%;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #eee;
+    font-size: 12px;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.stop-session-fields input:focus,
+.stop-session-fields textarea:focus {
+    outline: none;
+    border-color: #d4a843;
+}
+
+.stop-participant-label {
+    display: block;
+    padding: 5px 10px;
+    margin-bottom: 2px;
+    color: #888;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.stop-participant-label:hover {
+    color: #ccc;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.stop-participant-label.checked {
+    color: #d4a843;
+    background: rgba(139, 105, 20, 0.15);
+}
+
+.stop-participant-label input[type="checkbox"] {
+    display: none;
+}
+
+.stop-participant-label .check-mark {
+    display: inline-block;
+    width: 10px;
+    margin-right: 6px;
+    color: transparent;
+    font-size: 11px;
+}
+
+.stop-participant-label.checked .check-mark {
+    color: #d4a843;
+}
+
+.stop-no-party {
+    color: #777;
+    font-size: 11px;
+    font-style: italic;
+}
+
+#stop-edit-participants {
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+/* Responsive: se tela pequena, panels empilham */
+@media (max-width: 900px) {
+    #journey-modal-overlay.open {
+        flex-direction: column;
+        align-items: center;
+    }
+    .stop-edit-panel {
+        width: 90%;
+        max-width: 520px;
+        max-height: 40vh;
+    }
+}
+
+/* ===== PARTY LIST ===== */
+.journey-party-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #333;
+    border-radius: 6px;
+}
+
+.journey-party-item .party-name {
+    flex: 1;
+    padding: 4px 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #eee;
+    font-size: 12px;
+}
+
+.journey-party-item .party-name:focus {
+    outline: none;
+    border-color: #8b6914;
+}
+
+.party-img-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.party-img-preview {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #555;
+}
+
+.party-img-btn {
+    padding: 3px 8px;
+    background: rgba(139, 105, 20, 0.3);
+    border: 1px solid #8b6914;
+    border-radius: 4px;
+    color: #d4a843;
+    font-size: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.party-img-btn:hover {
+    background: rgba(139, 105, 20, 0.6);
+}
+
+.journey-party-item .party-remove {
+    color: #c55;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+}
+
+.journey-party-item .party-remove:hover {
+    color: #f77;
+}
+
+/* ===== BOTAO SALVAR JORNADA ===== */
+.journey-save-btn {
+    display: block;
+    width: 100%;
+    margin-top: 18px;
+    padding: 10px;
+    font-weight: 600;
+    background: rgba(139, 105, 20, 0.4);
+    border: 1px solid #8b6914;
+    border-radius: 6px;
+    color: #d4a843;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.journey-save-btn:hover {
+    background: rgba(139, 105, 20, 0.7);
+}
+
+.journey-save-btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+#journey-party-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 8px;
 }
 
 #lang-menu {

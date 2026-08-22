@@ -37,6 +37,73 @@
         <button id="trail-next" class="trail-ctrl-btn" style="display:none;">&#9654;</button>
     </div>
 
+    <!-- Sidebar de Configurações -->
+    <button id="settings-toggle" title="Configurações">&#9881;</button>
+    <div id="settings-sidebar">
+        <div class="settings-section">
+            <div class="settings-section-title">Jornadas</div>
+            <button class="settings-btn" id="trail-edit" title="Editar Jornada">&#9998; Editar Jornada</button>
+            <button class="settings-btn" id="trail-new" title="Nova Jornada">+ Nova Jornada</button>
+        </div>
+        <div class="settings-section">
+            <div class="settings-section-title">Ferramentas</div>
+            <button class="settings-btn" id="debug-btn" title="Modo Debug"><img src="img/debug.png" alt="Debug" class="settings-icon"> Debug Mode</button>
+        </div>
+    </div>
+
+    <!-- Modal de Jornada -->
+    <div id="journey-modal-overlay">
+        <div id="journey-modal">
+            <button id="journey-modal-close">&times;</button>
+            <h2 id="journey-modal-title">Nova Jornada</h2>
+            <div id="journey-modal-form" class="poi-form">
+                <label>Nome da Campanha</label>
+                <input type="text" id="journey-name">
+                <label>Cor da Trilha</label>
+                <input type="color" id="journey-color" value="#d4a843">
+                <label>Party</label>
+                <div id="journey-party-list"></div>
+                <button type="button" id="journey-add-member" class="add-detail-btn">+ Adicionar membro</button>
+                <div class="stops-header">
+                    <label>Paradas</label>
+                    <button type="button" id="journey-reorder-stops" class="reorder-btn" title="Reordenar paradas">&#8645;</button>
+                </div>
+                <div id="journey-stops-list"></div>
+                <button type="button" id="journey-add-stop" class="add-detail-btn">+ Adicionar parada (clique no mapa)</button>
+                <button type="button" id="journey-save" class="journey-save-btn">Salvar Jornada</button>
+                <button type="button" id="journey-delete" class="delete-page-btn" style="display:none;">Excluir Jornada</button>
+            </div>
+        </div>
+        <!-- Sub-modal de edicao de parada -->
+        <div id="stop-edit-panel" class="stop-edit-panel">
+            <button id="stop-edit-close">&times;</button>
+            <h3 id="stop-edit-title">Editar Parada</h3>
+            <div class="stop-edit-form poi-form">
+                <label>Local</label>
+                <input type="text" id="stop-edit-location" placeholder="Nome do local">
+                <label>Subtitulo</label>
+                <input type="text" id="stop-edit-subtitle" placeholder="Ex: Sessao 3-4">
+                <label>Descricao</label>
+                <textarea id="stop-edit-description" placeholder="Resumo do que aconteceu nesta parada..."></textarea>
+                <label>Coordenadas</label>
+                <div class="stop-edit-coords-row">
+                    <span id="stop-edit-coords-display">(0, 0)</span>
+                    <button type="button" id="stop-edit-relocate" class="add-detail-btn">Reposicionar no mapa</button>
+                </div>
+                <label>Personagens presentes</label>
+                <div id="stop-edit-participants"></div>
+                <label>Sessao Completa</label>
+                <div id="stop-edit-session-fields" class="stop-session-fields">
+                    <input type="text" id="stop-edit-session-title" placeholder="Titulo (ex: Sessao 0 — Onde estavamos...)">
+                    <input type="text" id="stop-edit-session-quote" placeholder="Citacao">
+                    <input type="text" id="stop-edit-session-quoteauthor" placeholder="Autor da citacao">
+                    <textarea id="stop-edit-session-content" class="stop-edit-fulltext" placeholder="Conteudo completo da sessao..."></textarea>
+                </div>
+                <button type="button" id="stop-edit-save" class="journey-save-btn">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Menu Wiki Lateral -->
     <div id="wiki-sidebar">
         <div class="wiki-sidebar-header">
@@ -133,7 +200,6 @@
         </div>
         <div class="lang-btn" id="lang-toggle">PT-BR</div>
         <div class="lang-btn pin-toggle" id="pin-btn" title="Marcar Ponto de Interesse"><img src="img/pin.png" alt="Pin" class="pin-icon"></div>
-        <div class="lang-btn debug-toggle" id="debug-btn" title="Modo Debug"><img src="img/debug.png" alt="Debug" class="debug-icon"></div>
     </div>
 
     <!-- Modal de Ponto de Interesse -->
@@ -183,7 +249,6 @@
     <!-- Firebase SDK (compat CDN) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
     <!-- Scripts -->
     <script src="data/wiki-data.js"></script>

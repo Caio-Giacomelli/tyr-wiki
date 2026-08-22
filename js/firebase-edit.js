@@ -90,6 +90,8 @@ async function loadFromFirestore() {
         if (typeof landmarks !== 'undefined') await loadCollection('landmarks', landmarks);
 
         console.log('Wiki carregada do Firestore');
+        // Reconstruir entityMap com dados carregados do Firestore
+        if (typeof rebuildEntityMap === 'function') rebuildEntityMap();
     } catch (error) {
         console.log('Usando dados locais (Firestore indisponível ou vazio):', error.message);
     }
@@ -306,6 +308,47 @@ function enterEditMode() {
             }
             altBtns.appendChild(addArtBtn);
         }
+
+        // Tornar botoes de arte alternativa existentes clicaveis para exclusao
+        const existingAltBtns = panel.querySelectorAll('.alt-art-btn');
+        existingAltBtns.forEach((btn, btnIndex) => {
+            // Pular o botao "1" (imagem principal) - so permitir excluir as alternativas
+            if (btnIndex === 0) return;
+            btn.classList.add('deleteable');
+            btn.title = 'Clique para excluir esta arte alternativa';
+            btn.addEventListener('click', function handleDeleteAlt(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                const altIndex = btnIndex - 1; // indice no array altImages
+                const entity = currentEditEntity;
+                if (!entity || !entity.data.altImages || !entity.data.altImages[altIndex]) return;
+
+                if (!confirm('Excluir esta arte alternativa? Essa ação não pode ser desfeita.')) return;
+
+                // Remover do array local
+                entity.data.altImages.splice(altIndex, 1);
+
+                // Determinar collection
+                let collection = '';
+                switch (entity.type) {
+                    case 'character': collection = 'characters'; break;
+                    case 'legion': collection = 'legion'; break;
+                    case 'villain': collection = 'villains'; break;
+                    case 'artifact': collection = 'artifacts'; break;
+                    case 'book': collection = 'books'; break;
+                    case 'historical': collection = 'historicalNPCs'; break;
+                    case 'ally': collection = 'allies'; break;
+                    case 'landmark': collection = 'landmarks'; break;
+                    case 'city': collection = 'cities'; break;
+                }
+
+                // Salvar no Firestore
+                saveToFirestore(collection, String(entity.id), { altImages: entity.data.altImages }).then(() => {
+                    exitEditMode();
+                    refreshEntityView(entity);
+                });
+            });
+        });
     }
 
     // Botão de adicionar imagem quando a entidade não tem nenhuma
@@ -702,7 +745,11 @@ async function saveEdits() {
 
     const success = await saveToFirestore(collection, docId, editedData);
     if (success) {
+        // Reconstruir o mapa de entidades para links [Nome] funcionarem imediatamente
+        if (typeof rebuildEntityMap === 'function') rebuildEntityMap();
         exitEditMode();
+        // Refresh da view para renderizar links atualizados
+        refreshEntityView(entity);
         // Feedback visual
         editBtn.textContent = '✓';
         setTimeout(() => { editBtn.textContent = '✎'; }, 1500);
@@ -786,3 +833,54 @@ deselectAll = function() {
 
 // ===== CARREGAR DADOS AO INICIAR =====
 loadFromFirestore();
+
+// ===== SEED: Salvar jornadas locais no Firestore (se nao existir ou estiver incompleto) =====
+async function seedLocalJourneys() {
+    if (typeof db === 'undefined') return;
+    try {
+        // Sol Negro: salvar se nao existir OU se tiver dados incompletos (sem sessions)
+        const solNegroDoc = await db.collection('journeys').doc('solnegro').get();
+        const solData = solNegroDoc.exists ? solNegroDoc.data() : null;
+        if (!solData || !solData.sessions || solData.sessions.length === 0) {
+            await db.collection('journeys').doc('solnegro').set({
+                key: 'solnegro',
+                displayName: 'Sol Negro',
+                color: '#d4a843',
+                pathColor: '#d4a843',
+                party: [
+                    { name: 'Stor', img: 'img/Stor.png', offset: -36 },
+                    { name: 'Elandor', img: 'img/Elandor.png', offset: 36 },
+                    { name: 'Azarran', img: 'img/Azarran.png', offset: 0 }
+                ],
+                stops: solNegroStopsCombined,
+                sessions: solNegroSessionsCombined
+            });
+            console.log('Sol Negro salvo/atualizado no Firestore');
+        }
+
+        // Cicatrizes: salvar se nao existir OU se tiver dados incompletos
+        const cicatrizDoc = await db.collection('journeys').doc('cicatriz').get();
+        const cicData = cicatrizDoc.exists ? cicatrizDoc.data() : null;
+        const cicatrizSessions = typeof sessionsDataCicatriz !== 'undefined' ? sessionsDataCicatriz : [];
+        const cicatrizStops = typeof journeyStopsCicatriz !== 'undefined' ? journeyStopsCicatriz : [];
+        if (!cicData || !cicData.sessions || cicData.sessions.length === 0) {
+            await db.collection('journeys').doc('cicatriz').set({
+                key: 'cicatriz',
+                displayName: 'Cicatrizes do Eclipse',
+                color: '#4a9cc8',
+                pathColor: '#4a9cc8',
+                party: [
+                    { name: 'Falin', img: 'img/Falin.png', offset: -30 },
+                    { name: 'Durgan', img: 'img/Durgan.png', offset: 30 }
+                ],
+                stops: cicatrizStops,
+                sessions: cicatrizSessions
+            });
+            console.log('Cicatrizes do Eclipse salvo/atualizado no Firestore');
+        }
+    } catch (err) {
+        console.log('Seed de jornadas:', err.message);
+    }
+}
+
+seedLocalJourneys();
