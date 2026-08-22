@@ -3041,9 +3041,6 @@ document.addEventListener('click', (e) => {
     }
 
     journeyModalClose.addEventListener('click', closeJourneyModal);
-    journeyOverlay.addEventListener('click', (e) => {
-        if (e.target === journeyOverlay) closeJourneyModal();
-    });
 
     // ===== PARTY LIST =====
     function renderPartyList() {
