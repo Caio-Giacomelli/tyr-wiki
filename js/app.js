@@ -1393,31 +1393,31 @@ function showJourneyStop(stop, index) {
     let sessionBtn = '';
     if (config.sessions && config.sessions.length > 0) {
         var sessionId = null;
-        if (currentJourneyKey === 'solnegro') {
-            // For Sol Negro, use stop index to determine which session range
+
+        // Primeiro: tentar usar indice direto (funciona para todas as jornadas salvas via editor)
+        if (config.sessions[index] && config.sessions[index].content) {
+            sessionId = index;
+        } else if (currentJourneyKey === 'solnegro') {
+            // Fallback Sol Negro: parsing do campo session
             var isT2 = stop.session.indexOf('T2') === 0;
             var stopSession = stop.session.replace(/^T\d+ - /, '');
             if (isT2) {
-                // T2 sessions: S02E01->0, S02E02->1, S02E03->2 + offset
                 var epMatch = stopSession.match(/E(\d+)/);
                 if (epMatch) {
                     var t1Count = typeof sessionsData !== 'undefined' ? sessionsData.length : 0;
                     sessionId = t1Count + parseInt(epMatch[1]) - 1;
                 }
             } else {
-                // T1 sessions: "Sessao X" -> X
                 var numMatch = stopSession.match(/(\d+)/);
                 if (numMatch) sessionId = parseInt(numMatch[1]);
             }
         } else if (currentJourneyKey === 'cicatriz') {
-            // Cicatrizes: S01E01->0, S01E02->1, S01E03->2
             var epMatch2 = stop.session.match(/E(\d+)/);
             if (epMatch2) sessionId = parseInt(epMatch2[1]) - 1;
         } else {
-            // Jornadas custom: cada parada tem sua sessao pelo indice
             sessionId = index;
         }
-        if (sessionId !== null && config.sessions[sessionId]) {
+        if (sessionId !== null && config.sessions[sessionId] && config.sessions[sessionId].content) {
             sessionBtn = '<button id="session-read-btn" onclick="openSessionModalFor(\'' + currentJourneyKey + '\', ' + sessionId + ')">Ler Sess\u00e3o Completa</button>';
         }
     }
@@ -1569,7 +1569,8 @@ function drawJourneyBase() {
 
         const img = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
         const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-        img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', baseUrl + char.img);
+        const imgSrc = char.img.startsWith('data:') ? char.img : baseUrl + char.img;
+        img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', imgSrc);
         img.setAttribute('x', '-25'); img.setAttribute('y', '-25');
         img.setAttribute('width', '50'); img.setAttribute('height', '50');
         img.setAttribute('clip-path', `url(#${clipId})`);
@@ -1623,7 +1624,27 @@ function advanceJourney() {
         linesGroup.appendChild(line);
 
         // Animate party icons along the path
-        const partyChars = (config.party || []).map(p => ({ offset: p.offset || 0 }));
+        const allPartyChars = config.party || [];
+        const destStop = config.stops[thisIndex];
+        const destParticipants = destStop && destStop.participants && destStop.participants.length > 0 ? destStop.participants : null;
+        const spacing = 36;
+
+        // Determinar quais membros serao visiveis na parada de destino
+        const visibleInDest = [];
+        allPartyChars.forEach((char, i) => {
+            if (!destParticipants || destParticipants.includes(char.name)) {
+                visibleInDest.push(i);
+            }
+        });
+        const totalWidthDest = (visibleInDest.length - 1) * spacing;
+
+        // Esconder membros que nao participam da proxima parada antes de animar
+        allPartyChars.forEach((char, i) => {
+            const charG = svgDoc.getElementById(`party-char-${currentJourneyKey}-${i}`);
+            if (!charG) return;
+            charG.style.display = visibleInDest.includes(i) ? '' : 'none';
+        });
+
         const duration = 2000;
         const animStart = performance.now();
 
@@ -1636,9 +1657,11 @@ function advanceJourney() {
             const cx = prev.ox + (stop.ox - prev.ox) * eased;
             const cy = prev.oy + (stop.oy - prev.oy) * eased;
 
-            partyChars.forEach((char, i) => {
-                const charG = svgDoc.getElementById(`party-char-${currentJourneyKey}-${i}`);
-                if (charG) charG.setAttribute('transform', `translate(${cx + char.offset}, ${cy - 40})`);
+            visibleInDest.forEach((origIndex, visPos) => {
+                const charG = svgDoc.getElementById(`party-char-${currentJourneyKey}-${origIndex}`);
+                if (!charG) return;
+                const offset = -totalWidthDest / 2 + visPos * spacing;
+                charG.setAttribute('transform', `translate(${cx + offset}, ${cy - 40})`);
             });
 
             // Animate line opacity
@@ -1648,6 +1671,7 @@ function advanceJourney() {
             if (t < 1) {
                 requestAnimationFrame(animatePartyMove);
             } else {
+                updatePartyVisibility(config, thisIndex);
                 placeStopMarker(stop, thisIndex, stopsGroup, config);
                 showJourneyStop(config.stops[thisIndex], thisIndex);
                 if (journeyMode === 'auto' && currentStopIndex === thisIndex) {
@@ -1658,12 +1682,49 @@ function advanceJourney() {
 
         requestAnimationFrame(animatePartyMove);
     } else {
+        // Primeira parada: ajustar visibilidade dos membros
+        updatePartyVisibility(config, 0);
         placeStopMarker(stop, 0, stopsGroup, config);
         showJourneyStop(config.stops[0], 0);
         if (journeyMode === 'auto') {
             journeyAnimation = setTimeout(() => { currentStopIndex++; advanceJourney(); }, 2000);
         }
     }
+}
+
+// Mostrar/esconder membros da party baseado nos participantes da parada e reposicionar
+function updatePartyVisibility(config, stopIndex) {
+    const partyChars = config.party || [];
+    const stop = config.stops[stopIndex];
+    const participants = stop && stop.participants ? stop.participants : null;
+    const offsetStops = getOffsetStopsFor(config.stops);
+    const currentStop = offsetStops[stopIndex];
+    const spacing = 36;
+
+    // Determinar quais membros sao visiveis
+    const visibleIndices = [];
+    partyChars.forEach((char, i) => {
+        if (!participants || participants.length === 0 || participants.includes(char.name)) {
+            visibleIndices.push(i);
+        }
+    });
+
+    // Calcular offsets centralizados para os visiveis
+    const totalWidth = (visibleIndices.length - 1) * spacing;
+
+    partyChars.forEach((char, i) => {
+        const charG = svgDoc.getElementById(`party-char-${currentJourneyKey}-${i}`);
+        if (!charG) return;
+
+        const visiblePos = visibleIndices.indexOf(i);
+        if (visiblePos < 0) {
+            charG.style.display = 'none';
+        } else {
+            charG.style.display = '';
+            const offset = -totalWidth / 2 + visiblePos * spacing;
+            charG.setAttribute('transform', `translate(${currentStop.ox + offset}, ${currentStop.oy - 40})`);
+        }
+    });
 }
 
 function placeStopMarker(stop, index, stopsGroup, config) {
@@ -2983,15 +3044,25 @@ document.addEventListener('click', (e) => {
             imgInput.type = 'file';
             imgInput.accept = 'image/*';
             imgInput.style.display = 'none';
-            imgInput.addEventListener('change', (e) => {
+            imgInput.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                // Usar o caminho relativo baseado no nome do arquivo
-                const imgPath = 'img/' + file.name;
-                journeyParty[i].img = imgPath;
-                imgPreview.src = imgPath;
-                imgPreview.style.display = 'block';
-                imgLabel.textContent = 'Trocar';
+                imgLabel.textContent = '...';
+                try {
+                    // Comprimir e converter para data URL
+                    const dataUrl = await compressImage(file, 200, 0.8);
+                    journeyParty[i].img = dataUrl;
+                    imgPreview.src = dataUrl;
+                    imgPreview.style.display = 'block';
+                    imgLabel.textContent = 'Trocar';
+                } catch (err) {
+                    // Fallback: tentar usar caminho local
+                    const imgPath = 'img/' + file.name;
+                    journeyParty[i].img = imgPath;
+                    imgPreview.src = imgPath;
+                    imgPreview.style.display = 'block';
+                    imgLabel.textContent = 'Trocar';
+                }
             });
 
             imgLabel.appendChild(imgInput);
@@ -3410,6 +3481,13 @@ document.addEventListener('click', (e) => {
 
             currentJourneyKey = key;
             trailSeason.value = key;
+            // Re-renderizar a trilha se estiver visivel
+            if (activeJourneys[key]) {
+                removeTrailFor(key);
+                currentStopIndex = 0;
+                drawJourneyBase();
+                updatePartyVisibility(journeyConfigs[key], 0);
+            }
             closeJourneyModal();
         } catch (err) {
             console.error('Erro ao salvar jornada:', err);
