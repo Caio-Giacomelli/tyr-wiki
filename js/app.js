@@ -3496,13 +3496,23 @@ document.addEventListener('click', (e) => {
             };
         });
 
+        // Limpar stops para salvar (remover dados redundantes que ja estao em sessions)
+        const stopsToSave = journeyStops.map(stop => ({
+            x: stop.x,
+            y: stop.y,
+            location: stop.location || '',
+            session: stop.session || stop.subtitle || '',
+            summary: stop.summary || stop.description || '',
+            participants: stop.participants || []
+        }));
+
         const journeyData = {
             key: key,
             displayName: name,
             color: journeyColorInput.value,
             pathColor: journeyColorInput.value,
             party: party,
-            stops: journeyStops,
+            stops: stopsToSave,
             sessions: sessions
         };
 
@@ -3511,7 +3521,8 @@ document.addEventListener('click', (e) => {
 
         try {
             await db.collection('journeys').doc(key).set(journeyData);
-            journeyConfigs[key] = journeyData;
+            // Atualizar config local com stops completos para uso imediato
+            journeyConfigs[key] = Object.assign({}, journeyData, { stops: journeyStops });
 
             if (!editingJourneyKey) {
                 const option = document.createElement('option');
