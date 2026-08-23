@@ -65,14 +65,8 @@ async function loadFromFirestore() {
                 } else {
                     const index = parseInt(docId);
                     if (!isNaN(index) && localArray[index]) {
-                        // So sobrescrever se o nome bate (protecao contra docs corrompidos)
                         const docData = doc.data();
-                        if (!docData.name || docData.name === localArray[index].name) {
-                            Object.assign(localArray[index], docData);
-                        } else {
-                            // Doc corrompido — deletar silenciosamente
-                            db.collection(collectionName).doc(docId).delete().catch(() => {});
-                        }
+                        Object.assign(localArray[index], docData);
                     }
                 }
             });
