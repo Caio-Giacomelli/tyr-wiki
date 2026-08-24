@@ -1109,7 +1109,20 @@ function showAllyInfo(index) {
 function toggleWikiSection(header) {
     header.classList.toggle('open');
     const list = header.nextElementSibling;
-    list.classList.toggle('open');
+    const isOpening = !list.classList.contains('open');
+    if (isOpening) {
+        list.classList.add('open');
+        list.style.overflowY = 'hidden';
+        list.addEventListener('transitionend', function handler() {
+            list.removeEventListener('transitionend', handler);
+            if (list.classList.contains('open')) {
+                list.style.overflowY = '';
+            }
+        });
+    } else {
+        list.style.overflowY = 'hidden';
+        list.classList.remove('open');
+    }
 }
 
 // ===== LINKIFY LOCAIS E PERSONAGENS =====

@@ -505,12 +505,13 @@ body {
 .wiki-section-list {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.3s ease;
+    transition: max-height 0.4s ease-out;
 }
 
 .wiki-section-list.open {
-    max-height: 3000px;
+    max-height: 800px;
     overflow-y: auto;
+    transition: max-height 0.4s ease-in;
 }
 
 .wiki-item {
