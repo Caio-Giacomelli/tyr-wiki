@@ -2639,6 +2639,16 @@ if (langToggle && langMenu) {
                 const poi = doc.data();
                 customPOIs.push(poi);
             });
+
+            // Migrar Hellvault de Veyrinn se ainda nao existe como POI customizado
+            if (typeof _hellvaultVeyrinnSeed !== 'undefined') {
+                const exists = customPOIs.some(p => p.id === _hellvaultVeyrinnSeed.id);
+                if (!exists) {
+                    await db.collection('customPOIs').doc(_hellvaultVeyrinnSeed.id).set(_hellvaultVeyrinnSeed);
+                    customPOIs.push(_hellvaultVeyrinnSeed);
+                }
+            }
+
             // Esperar o SVG carregar antes de renderizar
             function tryRender() {
                 if (svgDoc && svgDoc.querySelector('svg')) {

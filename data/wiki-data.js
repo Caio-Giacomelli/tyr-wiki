@@ -767,26 +767,28 @@ const journeyStopsCicatriz = [
 ];
 
 // ===== PONTOS DE INTERESSE NO MAPA (HELLVAULTS) =====
-const mapMarkers = [
-    {
-        id: "hellvault-veyrinn",
-        x: 1446, y: 1096,
-        icon: "img/hellvault-icon.png",
-        image: "img/hellvault-veyrinn.png",
-        size: 30,
-        name: "Hellvault de Veyrinn",
-        subtitle: "Hellvault",
-        description: "Um antigo local sagrado construido por Dekkar, irmao de Oronis. Dentro repousa o esqueleto de um dragao e a inscricao: 'Seu corpo, submerso em sua propria hubris'. O grupo encontrou aqui a carta de Dekkar e o manuscrito de Lalali-Puy.",
-        details: [
-            "Localizado abaixo de um lago proximo a Veyrinn",
-            "Protegido pelo cao espectral Marcius (evocado por Stor)",
-            "Contem o esqueleto de um dragao selado pela Preservacao",
-            "Inscricao: 'Seu corpo, submerso em sua propria hubris'",
-            "Carta de Dekkar para seu irmao encontrada aqui",
-            "Manuscrito de Lalali-Puy (renuncia ao titulo de campea)"
-        ]
-    }
-];
+const mapMarkers = [];
+
+// Hellvault de Veyrinn migrado para customPOIs (editavel pelo site)
+const _hellvaultVeyrinnSeed = {
+    id: "hellvault-veyrinn",
+    x: 1446, y: 1096,
+    iconSvg: '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24" height="24" viewBox="0 0 24 24"><image xlink:href="img/hellvault-icon.png" width="24" height="24" preserveAspectRatio="xMidYMid slice"/></svg>',
+    iconId: "local:hellvault",
+    image: "img/hellvault-veyrinn.png",
+    size: 30,
+    name: "Hellvault de Veyrinn",
+    subtitle: "Hellvault",
+    description: "Um antigo local sagrado construido por Dekkar, irmao de Oronis. Dentro repousa o esqueleto de um dragao e a inscricao: 'Seu corpo, submerso em sua propria hubris'. O grupo encontrou aqui a carta de Dekkar e o manuscrito de Lalali-Puy.",
+    details: [
+        "Localizado abaixo de um lago proximo a Veyrinn",
+        "Protegido pelo cao espectral Marcius (evocado por Stor)",
+        "Contem o esqueleto de um dragao selado pela Preservacao",
+        "Inscricao: 'Seu corpo, submerso em sua propria hubris'",
+        "Carta de Dekkar para seu irmao encontrada aqui",
+        "Manuscrito de Lalali-Puy (renuncia ao titulo de campea)"
+    ]
+};
 
 // ===== PARADAS DA JORNADA - SOL NEGRO T2 =====
 var journeyStopsSolNegro2 = [
