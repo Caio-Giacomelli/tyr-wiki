@@ -2326,20 +2326,47 @@ if (langToggle && langMenu) {
         if (!query) return;
         poiIconResults.innerHTML = '<div style="color:#999;font-size:12px;">Buscando...</div>';
 
+        // Icones locais customizados
+        const localIcons = [
+            { iconName: 'local:hellvault', keywords: ['hellvault', 'hell', 'vault'], isImageIcon: true, svgText: '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24" height="24" viewBox="0 0 24 24"><image xlink:href="img/hellvault-icon.png" width="24" height="24" preserveAspectRatio="xMidYMid slice"/></svg>' }
+        ];
+
+        // Filtrar locais pelo query
+        const matchedLocal = localIcons.filter(icon =>
+            icon.keywords.some(kw => kw.includes(query.toLowerCase()))
+        );
+
         try {
             const resp = await fetch('https://api.iconify.design/search?query=' + encodeURIComponent(query) + '&limit=48');
             const data = await resp.json();
 
-            if (!data.icons || data.icons.length === 0) {
+            const apiIcons = (data.icons && data.icons.length > 0) ? data.icons.slice(0, 48) : [];
+
+            if (matchedLocal.length === 0 && apiIcons.length === 0) {
                 poiIconResults.innerHTML = '<div style="color:#999;font-size:12px;">Nenhum icone encontrado. Tente em ingles (ex: cave, skull, dragon).</div>';
                 return;
             }
 
             poiIconResults.innerHTML = '';
-            const icons = data.icons.slice(0, 48);
 
-            // Carregar SVGs em paralelo (batch)
-            const promises = icons.map(iconName =>
+            // Renderizar icones locais primeiro
+            matchedLocal.forEach(result => {
+                const option = document.createElement('div');
+                option.className = 'poi-icon-option';
+                option.innerHTML = result.svgText;
+                option.title = result.iconName;
+                option.addEventListener('click', () => {
+                    document.querySelectorAll('.poi-icon-option.selected').forEach(el => el.classList.remove('selected'));
+                    option.classList.add('selected');
+                    selectedIconSvg = result.svgText;
+                    selectedIconId = result.iconName;
+                    poiIconPreview.innerHTML = result.svgText;
+                });
+                poiIconResults.appendChild(option);
+            });
+
+            // Carregar SVGs da API em paralelo (batch)
+            const promises = apiIcons.map(iconName =>
                 fetch('https://api.iconify.design/' + iconName + '.svg?height=24')
                     .then(r => r.text())
                     .then(svgText => ({ iconName, svgText }))
@@ -2480,19 +2507,49 @@ if (langToggle && langMenu) {
         group.appendChild(bg);
 
         // Icone SVG via foreignObject
-        const fo = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-        fo.setAttribute('x', poi.x - r + 4);
-        fo.setAttribute('y', poi.y - r + 4);
-        fo.setAttribute('width', (r - 4) * 2);
-        fo.setAttribute('height', (r - 4) * 2);
-        const iconDiv = document.createElement('div');
-        iconDiv.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
-        iconDiv.innerHTML = poi.iconSvg.replace(/width="[^"]*"/, 'width="' + ((r - 4) * 2 - 4) + '"').replace(/height="[^"]*"/, 'height="' + ((r - 4) * 2 - 4) + '"');
-        // Colorir o icone
-        const svgIcon = iconDiv.querySelector('svg');
-        if (svgIcon) svgIcon.style.fill = '#d4a843';
-        fo.appendChild(iconDiv);
-        group.appendChild(fo);
+        const isImageIcon = poi.iconId && poi.iconId.startsWith('local:');
+        if (isImageIcon) {
+            // Usar imagem nativa SVG com clip circular (como os mapMarkers)
+            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+            const defs = svgDoc.querySelector('defs') || (() => { const d = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'defs'); svgEl.insertBefore(d, svgEl.firstChild); return d; })();
+            const clipId = 'clip-' + poi.id;
+            const clipPath = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+            clipPath.setAttribute('id', clipId);
+            const clipCircle = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            clipCircle.setAttribute('cx', poi.x);
+            clipCircle.setAttribute('cy', poi.y);
+            clipCircle.setAttribute('r', r - 2);
+            clipPath.appendChild(clipCircle);
+            defs.appendChild(clipPath);
+
+            // Extrair o src da imagem do SVG inline
+            const srcMatch = poi.iconSvg.match(/xlink:href="([^"]+)"|href="([^"]+)"/);
+            const imgSrc = srcMatch ? (srcMatch[1] || srcMatch[2]) : 'img/hellvault-icon.png';
+
+            const img = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+            img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', baseUrl + imgSrc);
+            img.setAttribute('x', poi.x - r + 2);
+            img.setAttribute('y', poi.y - r + 2);
+            img.setAttribute('width', (r - 2) * 2);
+            img.setAttribute('height', (r - 2) * 2);
+            img.setAttribute('clip-path', 'url(#' + clipId + ')');
+            img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+            group.appendChild(img);
+        } else {
+            const fo = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+            fo.setAttribute('x', poi.x - r + 4);
+            fo.setAttribute('y', poi.y - r + 4);
+            fo.setAttribute('width', (r - 4) * 2);
+            fo.setAttribute('height', (r - 4) * 2);
+            const iconDiv = document.createElement('div');
+            iconDiv.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+            iconDiv.innerHTML = poi.iconSvg.replace(/width="[^"]*"/, 'width="' + ((r - 4) * 2 - 4) + '"').replace(/height="[^"]*"/, 'height="' + ((r - 4) * 2 - 4) + '"');
+            // Colorir o icone
+            const svgIcon = iconDiv.querySelector('svg');
+            if (svgIcon) svgIcon.style.fill = '#d4a843';
+            fo.appendChild(iconDiv);
+            group.appendChild(fo);
+        }
 
         // Hover
         group.addEventListener('mouseenter', () => {
