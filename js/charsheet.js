@@ -49,7 +49,9 @@
             // Personality
             personalityTraits: '', ideals: '', bonds: '', flaws: '',
             // Roleplay
-            roleplayNotes: [], // strings
+            roleplayNotes: [], // deprecated, kept for compat
+            // Contos
+            contos: [], // { title, text, date }
             // Bonus/Misc
             bonusMechanics: [], // { name, desc }
             notes: ''
@@ -311,14 +313,6 @@
             html += collapseHtml('Bônus & Mecânicas', bonusHtml, false);
         }
 
-        // Roleplay
-        if (s.roleplayNotes && s.roleplayNotes.length) {
-            let rpHtml = '<ul class="cs-rp-list">';
-            s.roleplayNotes.forEach(n => { rpHtml += '<li>' + escHtml(n) + '</li>'; });
-            rpHtml += '</ul>';
-            html += collapseHtml('Roleplay & Aprendizados', rpHtml, false);
-        }
-
         // Languages & Proficiencies
         if (s.languages || s.proficienciesText) {
             let lpHtml = '';
@@ -332,11 +326,18 @@
             html += collapseHtml('Notas', '<div class="cs-notes-block">' + escHtml(s.notes) + '</div>', false);
         }
 
+        // Contos
+        const contosCount = (s.contos || []).length;
+        html += `<div class="cs-contos-btn-wrap">
+            <button class="cs-contos-open-btn" id="cs-contos-btn">&#128214; Contos <span class="cs-contos-count">${contosCount}</span></button>
+        </div>`;
+
         html += '</div>'; // .cs-sheet
         c.innerHTML = html;
 
         document.getElementById('cs-back-btn').addEventListener('click', closeCharsheetOverlay);
         document.getElementById('cs-edit-btn').addEventListener('click', () => { sheetEditMode = true; renderEditView(); });
+        document.getElementById('cs-contos-btn').addEventListener('click', () => renderContosView());
 
         // Combat mode toggle
         const combatToggle = document.getElementById('cs-combat-toggle');
@@ -587,7 +588,6 @@
                     <div class="cs-field"><label>Proficiências</label><textarea id="cs-e-proftext" class="cs-ta-sm">${escHtml(s.proficienciesText)}</textarea></div>
                 `)}
                 ${editSection('Bônus & Mecânicas', renderListEditor('bonus', s.bonusMechanics || [], ['name', 'desc'], ['Nome', 'Descrição']))}
-                ${editSection('Roleplay (um por linha)', `<textarea id="cs-e-rp" class="cs-ta">${(s.roleplayNotes || []).join('\n')}</textarea>`)}
                 ${editSection('Notas', `<textarea id="cs-e-notes" class="cs-ta">${escHtml(s.notes)}</textarea>`)}
                 <div class="cs-edit-section cs-danger-zone"><button id="cs-delete-btn" class="cs-btn cs-btn-danger">Excluir Ficha</button></div>
             </div>
@@ -755,7 +755,6 @@
 
         s.languages = document.getElementById('cs-e-langs').value.trim();
         s.proficienciesText = document.getElementById('cs-e-proftext').value.trim();
-        s.roleplayNotes = document.getElementById('cs-e-rp').value.split('\n').map(l => l.trim()).filter(l => l);
         s.notes = document.getElementById('cs-e-notes').value.trim();
 
         const btn = document.getElementById('cs-save-btn');
@@ -783,6 +782,153 @@
         const panel = tabs.querySelector('.cs-tab-panel[data-tab="' + key + '"]');
         if (panel) panel.classList.add('cs-tab-visible');
     });
+
+    // ===== CONTOS (TALES) =====
+    function renderContosView() {
+        const c = document.getElementById('charsheet-container');
+        if (!c || !currentSheet) return;
+        const contos = currentSheet.contos || [];
+
+        let html = `
+        <div class="cs-contos-view">
+            <div class="cs-sheet-toolbar">
+                <button id="cs-contos-back" class="cs-toolbar-btn">&#8592;</button>
+                <span class="cs-toolbar-title">Contos de ${escHtml(currentSheet.name)}</span>
+                <div class="cs-toolbar-right">
+                    <button id="cs-contos-add" class="cs-toolbar-btn" title="Novo Conto">+</button>
+                </div>
+            </div>
+            <div class="cs-contos-shelf">`;
+
+        if (contos.length === 0) {
+            html += '<div class="cs-contos-empty"><p>Nenhum conto escrito ainda.</p><p class="cs-contos-hint">Escreva contos sobre seu personagem para ganhar pontos de inspiração heroica.</p></div>';
+        } else {
+            contos.forEach((conto, i) => {
+                html += `<div class="cs-conto-card" data-idx="${i}">
+                    <div class="cs-conto-card-inner">
+                        <div class="cs-conto-number">${toRoman(i + 1)}</div>
+                        <div class="cs-conto-title">${escHtml(conto.title || 'Sem título')}</div>
+                        <div class="cs-conto-date">${conto.date || ''}</div>
+                    </div>
+                </div>`;
+            });
+        }
+
+        html += `</div></div>`;
+        c.innerHTML = html;
+
+        document.getElementById('cs-contos-back').addEventListener('click', renderSheetView);
+        document.getElementById('cs-contos-add').addEventListener('click', () => openContoEditor(-1));
+        c.querySelectorAll('.cs-conto-card').forEach(card => {
+            card.addEventListener('click', () => openContoReader(parseInt(card.dataset.idx)));
+        });
+    }
+
+    function openContoReader(idx) {
+        const c = document.getElementById('charsheet-container');
+        const contos = currentSheet.contos || [];
+        const conto = contos[idx];
+        if (!conto) return;
+
+        const total = contos.length;
+        c.innerHTML = `
+        <div class="cs-conto-book">
+            <div class="cs-book-header">
+                <button id="cs-book-back" class="cs-toolbar-btn">&#8592;</button>
+                <span class="cs-book-nav">${idx + 1} / ${total}</span>
+                <div class="cs-toolbar-right">
+                    <button id="cs-book-edit" class="cs-toolbar-btn" title="Editar">&#9998;</button>
+                    <button id="cs-book-delete" class="cs-toolbar-btn cs-btn-del" title="Excluir">&#128465;</button>
+                </div>
+            </div>
+            <div class="cs-book-page">
+                <div class="cs-book-ornament">&#10086;</div>
+                <h1 class="cs-book-title">${escHtml(conto.title || 'Sem título')}</h1>
+                <div class="cs-book-date">${conto.date || ''}</div>
+                <div class="cs-book-text">${escHtml(conto.text || '').replace(/\n/g, '<br>')}</div>
+                <div class="cs-book-ornament">&#10086;</div>
+            </div>
+            <div class="cs-book-footer">
+                ${idx > 0 ? '<button class="cs-book-prev" data-dir="-1">&#9664; Anterior</button>' : '<span></span>'}
+                ${idx < total - 1 ? '<button class="cs-book-next" data-dir="1">Próximo &#9654;</button>' : '<span></span>'}
+            </div>
+        </div>`;
+
+        document.getElementById('cs-book-back').addEventListener('click', renderContosView);
+        document.getElementById('cs-book-edit').addEventListener('click', () => openContoEditor(idx));
+        document.getElementById('cs-book-delete').addEventListener('click', async () => {
+            if (!confirm('Excluir este conto?')) return;
+            currentSheet.contos.splice(idx, 1);
+            await saveSheet(currentSheet);
+            renderContosView();
+        });
+        c.querySelectorAll('.cs-book-prev, .cs-book-next').forEach(btn => {
+            btn.addEventListener('click', () => openContoReader(idx + parseInt(btn.dataset.dir)));
+        });
+    }
+
+    function openContoEditor(idx) {
+        const c = document.getElementById('charsheet-container');
+        const contos = currentSheet.contos || [];
+        const isNew = idx === -1;
+        const conto = isNew ? { title: '', text: '', date: new Date().toLocaleDateString('pt-BR') } : { ...contos[idx] };
+
+        c.innerHTML = `
+        <div class="cs-conto-editor">
+            <div class="cs-sheet-toolbar">
+                <button id="cs-conto-cancel" class="cs-toolbar-btn">&#8592;</button>
+                <span class="cs-toolbar-title">${isNew ? 'Novo Conto' : 'Editar Conto'}</span>
+                <div class="cs-toolbar-right">
+                    <button id="cs-conto-save" class="cs-toolbar-btn cs-save">&#10003;</button>
+                </div>
+            </div>
+            <div class="cs-conto-form">
+                <div class="cs-field">
+                    <label>Título</label>
+                    <input type="text" id="cs-conto-title" value="${escAttr(conto.title)}" placeholder="O título do conto...">
+                </div>
+                <div class="cs-field">
+                    <label>Data</label>
+                    <input type="text" id="cs-conto-date" value="${escAttr(conto.date)}" placeholder="Ex: 15/03/2026">
+                </div>
+                <div class="cs-field cs-conto-text-field">
+                    <label>Conto</label>
+                    <textarea id="cs-conto-text" class="cs-conto-textarea" placeholder="Escreva a história do seu personagem...">${escHtml(conto.text)}</textarea>
+                </div>
+            </div>
+        </div>`;
+
+        document.getElementById('cs-conto-cancel').addEventListener('click', () => {
+            if (isNew) renderContosView();
+            else openContoReader(idx);
+        });
+        document.getElementById('cs-conto-save').addEventListener('click', async () => {
+            const title = document.getElementById('cs-conto-title').value.trim();
+            const text = document.getElementById('cs-conto-text').value.trim();
+            const date = document.getElementById('cs-conto-date').value.trim();
+            if (!text && !title) return;
+
+            const entry = { title, text, date };
+            if (!currentSheet.contos) currentSheet.contos = [];
+            if (isNew) {
+                currentSheet.contos.push(entry);
+            } else {
+                currentSheet.contos[idx] = entry;
+            }
+            await saveSheet(currentSheet);
+            openContoReader(isNew ? currentSheet.contos.length - 1 : idx);
+        });
+    }
+
+    function toRoman(num) {
+        const vals = [1000,900,500,400,100,90,50,40,10,9,5,4,1];
+        const syms = ['M','CM','D','CD','C','XC','L','XL','X','IX','V','IV','I'];
+        let result = '';
+        for (let i = 0; i < vals.length; i++) {
+            while (num >= vals[i]) { result += syms[i]; num -= vals[i]; }
+        }
+        return result;
+    }
 
     // ===== EXPOSE =====
     window.openCharsheetOverlay = openCharsheetOverlay;
