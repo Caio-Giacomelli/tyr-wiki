@@ -2490,6 +2490,8 @@ body.font-dragao * {
 
 /* Bonus */
 .cs-notes-block { font-size: 12px; color: #bbb; line-height: 1.5; white-space: pre-wrap; background: rgba(44,24,16,0.4); padding: 8px 10px; border-radius: 6px; }
+.cs-collapse-inner p { font-size: 12px; color: #bbb; line-height: 1.5; margin: 4px 0; }
+.cs-collapse-inner p strong { color: #a08050; }
 
 /* ===== EDIT MODE ===== */
 .cs-editing { padding-bottom: 50px; }
