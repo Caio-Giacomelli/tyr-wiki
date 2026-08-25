@@ -447,15 +447,19 @@
             if (cat.items.length === 0) return;
             panelsHtml += `<div class="cs-tab-panel${i === 0 ? ' cs-tab-visible' : ''}" data-tab="${cat.key}">`;
             cat.items.forEach(ab => {
+                const compStr = ab.components ? ab.components : '';
                 panelsHtml += `<div class="cs-ability-card">
                     <div class="cs-ability-header" onclick="this.parentElement.classList.toggle('cs-ab-open')">
                         <span class="cs-ability-name">${escHtml(ab.name)}</span>
                         ${ab.cost ? '<span class="cs-ability-cost">' + escHtml(ab.cost) + '</span>' : ''}
                     </div>
                     <div class="cs-ability-body"><div>
+                        ${ab.castingTime ? '<div class="cs-ab-meta"><b>Conjuração:</b> ' + escHtml(ab.castingTime) + '</div>' : ''}
+                        ${compStr ? '<div class="cs-ab-meta"><b>Componentes:</b> ' + escHtml(compStr) + '</div>' : ''}
                         ${ab.range ? '<div class="cs-ab-meta"><b>Alcance:</b> ' + escHtml(ab.range) + '</div>' : ''}
                         ${ab.duration ? '<div class="cs-ab-meta"><b>Duração:</b> ' + escHtml(ab.duration) + '</div>' : ''}
                         <div class="cs-ab-desc">${escHtml(ab.desc)}</div>
+                        ${ab.link ? '<a class="cs-ab-link" href="' + escAttr(ab.link) + '" target="_blank" rel="noopener">Saber mais</a>' : ''}
                     </div></div>
                 </div>`;
             });
@@ -524,7 +528,14 @@
                         <div class="cs-field"><label>Raça</label><input id="cs-e-race" value="${escAttr(s.race)}"></div>
                         <div class="cs-field"><label>Antecedente</label><input id="cs-e-bg" value="${escAttr(s.background)}"></div>
                         <div class="cs-field"><label>Alinhamento</label><input id="cs-e-align" value="${escAttr(s.alignment)}"></div>
-                        <div class="cs-field"><label>Imagem (URL)</label><input id="cs-e-image" value="${escAttr(s.image)}"></div>
+                        <div class="cs-field cs-field-full"><label>Imagem</label>
+                            <div class="cs-image-upload">
+                                <input type="file" id="cs-e-image-file" accept="image/*" class="cs-file-input">
+                                <label for="cs-e-image-file" class="cs-file-label">${s.image ? 'Trocar imagem...' : 'Escolher imagem...'}</label>
+                                ${s.image ? '<img class="cs-img-preview" src="' + escAttr(s.image) + '">' : ''}
+                                <input type="hidden" id="cs-e-image" value="${escAttr(s.image)}">
+                            </div>
+                        </div>
                     </div>
                 `)}
                 ${editSection('Atributos', `
@@ -555,9 +566,9 @@
                     </div>
                 `)}
                 ${editSection('Ataques', renderListEditor('attacks', s.attacks || [], ['name', 'bonus', 'damage', 'desc'], ['Nome', 'Bônus', 'Dano', 'Descrição']))}
-                ${editSection('Habilidades - Ação', renderListEditor('abAction', s.abilitiesAction || [], ['name', 'cost', 'range', 'duration', 'desc'], ['Nome', 'Custo', 'Alcance', 'Duração', 'Descrição']))}
-                ${editSection('Habilidades - Bônus', renderListEditor('abBonus', s.abilitiesBonus || [], ['name', 'cost', 'range', 'duration', 'desc'], ['Nome', 'Custo', 'Alcance', 'Duração', 'Descrição']))}
-                ${editSection('Habilidades - Reação', renderListEditor('abReaction', s.abilitiesReaction || [], ['name', 'cost', 'range', 'duration', 'desc'], ['Nome', 'Custo', 'Alcance', 'Duração', 'Descrição']))}
+                ${editSection('Habilidades - Ação', renderListEditor('abAction', s.abilitiesAction || [], ['name', 'cost', 'castingTime', 'components', 'range', 'duration', 'desc', 'link'], ['Nome', 'Custo (Slot)', 'Tempo de Conjuração', 'Componentes (V, S, M)', 'Alcance', 'Duração', 'Descrição', 'Link (Saber mais)']))}
+                ${editSection('Habilidades - Bônus', renderListEditor('abBonus', s.abilitiesBonus || [], ['name', 'cost', 'castingTime', 'components', 'range', 'duration', 'desc', 'link'], ['Nome', 'Custo (Slot)', 'Tempo de Conjuração', 'Componentes (V, S, M)', 'Alcance', 'Duração', 'Descrição', 'Link (Saber mais)']))}
+                ${editSection('Habilidades - Reação', renderListEditor('abReaction', s.abilitiesReaction || [], ['name', 'cost', 'castingTime', 'components', 'range', 'duration', 'desc', 'link'], ['Nome', 'Custo (Slot)', 'Tempo de Conjuração', 'Componentes (V, S, M)', 'Alcance', 'Duração', 'Descrição', 'Link (Saber mais)']))}
                 ${editSection('Traços de Classe & Passivos', renderListEditor('classFeatures', (s.classFeatures || []).concat(s.abilitiesPassive || []), ['name', 'desc'], ['Nome', 'Descrição']))}
                 ${editSection('Poderes Especiais', renderListEditor('special', s.specialMechanics || [], ['name', 'desc'], ['Nome', 'Descrição']))}
                 ${editSection('Inventário', renderListEditor('equip', s.equipment || [], ['name', 'bonus', 'damage', 'desc', 'charges'], ['Nome', 'Bônus', 'Dano', 'Descrição', 'Cargas']))}
@@ -585,6 +596,30 @@
         document.getElementById('cs-cancel-btn').addEventListener('click', () => { sheetEditMode = false; renderSheetView(); });
         document.getElementById('cs-save-btn').addEventListener('click', handleSave);
         document.getElementById('cs-delete-btn').addEventListener('click', handleDelete);
+
+        // Image upload handler
+        const imageFileInput = document.getElementById('cs-e-image-file');
+        if (imageFileInput) {
+            imageFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const dataUrl = ev.target.result;
+                    document.getElementById('cs-e-image').value = dataUrl;
+                    const preview = c.querySelector('.cs-img-preview');
+                    if (preview) { preview.src = dataUrl; }
+                    else {
+                        const img = document.createElement('img');
+                        img.className = 'cs-img-preview';
+                        img.src = dataUrl;
+                        c.querySelector('.cs-image-upload').appendChild(img);
+                    }
+                    c.querySelector('.cs-file-label').textContent = 'Trocar imagem...';
+                };
+                reader.readAsDataURL(file);
+            });
+        }
 
         // Wire up add-row buttons
         c.querySelectorAll('.cs-add-row-btn').forEach(btn => {

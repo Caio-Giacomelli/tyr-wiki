@@ -2548,3 +2548,21 @@ body.font-dragao * {
 .cs-slots-editor { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .cs-slot-edit-row { display: flex; align-items: center; gap: 4px; }
 .cs-slot-edit-lvl { font-size: 11px; color: #a080d0; font-weight: 600; min-width: 20px; }
+
+/* Image Upload */
+.cs-image-upload { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cs-file-input { display: none; }
+.cs-file-label {
+    padding: 6px 12px; border: 1px dashed rgba(139,105,20,0.4); border-radius: 6px;
+    color: #a08050; font-size: 11px; cursor: pointer; transition: all 0.15s;
+}
+.cs-file-label:hover { border-color: #d4a843; color: #d4a843; background: rgba(139,105,20,0.1); }
+.cs-img-preview { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1.5px solid #8b6914; }
+
+/* Ability link */
+.cs-ab-link {
+    display: inline-block; margin-top: 4px;
+    font-size: 10px; color: #a080d0; text-decoration: none;
+    border-bottom: 1px dotted #a080d0; transition: color 0.15s;
+}
+.cs-ab-link:hover { color: #d4a843; border-color: #d4a843; }
