@@ -3102,6 +3102,22 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// ===== FICHA DE PERSONAGEM (botao settings) =====
+const charsheetBtn = document.getElementById('charsheet-btn');
+const charsheetCloseBtn = document.getElementById('charsheet-close');
+if (charsheetBtn) {
+    charsheetBtn.addEventListener('click', () => {
+        settingsToggle.classList.remove('open');
+        settingsSidebar.classList.remove('open');
+        if (typeof openCharsheetOverlay === 'function') openCharsheetOverlay();
+    });
+}
+if (charsheetCloseBtn) {
+    charsheetCloseBtn.addEventListener('click', () => {
+        if (typeof closeCharsheetOverlay === 'function') closeCharsheetOverlay();
+    });
+}
+
 // ===== EDITOR DE JORNADAS =====
 (function() {
     const journeyOverlay = document.getElementById('journey-modal-overlay');

@@ -549,6 +549,78 @@
         bottom: 70px;
         left: 12px;
     }
+
+    /* ===== FICHA DE PERSONAGEM (TABLET) ===== */
+    #charsheet-overlay {
+        top: 0;
+        bottom: 60px;
+        z-index: 8000;
+    }
+
+    #charsheet-overlay.open {
+        display: block;
+    }
+
+    #charsheet-close {
+        display: none;
+    }
+
+    #charsheet-container {
+        padding: 12px;
+        max-width: 100%;
+    }
+
+    .cs-login {
+        min-height: 60vh;
+    }
+
+    .cs-char-name {
+        font-size: 16px;
+    }
+
+    .cs-portrait {
+        width: 36px;
+        height: 36px;
+    }
+
+    .cs-abilities-row {
+        gap: 3px;
+    }
+
+    .cs-ability-box {
+        padding: 3px 2px;
+    }
+
+    .cs-ab-score {
+        font-size: 13px;
+    }
+
+    .cs-skills-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .cs-skills-edit {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .cs-eg6 {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 4px;
+    }
+
+    .cs-eg2 {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+
+    .cs-sheet-toolbar {
+        position: sticky;
+        top: 0;
+        background: #1a1a1a;
+        z-index: 10;
+        padding: 6px 0;
+        margin-bottom: 8px;
+    }
 }
 
 /* ===== MOBILE (abaixo de 600px) - manter comportamento atual ===== */

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
 
 @font-face {
     font-family: 'Dragao';
@@ -67,7 +67,7 @@ body {
     50% { filter: drop-shadow(0 0 20px rgba(255, 215, 0, 1)) brightness(1.5); }
 }
 
-/* ===== PAINEL DE INFORMAÇÕES ===== */
+/* ===== PAINEL DE INFORMAÃ‡Ã•ES ===== */
 #info-panel {
     position: fixed;
     top: 0;
@@ -230,7 +230,7 @@ body {
     text-align: center;
 }
 
-/* ===== BOTÃO DE JORNADA ===== */
+/* ===== BOTÃƒO DE JORNADA ===== */
 #trail-btn {
     position: fixed;
     top: 15px;
@@ -312,7 +312,7 @@ body {
     border-color: #d4a843;
 }
 
-/* ===== INSTRUÇÃO ===== */
+/* ===== INSTRUÃ‡ÃƒO ===== */
 #instructions {
     position: fixed;
     bottom: 20px;
@@ -381,7 +381,7 @@ body {
     border-radius: 10px;
 }
 
-/* Cabeçalho da sidebar */
+/* CabeÃ§alho da sidebar */
 .wiki-sidebar-header {
     padding: 12px 14px 8px;
     border-bottom: 1px solid rgba(139, 105, 20, 0.3);
@@ -447,7 +447,7 @@ body {
     border-color: #d4a843;
 }
 
-/* Conteúdo scrollável */
+/* ConteÃºdo scrollÃ¡vel */
 .wiki-sidebar-content {
     overflow-y: auto;
     flex: 1;
@@ -463,7 +463,7 @@ body {
     border-radius: 3px;
 }
 
-/* Seções */
+/* SeÃ§Ãµes */
 .wiki-section {
     margin: 0 6px 4px;
     border-radius: 6px;
@@ -659,7 +659,7 @@ body {
     border-color: #d4a843;
 }
 
-/* Seção vazia (Marcos Históricos) */
+/* SeÃ§Ã£o vazia (Marcos HistÃ³ricos) */
 .wiki-section-empty {
     padding: 8px 12px;
     font-size: 12px;
@@ -892,7 +892,7 @@ body {
     color: #f0d060;
 }
 
-/* Links de entidades (personagens, legião, vilões) */
+/* Links de entidades (personagens, legiÃ£o, vilÃµes) */
 .wiki-link {
     color: #8fc8e8;
     text-decoration: none;
@@ -916,7 +916,7 @@ body {
     gap: 6px;
 }
 
-/* ===== SIDEBAR DE CONFIGURAÇÕES ===== */
+/* ===== SIDEBAR DE CONFIGURAÃ‡Ã•ES ===== */
 #settings-toggle {
     position: fixed;
     top: 15px;
@@ -1065,7 +1065,7 @@ body {
     opacity: 1;
 }
 
-/* ===== BOTÃO PIN ===== */
+/* ===== BOTÃƒO PIN ===== */
 .pin-toggle {
     padding: 0;
     cursor: pointer;
@@ -1335,7 +1335,7 @@ body {
     border: 1px solid #555;
 }
 
-/* ===== BOTÃO ADICIONAR WIKI ENTRY ===== */
+/* ===== BOTÃƒO ADICIONAR WIKI ENTRY ===== */
 .wiki-add-item {
     padding: 6px 10px;
     color: #8b6914;
@@ -2011,7 +2011,7 @@ body.font-dragao * {
 }
 
 
-/* ===== MODO DE EDIÇÃO ===== */
+/* ===== MODO DE EDIÃ‡ÃƒO ===== */
 #edit-btn {
     position: absolute;
     top: 15px;
@@ -2044,7 +2044,7 @@ body.font-dragao * {
     background: rgba(34, 139, 34, 0.5);
 }
 
-/* Campos editáveis */
+/* Campos editÃ¡veis */
 .editable {
     outline: 1px dashed rgba(139, 105, 20, 0.5);
     outline-offset: 3px;
@@ -2074,7 +2074,7 @@ body.font-dragao * {
 }
 
 
-/* ===== MODAL DE SESSÃO ===== */
+/* ===== MODAL DE SESSÃƒO ===== */
 #session-modal-overlay {
     position: fixed;
     top: 0;
@@ -2179,7 +2179,7 @@ body.font-dragao * {
     white-space: pre-line;
 }
 
-/* Botão de resumo na jornada */
+/* BotÃ£o de resumo na jornada */
 #session-read-btn {
     margin-top: 10px;
     padding: 6px 14px;
@@ -2196,3 +2196,355 @@ body.font-dragao * {
 #session-read-btn:hover {
     background: rgba(139, 105, 20, 0.5);
 }
+
+
+/* ===== FICHA DE PERSONAGEM D&D 5e ===== */
+
+#charsheet-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #1a1a1a;
+    z-index: 11000;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+#charsheet-overlay.open { display: block; }
+
+#charsheet-close {
+    position: fixed;
+    top: 14px; right: 14px;
+    width: 34px; height: 34px;
+    background: rgba(44, 24, 16, 0.9);
+    border: 2px solid #8b6914;
+    border-radius: 50%;
+    color: #d4a843;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 11001;
+    transition: background 0.2s;
+}
+#charsheet-close:hover { background: rgba(139, 105, 20, 0.6); }
+
+#charsheet-container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 16px;
+    min-height: 100vh;
+}
+
+/* Login */
+.cs-login { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; text-align: center; }
+.cs-login-title { font-family: 'MedievalSharp', cursive; font-size: 28px; color: #d4a843; margin-bottom: 2px; }
+.cs-login-subtitle { font-size: 14px; color: #a08050; margin-bottom: 36px; }
+.cs-login-form { width: 100%; max-width: 300px; }
+.cs-login-form label { display: block; text-align: left; color: #a08050; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin: 14px 0 3px; }
+.cs-login-form input { width: 100%; padding: 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid #555; border-radius: 6px; color: #eee; font-size: 14px; font-family: 'Crimson Text', serif; }
+.cs-login-form input:focus { outline: none; border-color: #d4a843; }
+.cs-login-actions { display: flex; gap: 8px; margin-top: 20px; }
+.cs-btn { padding: 9px 16px; border: none; border-radius: 6px; font-family: 'Crimson Text', serif; font-size: 14px; cursor: pointer; transition: all 0.2s; flex: 1; }
+.cs-btn-primary { background: #8b6914; color: #fff; }
+.cs-btn-primary:hover { background: #d4a843; color: #1a1a1a; }
+.cs-btn-secondary { background: rgba(139,105,20,0.2); color: #d4a843; border: 1px solid #8b6914; }
+.cs-btn-secondary:hover { background: rgba(139,105,20,0.4); }
+.cs-btn-danger { background: rgba(200,50,50,0.15); color: #e55; border: 1px solid #c55; }
+.cs-btn-danger:hover { background: rgba(200,50,50,0.3); }
+.cs-error { color: #e55; font-size: 12px; margin-top: 10px; min-height: 1em; }
+
+/* Sheet */
+.cs-sheet { padding-bottom: 30px; }
+.cs-sheet-toolbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0; margin-bottom: 8px;
+    border-bottom: 1px solid rgba(139,105,20,0.35);
+    position: sticky; top: 0; background: #1a1a1a; z-index: 50;
+}
+.cs-toolbar-btn {
+    width: 30px; height: 30px;
+    background: rgba(139,105,20,0.2); border: 1px solid #8b6914; border-radius: 6px;
+    color: #d4a843; font-size: 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+}
+.cs-toolbar-btn:hover { background: rgba(139,105,20,0.5); }
+.cs-toolbar-btn.cs-save { background: #8b6914; color: #fff; }
+.cs-toolbar-title { font-family: 'MedievalSharp', cursive; font-size: 14px; color: #d4a843; flex: 1; text-align: center; }
+
+/* Header */
+.cs-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.cs-portrait { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid #8b6914; object-fit: cover; flex-shrink: 0; }
+.cs-header-info { flex: 1; min-width: 0; }
+.cs-char-name { font-family: 'MedievalSharp', cursive; font-size: 17px; color: #d4a843; line-height: 1.1; }
+.cs-char-meta { font-size: 11px; color: #ccc; margin-top: 1px; }
+.cs-char-meta2 { font-size: 10px; color: #888; }
+
+/* Combat Stats */
+.cs-combat-row { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
+.cs-stat-pill {
+    flex: 1; min-width: 44px;
+    background: rgba(139,105,20,0.08); border: 1px solid rgba(139,105,20,0.35); border-radius: 6px;
+    padding: 4px 3px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1px;
+}
+.cs-stat-val { font-family: 'MedievalSharp', cursive; font-size: 14px; color: #d4a843; line-height: 1; }
+.cs-stat-lbl { font-size: 8px; color: #888; text-transform: uppercase; letter-spacing: 0.4px; }
+.cs-stat-pill.cs-hp { border-color: rgba(200,80,80,0.4); background: rgba(200,50,50,0.06); }
+
+/* Spell Slots row */
+.cs-slots-row { display: flex; gap: 5px; margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
+.cs-slot-pill {
+    display: flex; align-items: center; gap: 3px;
+    padding: 3px 7px; background: rgba(100,60,180,0.08); border: 1px solid rgba(140,100,200,0.3); border-radius: 10px;
+}
+.cs-slot-lvl { font-size: 10px; color: #a080d0; font-weight: 600; }
+.cs-slot-val { font-size: 11px; color: #d4a843; font-family: monospace; }
+
+/* Combat Mode Panel */
+.cs-combat-panel {
+    display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows 0.25s ease;
+    margin-bottom: 6px;
+}
+.cs-combat-panel.cs-cm-open { grid-template-rows: 1fr; }
+.cs-cm-inner {
+    overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 0;
+}
+.cs-combat-panel.cs-cm-open .cs-cm-inner {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(139,105,20,0.25);
+}
+/* HP Row */
+.cs-cm-hp-row {
+    display: flex; align-items: center; gap: 6px;
+}
+.cs-cm-hp-center { text-align: center; min-width: 60px; }
+.cs-cm-hp-label { font-size: 8px; color: #8b6914; text-transform: uppercase; letter-spacing: 0.5px; }
+.cs-cm-hp-val { font-family: 'MedievalSharp', cursive; font-size: 18px; color: #d4a843; }
+.cs-cm-hp-val small { font-size: 12px; color: #a08050; }
+.cs-cm-hp-btn {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 1.5px solid rgba(139,105,20,0.4); background: rgba(44,24,16,0.8);
+    font-family: 'MedievalSharp', cursive; font-size: 13px; font-weight: bold;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+}
+.cs-cm-hp-btn.cs-cm-dmg { color: #c55; }
+.cs-cm-hp-btn.cs-cm-dmg:hover { border-color: #c55; background: rgba(200,50,50,0.15); box-shadow: 0 0 6px rgba(200,50,50,0.3); }
+.cs-cm-hp-btn.cs-cm-heal { color: #5b5; }
+.cs-cm-hp-btn.cs-cm-heal:hover { border-color: #5b5; background: rgba(50,180,50,0.12); box-shadow: 0 0 6px rgba(50,180,50,0.3); }
+/* Spell Slots combat */
+.cs-cm-slots { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.cs-cm-slot-row { display: flex; align-items: center; gap: 3px; }
+.cs-cm-slot-pill {
+    display: flex; align-items: center; gap: 3px;
+    padding: 2px 6px; background: rgba(100,60,180,0.08); border: 1px solid rgba(140,100,200,0.3); border-radius: 8px;
+}
+.cs-cm-slot-lvl { font-size: 9px; color: #a080d0; font-weight: 600; }
+.cs-cm-slot-val { font-size: 10px; color: #d4a843; font-family: monospace; }
+.cs-cm-slot-btn {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 1px solid #555; background: rgba(44,24,16,0.8);
+    font-size: 12px; font-weight: bold; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+}
+.cs-cm-slot-btn.cs-cm-dmg { color: #c55; }
+.cs-cm-slot-btn.cs-cm-dmg:hover { border-color: #c55; }
+.cs-cm-slot-btn.cs-cm-heal { color: #5b5; }
+.cs-cm-slot-btn.cs-cm-heal:hover { border-color: #5b5; }
+/* Rest button */
+.cs-cm-rest-btn {
+    padding: 4px 14px; border-radius: 12px;
+    border: 1px solid rgba(139,105,20,0.4); background: rgba(44,24,16,0.8);
+    color: #a08050; font-size: 10px; font-family: 'Crimson Text', serif;
+    cursor: pointer; transition: all 0.15s;
+}
+.cs-cm-rest-btn:hover { border-color: #d4a843; color: #d4a843; background: rgba(139,105,20,0.12); }
+/* Toolbar right group */
+.cs-toolbar-right { display: flex; gap: 6px; }
+/* Combat toggle active state */
+.cs-combat-btn.cs-active { background: rgba(200,80,80,0.25); border-color: #c55; color: #f88; }
+
+/* Abilities Row */
+.cs-abilities-row { display: flex; gap: 3px; margin-bottom: 10px; }
+.cs-ability-box {
+    flex: 1; background: rgba(44,24,16,0.7); border: 1px solid rgba(139,105,20,0.4); border-radius: 6px;
+    padding: 4px 2px; text-align: center;
+}
+.cs-ab-name { font-size: 8px; color: #8b6914; text-transform: uppercase; letter-spacing: 0.3px; }
+.cs-ab-score { font-family: 'MedievalSharp', cursive; font-size: 14px; color: #d4a843; line-height: 1; margin: 1px 0; }
+.cs-ab-save { font-size: 9px; color: #a08050; border-top: 1px solid rgba(139,105,20,0.2); padding-top: 1px; }
+
+/* Collapsible Sections */
+.cs-collapse { margin-bottom: 6px; border: 1px solid rgba(139,105,20,0.2); border-radius: 6px; overflow: hidden; }
+.cs-collapse-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; cursor: pointer;
+    background: rgba(44,24,16,0.5);
+    font-family: 'MedievalSharp', cursive; font-size: 12px; color: #c9a84c;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.cs-collapse-header:hover { background: rgba(139,105,20,0.15); }
+.cs-collapse-arrow { font-size: 9px; transition: transform 0.2s ease; color: #8b6914; }
+.cs-collapse.cs-open .cs-collapse-arrow { transform: rotate(90deg); }
+.cs-collapse-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.25s ease;
+}
+.cs-collapse.cs-open .cs-collapse-body {
+    grid-template-rows: 1fr;
+}
+.cs-collapse-body > * {
+    overflow: hidden;
+}
+.cs-collapse-inner {
+    padding: 0 10px;
+    overflow: hidden;
+}
+.cs-collapse.cs-open .cs-collapse-inner {
+    padding: 8px 10px;
+}
+
+/* Skills Grid */
+.cs-skills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; }
+.cs-skill-row { display: flex; align-items: center; gap: 5px; padding: 2px 0; font-size: 12px; color: #aaa; }
+.cs-skill-row.cs-prof { color: #eee; }
+.cs-skill-val { font-family: monospace; font-size: 11px; width: 24px; text-align: right; color: #d4a843; }
+.cs-skill-name { flex: 1; }
+
+/* Attacks */
+.cs-attacks-list { display: flex; flex-direction: column; gap: 5px; }
+.cs-atk-card { background: rgba(139,105,20,0.06); border-radius: 6px; padding: 7px 10px; }
+.cs-atk-top { display: flex; align-items: center; gap: 8px; }
+.cs-atk-name { flex: 1; font-size: 13px; color: #eee; font-weight: 600; }
+.cs-atk-bonus { font-family: monospace; font-size: 12px; color: #d4a843; }
+.cs-atk-dmg { font-family: monospace; font-size: 12px; color: #c55; }
+.cs-atk-desc { font-size: 11px; color: #999; margin-top: 3px; }
+
+/* Ability Tabs */
+.cs-tabs { margin-top: 4px; }
+.cs-tabs-header { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
+.cs-tab-btn {
+    padding: 5px 12px; border: 1px solid #8b6914; border-radius: 14px;
+    background: transparent; color: #a08050; font-size: 12px; font-family: 'Crimson Text', serif;
+    cursor: pointer; transition: all 0.2s;
+}
+.cs-tab-btn.cs-tab-active { background: #8b6914; color: #fff; }
+.cs-tab-btn:hover { background: rgba(139,105,20,0.2); }
+.cs-tab-panel { display: none; }
+.cs-tab-panel.cs-tab-visible { display: block; }
+
+/* Ability Cards (collapsible individually) */
+.cs-ability-card { margin-bottom: 4px; border: 1px solid rgba(139,105,20,0.2); border-radius: 5px; overflow: hidden; }
+.cs-ability-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 9px; cursor: pointer; background: rgba(44,24,16,0.4);
+    transition: background 0.15s;
+}
+.cs-ability-header:hover { background: rgba(139,105,20,0.12); }
+.cs-ability-name { font-size: 12px; color: #eee; font-weight: 600; }
+.cs-ability-cost { font-size: 10px; color: #a08050; background: rgba(139,105,20,0.15); padding: 1px 6px; border-radius: 8px; }
+.cs-ability-body {
+    display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.2s ease;
+}
+.cs-ability-card.cs-ab-open .cs-ability-body { grid-template-rows: 1fr; }
+.cs-ability-body > div { overflow: hidden; padding: 0 9px; }
+.cs-ability-card.cs-ab-open .cs-ability-body > div { padding: 6px 9px; }
+.cs-ab-meta { font-size: 10px; color: #999; margin-bottom: 2px; }
+.cs-ab-meta b { color: #a08050; }
+.cs-ab-desc { font-size: 11px; color: #ccc; line-height: 1.4; white-space: pre-wrap; }
+
+/* Features */
+.cs-feat-card { margin-bottom: 5px; padding: 8px 10px; background: rgba(139,105,20,0.05); border-radius: 6px; border-left: 2px solid #8b6914; }
+.cs-feat-card.cs-special { border-left-color: #a060d0; }
+.cs-feat-name { font-size: 13px; color: #d4a843; font-weight: 600; margin-bottom: 3px; }
+.cs-feat-desc { font-size: 12px; color: #bbb; line-height: 1.4; white-space: pre-wrap; }
+
+/* Inventory */
+.cs-inv { }
+.cs-coins { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.cs-coin { font-size: 11px; padding: 3px 8px; background: rgba(139,105,20,0.12); border: 1px solid rgba(139,105,20,0.35); border-radius: 10px; color: #d4a843; }
+.cs-inv-list { display: flex; flex-direction: column; gap: 3px; }
+.cs-inv-item { border: 1px solid rgba(139,105,20,0.15); border-radius: 6px; overflow: hidden; cursor: pointer; transition: border-color 0.2s; }
+.cs-inv-item:hover { border-color: rgba(139,105,20,0.4); }
+.cs-inv-item-header { display: flex; align-items: center; gap: 6px; padding: 6px 10px; }
+.cs-inv-name { flex: 1; font-size: 12px; color: #ddd; }
+.cs-inv-bonus { font-size: 11px; color: #d4a843; font-family: monospace; }
+.cs-inv-dmg { font-size: 11px; color: #c55; font-family: monospace; }
+.cs-inv-charges { font-size: 10px; color: #a080d0; background: rgba(100,60,180,0.12); padding: 1px 6px; border-radius: 8px; }
+.cs-inv-desc {
+    display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.2s ease;
+    font-size: 10px; color: #999; line-height: 1.4;
+}
+.cs-inv-desc > span { overflow: hidden; padding: 0 10px; }
+.cs-inv-item.cs-inv-open .cs-inv-desc { grid-template-rows: 1fr; }
+.cs-inv-item.cs-inv-open .cs-inv-desc > span { padding: 3px 10px 6px; }
+
+/* Roleplay */
+.cs-rp-list { list-style: none; padding: 0; }
+.cs-rp-list li { font-size: 12px; color: #bbb; padding: 3px 0 3px 14px; position: relative; }
+.cs-rp-list li::before { content: '\2726'; position: absolute; left: 0; color: #8b6914; font-size: 10px; }
+
+/* Bonus */
+.cs-notes-block { font-size: 12px; color: #bbb; line-height: 1.5; white-space: pre-wrap; background: rgba(44,24,16,0.4); padding: 8px 10px; border-radius: 6px; }
+
+/* ===== EDIT MODE ===== */
+.cs-editing { padding-bottom: 50px; }
+.cs-edit-scroll { display: flex; flex-direction: column; gap: 10px; }
+.cs-edit-section { background: rgba(44,24,16,0.35); border: 1px solid rgba(139,105,20,0.2); border-radius: 8px; padding: 12px; }
+.cs-es-title { font-family: 'MedievalSharp', cursive; font-size: 12px; color: #c9a84c; margin-bottom: 8px; }
+.cs-eg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cs-eg5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.cs-eg6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.cs-field { display: flex; flex-direction: column; gap: 2px; }
+.cs-field label { font-size: 10px; color: #a08050; text-transform: uppercase; letter-spacing: 0.3px; }
+.cs-field input, .cs-field textarea { padding: 7px 9px; background: rgba(255,255,255,0.04); border: 1px solid #555; border-radius: 5px; color: #eee; font-size: 13px; font-family: 'Crimson Text', serif; }
+.cs-field input:focus, .cs-field textarea:focus { outline: none; border-color: #d4a843; }
+.cs-fc { align-items: center; }
+.cs-ism { width: 100%; text-align: center; }
+.cs-skills-edit { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 10px; }
+.cs-sk-edit { display: flex; align-items: center; gap: 4px; }
+.cs-sk-edit label { font-size: 11px; color: #bbb; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cs-sk-edit input { width: 40px; padding: 4px; text-align: center; background: rgba(255,255,255,0.04); border: 1px solid #555; border-radius: 4px; color: #eee; font-size: 12px; }
+.cs-sk-edit input:focus { outline: none; border-color: #d4a843; }
+.cs-ta { width: 100%; min-height: 100px; padding: 8px; background: rgba(255,255,255,0.04); border: 1px solid #555; border-radius: 5px; color: #eee; font-size: 11px; font-family: monospace; resize: vertical; white-space: pre; }
+.cs-ta:focus { outline: none; border-color: #d4a843; }
+.cs-ta-lg { min-height: 200px; }
+.cs-ta-sm { width: 100%; min-height: 60px; padding: 8px; background: rgba(255,255,255,0.04); border: 1px solid #555; border-radius: 5px; color: #eee; font-size: 11px; font-family: monospace; resize: vertical; }
+.cs-ta-sm:focus { outline: none; border-color: #d4a843; }
+.cs-danger-zone { border-color: rgba(200,50,50,0.3); text-align: center; }
+
+/* List Editor */
+.cs-list-editor { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.cs-editor-row {
+    position: relative;
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 8px; padding-right: 28px;
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(139,105,20,0.15); border-radius: 6px;
+}
+.cs-editor-row .cs-field { flex: 1; min-width: 120px; }
+.cs-editor-row .cs-field-full { flex-basis: 100%; min-width: 100%; }
+.cs-row-remove {
+    position: absolute; top: 6px; right: 6px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(200,50,50,0.1); border: 1px solid rgba(200,50,50,0.3);
+    color: #c55; font-size: 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+}
+.cs-row-remove:hover { background: rgba(200,50,50,0.3); border-color: #e55; }
+.cs-add-row-btn {
+    display: inline-block; padding: 5px 12px;
+    background: rgba(139,105,20,0.1); border: 1px dashed rgba(139,105,20,0.4); border-radius: 6px;
+    color: #a08050; font-size: 11px; cursor: pointer; transition: all 0.15s;
+    align-self: flex-start;
+}
+.cs-add-row-btn:hover { background: rgba(139,105,20,0.2); border-color: #d4a843; color: #d4a843; }
+
+/* Spell Slots Editor */
+.cs-slots-editor { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cs-slot-edit-row { display: flex; align-items: center; gap: 4px; }
+.cs-slot-edit-lvl { font-size: 11px; color: #a080d0; font-weight: 600; min-width: 20px; }

@@ -50,11 +50,13 @@
     function initNavigation() {
         const navMap = document.getElementById('tablet-nav-map');
         const navWiki = document.getElementById('tablet-nav-wiki');
+        const navSheet = document.getElementById('tablet-nav-sheet');
 
         if (!navMap || !navWiki) return;
 
         navMap.addEventListener('click', function() { switchView('map'); });
         navWiki.addEventListener('click', function() { switchView('wiki'); });
+        if (navSheet) navSheet.addEventListener('click', function() { switchView('charsheet'); });
     }
 
     function switchView(view) {
@@ -67,12 +69,14 @@
 
         const wikiView = document.getElementById('tablet-wiki-view');
         const mapContainer = document.getElementById('map-container');
+        const charsheetOverlay = document.getElementById('charsheet-overlay');
 
         switch (view) {
             case 'map':
                 document.getElementById('tablet-nav-map').classList.add('active');
                 if (wikiView) wikiView.classList.remove('active');
                 if (mapContainer) mapContainer.style.display = '';
+                if (charsheetOverlay) charsheetOverlay.classList.remove('open');
                 showMapControls(true);
                 break;
 
@@ -80,6 +84,16 @@
                 document.getElementById('tablet-nav-wiki').classList.add('active');
                 if (wikiView) wikiView.classList.add('active');
                 if (mapContainer) mapContainer.style.display = 'none';
+                if (charsheetOverlay) charsheetOverlay.classList.remove('open');
+                closeBottomSheet();
+                showMapControls(false);
+                break;
+
+            case 'charsheet':
+                document.getElementById('tablet-nav-sheet').classList.add('active');
+                if (wikiView) wikiView.classList.remove('active');
+                if (mapContainer) mapContainer.style.display = 'none';
+                if (typeof openCharsheetOverlay === 'function') openCharsheetOverlay();
                 closeBottomSheet();
                 showMapControls(false);
                 break;
