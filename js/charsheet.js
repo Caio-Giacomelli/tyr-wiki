@@ -626,8 +626,9 @@
             btn.addEventListener('click', () => {
                 const listId = btn.dataset.list;
                 const fields = btn.dataset.fields.split(',');
+                const labels = btn.dataset.labels.split(',');
                 const container = c.querySelector(`.cs-list-editor[data-list="${listId}"]`);
-                if (container) container.insertAdjacentHTML('beforeend', buildEditorRow(listId, fields, {}));
+                if (container) container.insertAdjacentHTML('beforeend', buildEditorRow(listId, fields, {}, labels));
             });
         });
 
@@ -644,7 +645,7 @@
         let html = `<div class="cs-list-editor" data-list="${listId}">`;
         items.forEach(item => { html += buildEditorRow(listId, fields, item, labels); });
         html += '</div>';
-        html += `<button class="cs-add-row-btn" data-list="${listId}" data-fields="${fields.join(',')}">+ Adicionar</button>`;
+        html += `<button class="cs-add-row-btn" data-list="${listId}" data-fields="${fields.join(',')}" data-labels="${labels.join(',')}">+ Adicionar</button>`;
         return html;
     }
 
