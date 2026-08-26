@@ -109,6 +109,29 @@
     function escHtml(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
     function escAttr(s) { return escHtml(s); }
 
+    // Compress image to fit Firestore 1MB limit
+    function compressImage(file, maxSize, quality) {
+        maxSize = maxSize || 256;
+        quality = quality || 0.7;
+        return new Promise((resolve) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                const canvas = document.createElement('canvas');
+                let w = img.width, h = img.height;
+                if (w > h) { if (w > maxSize) { h = Math.round(h * maxSize / w); w = maxSize; } }
+                else { if (h > maxSize) { w = Math.round(w * maxSize / h); h = maxSize; } }
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); resolve(''); };
+            img.src = url;
+        });
+    }
+
     // ===== FIRESTORE =====
     async function saveSheet(sheet) {
         if (typeof db === 'undefined') return false;
@@ -648,24 +671,22 @@
         // Image upload handler
         const imageFileInput = document.getElementById('cs-e-image-file');
         if (imageFileInput) {
-            imageFileInput.addEventListener('change', (e) => {
+            imageFileInput.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const dataUrl = ev.target.result;
-                    document.getElementById('cs-e-image').value = dataUrl;
-                    const preview = c.querySelector('.cs-img-preview');
-                    if (preview) { preview.src = dataUrl; }
-                    else {
-                        const img = document.createElement('img');
-                        img.className = 'cs-img-preview';
-                        img.src = dataUrl;
-                        c.querySelector('.cs-image-upload').appendChild(img);
-                    }
-                    c.querySelector('.cs-file-label').textContent = 'Trocar imagem...';
-                };
-                reader.readAsDataURL(file);
+                c.querySelector('.cs-file-label').textContent = 'Processando...';
+                const dataUrl = await compressImage(file, 256, 0.7);
+                if (!dataUrl) return;
+                document.getElementById('cs-e-image').value = dataUrl;
+                const preview = c.querySelector('.cs-img-preview');
+                if (preview) { preview.src = dataUrl; }
+                else {
+                    const img = document.createElement('img');
+                    img.className = 'cs-img-preview';
+                    img.src = dataUrl;
+                    c.querySelector('.cs-image-upload').appendChild(img);
+                }
+                c.querySelector('.cs-file-label').textContent = 'Trocar imagem...';
             });
         }
 
@@ -1046,16 +1067,14 @@
         // Image upload
         const imgInput = document.getElementById('cs-ce-image-file');
         if (imgInput) {
-            imgInput.addEventListener('change', (e) => {
+            imgInput.addEventListener('change', async (e) => {
                 const file = e.target.files[0]; if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    document.getElementById('cs-ce-image').value = ev.target.result;
-                    const preview = c.querySelector('.cs-img-preview');
-                    if (preview) preview.src = ev.target.result;
-                    else { const img = document.createElement('img'); img.className = 'cs-img-preview'; img.src = ev.target.result; c.querySelector('.cs-image-upload').appendChild(img); }
-                };
-                reader.readAsDataURL(file);
+                const dataUrl = await compressImage(file, 256, 0.7);
+                if (!dataUrl) return;
+                document.getElementById('cs-ce-image').value = dataUrl;
+                const preview = c.querySelector('.cs-img-preview');
+                if (preview) preview.src = dataUrl;
+                else { const img = document.createElement('img'); img.className = 'cs-img-preview'; img.src = dataUrl; c.querySelector('.cs-image-upload').appendChild(img); }
             });
         }
 
