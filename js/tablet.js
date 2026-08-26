@@ -19,7 +19,7 @@
     // ===== DETECÇÃO DE TABLET =====
     function isTablet() {
         const w = window.innerWidth;
-        return w >= 600 && w <= 1024;
+        return w >= 600 && w <= 1366;
     }
 
     // Se não é tablet, não inicializar (mas observar resize)

@@ -10,8 +10,8 @@
     display: none;
 }
 
-/* ===== MEDIA QUERY: TABLET (600px - 1024px) ===== */
-@media (min-width: 600px) and (max-width: 1024px) {
+/* ===== MEDIA QUERY: TABLET (600px - 1366px) ===== */
+@media (min-width: 600px) and (max-width: 1366px) {
 
     /* --- Esconder elementos desktop --- */
     #wiki-sidebar {

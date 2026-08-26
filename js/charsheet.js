@@ -8,6 +8,7 @@
     let currentSheet = null;
     let sheetEditMode = false;
     let sheetAuthenticated = false;
+    let activeCompanionIdx = -1; // -1 = main sheet, 0+ = companion index
 
     // ===== DATA MODEL =====
     function emptySheet() {
@@ -52,8 +53,29 @@
             roleplayNotes: [], // deprecated, kept for compat
             // Contos
             contos: [], // { title, text, date }
+            // Companions
+            companions: [], // array of companion stat blocks
             // Bonus/Misc
             bonusMechanics: [], // { name, desc }
+            notes: ''
+        };
+    }
+
+    function emptyCompanion() {
+        return {
+            name: '', type: '', image: '',
+            armorClass: 10, hpMax: 10, hpCurrent: 10, speed: '30 ft.',
+            str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10,
+            saves: '',
+            skills: '',
+            damageImmunities: '',
+            conditionImmunities: '',
+            senses: '',
+            languages: '',
+            proficiencyBonus: 0,
+            traits: [], // { name, desc }
+            actions: [], // { name, desc }
+            reactions: [], // { name, desc }
             notes: ''
         };
     }
@@ -190,9 +212,11 @@
 
     // ===== SHEET VIEW =====
     function renderSheetView() {
+        if (activeCompanionIdx >= 0) { renderCompanionView(); return; }
         const c = document.getElementById('charsheet-container');
         if (!c || !currentSheet) return;
         const s = currentSheet;
+        const companions = s.companions || [];
 
         let html = `
         <div class="cs-sheet">
@@ -204,8 +228,8 @@
                     <button id="cs-edit-btn" class="cs-toolbar-btn">&#9998;</button>
                 </div>
             </div>
+            ${companions.length > 0 ? renderCompanionTabs(s, -1) : ''}
 
-            <!-- Header compacto -->
             <div class="cs-header">
                 ${s.image ? '<img class="cs-portrait" src="' + escAttr(s.image) + '">' : ''}
                 <div class="cs-header-info">
@@ -385,6 +409,9 @@
             // Auto-save
             await saveSheet(s);
         });
+
+        // Companion tabs
+        wireCompanionTabs(c);
     }
 
     function renderSpellSlotsCompact(s) {
@@ -589,6 +616,12 @@
                 `)}
                 ${editSection('Bônus & Mecânicas', renderListEditor('bonus', s.bonusMechanics || [], ['name', 'desc'], ['Nome', 'Descrição']))}
                 ${editSection('Notas', `<textarea id="cs-e-notes" class="cs-ta">${escHtml(s.notes)}</textarea>`)}
+                ${editSection('Fichas Extras', `
+                    <div class="cs-companions-list">
+                        ${(s.companions || []).map((comp, i) => `<div class="cs-comp-item"><span>${escHtml(comp.name || 'Ficha Extra ' + (i+1))}</span></div>`).join('')}
+                    </div>
+                    <button class="cs-add-row-btn" id="cs-add-companion">+ Nova Ficha Extra</button>
+                `)}
                 <div class="cs-edit-section cs-danger-zone"><button id="cs-delete-btn" class="cs-btn cs-btn-danger">Excluir Ficha</button></div>
             </div>
         </div>`;
@@ -596,6 +629,21 @@
         document.getElementById('cs-cancel-btn').addEventListener('click', () => { sheetEditMode = false; renderSheetView(); });
         document.getElementById('cs-save-btn').addEventListener('click', handleSave);
         document.getElementById('cs-delete-btn').addEventListener('click', handleDelete);
+
+        // Add companion button
+        const addCompBtn = document.getElementById('cs-add-companion');
+        if (addCompBtn) {
+            addCompBtn.addEventListener('click', async () => {
+                if (!currentSheet.companions) currentSheet.companions = [];
+                const newComp = emptyCompanion();
+                newComp.name = 'Nova Ficha Extra';
+                currentSheet.companions.push(newComp);
+                await saveSheet(currentSheet);
+                activeCompanionIdx = currentSheet.companions.length - 1;
+                sheetEditMode = false;
+                renderCompanionEditView(activeCompanionIdx);
+            });
+        }
 
         // Image upload handler
         const imageFileInput = document.getElementById('cs-e-image-file');
@@ -782,6 +830,291 @@
         const panel = tabs.querySelector('.cs-tab-panel[data-tab="' + key + '"]');
         if (panel) panel.classList.add('cs-tab-visible');
     });
+
+    // ===== COMPANIONS =====
+    function renderCompanionTabs(s, activeIdx) {
+        const companions = s.companions || [];
+        let html = '<div class="cs-companion-tabs">';
+        html += `<button class="cs-comp-tab${activeIdx === -1 ? ' cs-comp-tab-active' : ''}" data-comp="-1">${escHtml(s.name)}</button>`;
+        companions.forEach((comp, i) => {
+            html += `<button class="cs-comp-tab${activeIdx === i ? ' cs-comp-tab-active' : ''}" data-comp="${i}">${escHtml(comp.name || 'Ficha Extra')}</button>`;
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function renderCompanionView() {
+        const c = document.getElementById('charsheet-container');
+        if (!c || !currentSheet) return;
+        const s = currentSheet;
+        const comp = (s.companions || [])[activeCompanionIdx];
+        if (!comp) { activeCompanionIdx = -1; renderSheetView(); return; }
+
+        let html = `
+        <div class="cs-sheet">
+            <div class="cs-sheet-toolbar">
+                <button id="cs-back-btn" class="cs-toolbar-btn">&#8592;</button>
+                <span class="cs-toolbar-title">${escHtml(comp.name)}</span>
+                <div class="cs-toolbar-right">
+                    <button id="cs-comp-combat-toggle" class="cs-toolbar-btn cs-combat-btn" title="Modo Combate">&#9876;</button>
+                    <button id="cs-comp-edit-btn" class="cs-toolbar-btn">&#9998;</button>
+                </div>
+            </div>
+            ${renderCompanionTabs(s, activeCompanionIdx)}
+
+            <!-- Companion Header -->
+            <div class="cs-header">
+                ${comp.image ? '<img class="cs-portrait" src="' + escAttr(comp.image) + '">' : ''}
+                <div class="cs-header-info">
+                    <div class="cs-char-name">${escHtml(comp.name)}</div>
+                    <div class="cs-char-meta">${escHtml(comp.type)}</div>
+                </div>
+            </div>
+
+            <!-- Combat Stats -->
+            <div class="cs-combat-row">
+                <div class="cs-stat-pill cs-hp"><span class="cs-stat-val" id="cs-comp-hp-display">${comp.hpCurrent}/${comp.hpMax}</span><span class="cs-stat-lbl">PV</span></div>
+                <div class="cs-stat-pill"><span class="cs-stat-val">${comp.armorClass}</span><span class="cs-stat-lbl">CA</span></div>
+                <div class="cs-stat-pill"><span class="cs-stat-val">${escHtml(comp.speed)}</span><span class="cs-stat-lbl">Desl</span></div>
+                ${comp.proficiencyBonus ? '<div class="cs-stat-pill"><span class="cs-stat-val">+' + comp.proficiencyBonus + '</span><span class="cs-stat-lbl">Prof</span></div>' : ''}
+            </div>
+
+            <!-- Combat Mode Panel -->
+            <div class="cs-combat-panel" id="cs-comp-combat-panel">
+                <div class="cs-cm-inner">
+                    <div class="cs-cm-hp-row">
+                        <button class="cs-cm-hp-btn cs-cm-dmg" data-action="hp-down5">5</button>
+                        <button class="cs-cm-hp-btn cs-cm-dmg" data-action="hp-down">1</button>
+                        <div class="cs-cm-hp-center">
+                            <div class="cs-cm-hp-label">Vida</div>
+                            <div class="cs-cm-hp-val" id="cs-comp-cm-hp">${comp.hpCurrent}<small>/${comp.hpMax}</small></div>
+                        </div>
+                        <button class="cs-cm-hp-btn cs-cm-heal" data-action="hp-up">1</button>
+                        <button class="cs-cm-hp-btn cs-cm-heal" data-action="hp-up5">5</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attributes -->
+            <div class="cs-abilities-row">
+                ${ABILITIES.map(ab => {
+                    const sc = comp[ab] || 10;
+                    return `<div class="cs-ability-box">
+                        <div class="cs-ab-name">${ABILITY_NAMES[ab]}</div>
+                        <div class="cs-ab-score">${sc}</div>
+                        <div class="cs-ab-save">${modStr(getMod(sc))}</div>
+                    </div>`;
+                }).join('')}
+            </div>`;
+
+        // Info fields
+        const infoFields = [
+            { label: 'Saves', val: comp.saves },
+            { label: 'Perícias', val: comp.skills },
+            { label: 'Imunidade a Dano', val: comp.damageImmunities },
+            { label: 'Imunidade a Condição', val: comp.conditionImmunities },
+            { label: 'Sentidos', val: comp.senses },
+            { label: 'Idiomas', val: comp.languages }
+        ];
+        const hasInfo = infoFields.some(f => f.val);
+        if (hasInfo) {
+            let infoHtml = '';
+            infoFields.forEach(f => { if (f.val) infoHtml += `<div class="cs-comp-info-row"><b>${f.label}:</b> ${escHtml(f.val)}</div>`; });
+            html += collapseHtml('Informações', infoHtml, true);
+        }
+
+        // Traits
+        if (comp.traits && comp.traits.length) {
+            let traitsHtml = '';
+            comp.traits.forEach(t => { traitsHtml += `<div class="cs-feat-card"><div class="cs-feat-name">${escHtml(t.name)}</div><div class="cs-feat-desc">${escHtml(t.desc)}</div></div>`; });
+            html += collapseHtml('Traços', traitsHtml, true);
+        }
+
+        // Actions
+        if (comp.actions && comp.actions.length) {
+            let actHtml = '';
+            comp.actions.forEach(a => { actHtml += `<div class="cs-feat-card"><div class="cs-feat-name">${escHtml(a.name)}</div><div class="cs-feat-desc">${escHtml(a.desc)}</div></div>`; });
+            html += collapseHtml('Ações', actHtml, true);
+        }
+
+        // Reactions
+        if (comp.reactions && comp.reactions.length) {
+            let reactHtml = '';
+            comp.reactions.forEach(r => { reactHtml += `<div class="cs-feat-card"><div class="cs-feat-name">${escHtml(r.name)}</div><div class="cs-feat-desc">${escHtml(r.desc)}</div></div>`; });
+            html += collapseHtml('Reações', reactHtml, true);
+        }
+
+        // Notes
+        if (comp.notes) {
+            html += collapseHtml('Notas', '<div class="cs-notes-block">' + escHtml(comp.notes) + '</div>', false);
+        }
+
+        html += '</div>';
+        c.innerHTML = html;
+
+        document.getElementById('cs-back-btn').addEventListener('click', () => { activeCompanionIdx = -1; renderSheetView(); });
+        document.getElementById('cs-comp-edit-btn').addEventListener('click', () => renderCompanionEditView(activeCompanionIdx));
+        wireCompanionTabs(c);
+
+        // Companion combat mode
+        const compCombatToggle = document.getElementById('cs-comp-combat-toggle');
+        const compCombatPanel = document.getElementById('cs-comp-combat-panel');
+        compCombatToggle.addEventListener('click', () => {
+            compCombatToggle.classList.toggle('cs-active');
+            compCombatPanel.classList.toggle('cs-cm-open');
+        });
+        compCombatPanel.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const comp = (currentSheet.companions || [])[activeCompanionIdx];
+            if (!comp) return;
+
+            if (action === 'hp-down') comp.hpCurrent = Math.max(0, comp.hpCurrent - 1);
+            else if (action === 'hp-down5') comp.hpCurrent = Math.max(0, comp.hpCurrent - 5);
+            else if (action === 'hp-up') comp.hpCurrent = Math.min(comp.hpMax, comp.hpCurrent + 1);
+            else if (action === 'hp-up5') comp.hpCurrent = Math.min(comp.hpMax, comp.hpCurrent + 5);
+
+            document.getElementById('cs-comp-cm-hp').innerHTML = comp.hpCurrent + '<small>/' + comp.hpMax + '</small>';
+            document.getElementById('cs-comp-hp-display').textContent = comp.hpCurrent + '/' + comp.hpMax;
+            await saveSheet(currentSheet);
+        });
+    }
+
+    function renderCompanionEditView(idx) {
+        const c = document.getElementById('charsheet-container');
+        const s = currentSheet;
+        const comp = (s.companions || [])[idx];
+        if (!comp) return;
+
+        c.innerHTML = `
+        <div class="cs-sheet cs-editing">
+            <div class="cs-sheet-toolbar">
+                <button id="cs-comp-cancel" class="cs-toolbar-btn">&#8592;</button>
+                <span class="cs-toolbar-title">Editando ${escHtml(comp.name || 'Ficha Extra')}</span>
+                <div class="cs-toolbar-right">
+                    <button id="cs-comp-save" class="cs-toolbar-btn cs-save">&#10003;</button>
+                </div>
+            </div>
+            <div class="cs-edit-scroll">
+                ${editSection('Básico', `
+                    <div class="cs-eg2">
+                        <div class="cs-field"><label>Nome</label><input id="cs-ce-name" value="${escAttr(comp.name)}"></div>
+                        <div class="cs-field"><label>Tipo</label><input id="cs-ce-type" value="${escAttr(comp.type)}" placeholder="Ex: Medium construct"></div>
+                        <div class="cs-field cs-field-full"><label>Imagem</label>
+                            <div class="cs-image-upload">
+                                <input type="file" id="cs-ce-image-file" accept="image/*" class="cs-file-input">
+                                <label for="cs-ce-image-file" class="cs-file-label">${comp.image ? 'Trocar imagem...' : 'Escolher imagem...'}</label>
+                                ${comp.image ? '<img class="cs-img-preview" src="' + escAttr(comp.image) + '">' : ''}
+                                <input type="hidden" id="cs-ce-image" value="${escAttr(comp.image)}">
+                            </div>
+                        </div>
+                    </div>
+                `)}
+                ${editSection('Combate', `
+                    <div class="cs-eg2">
+                        <div class="cs-field"><label>CA</label><input type="number" id="cs-ce-ac" value="${comp.armorClass}"></div>
+                        <div class="cs-field"><label>PV Max</label><input type="number" id="cs-ce-hpmax" value="${comp.hpMax}"></div>
+                        <div class="cs-field"><label>PV Atual</label><input type="number" id="cs-ce-hpcur" value="${comp.hpCurrent}"></div>
+                        <div class="cs-field"><label>Deslocamento</label><input id="cs-ce-speed" value="${escAttr(comp.speed)}"></div>
+                        <div class="cs-field"><label>Bônus de Prof.</label><input type="number" id="cs-ce-prof" value="${comp.proficiencyBonus}"></div>
+                    </div>
+                `)}
+                ${editSection('Atributos', `
+                    <div class="cs-eg6">
+                        ${ABILITIES.map(ab => `<div class="cs-field cs-fc"><label>${ABILITY_NAMES[ab]}</label><input type="number" id="cs-ce-${ab}" value="${comp[ab] || 10}" class="cs-ism"></div>`).join('')}
+                    </div>
+                `)}
+                ${editSection('Detalhes', `
+                    <div class="cs-eg2">
+                        <div class="cs-field"><label>Saves</label><input id="cs-ce-saves" value="${escAttr(comp.saves)}" placeholder="Dex +1 plus PB, Con +2 plus PB"></div>
+                        <div class="cs-field"><label>Perícias</label><input id="cs-ce-skills" value="${escAttr(comp.skills)}" placeholder="Athletics +2 plus PB"></div>
+                        <div class="cs-field"><label>Imunidade a Dano</label><input id="cs-ce-dmgimm" value="${escAttr(comp.damageImmunities)}"></div>
+                        <div class="cs-field"><label>Imunidade a Condição</label><input id="cs-ce-condimm" value="${escAttr(comp.conditionImmunities)}"></div>
+                        <div class="cs-field"><label>Sentidos</label><input id="cs-ce-senses" value="${escAttr(comp.senses)}"></div>
+                        <div class="cs-field"><label>Idiomas</label><input id="cs-ce-langs" value="${escAttr(comp.languages)}"></div>
+                    </div>
+                `)}
+                ${editSection('Traços', renderListEditor('compTraits', comp.traits || [], ['name', 'desc'], ['Nome', 'Descrição']))}
+                ${editSection('Ações', renderListEditor('compActions', comp.actions || [], ['name', 'desc'], ['Nome', 'Descrição']))}
+                ${editSection('Reações', renderListEditor('compReactions', comp.reactions || [], ['name', 'desc'], ['Nome', 'Descrição']))}
+                ${editSection('Notas', `<textarea id="cs-ce-notes" class="cs-ta">${escHtml(comp.notes)}</textarea>`)}
+                <div class="cs-edit-section cs-danger-zone"><button id="cs-comp-delete" class="cs-btn cs-btn-danger">Remover Ficha Extra</button></div>
+            </div>
+        </div>`;
+
+        // Image upload
+        const imgInput = document.getElementById('cs-ce-image-file');
+        if (imgInput) {
+            imgInput.addEventListener('change', (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    document.getElementById('cs-ce-image').value = ev.target.result;
+                    const preview = c.querySelector('.cs-img-preview');
+                    if (preview) preview.src = ev.target.result;
+                    else { const img = document.createElement('img'); img.className = 'cs-img-preview'; img.src = ev.target.result; c.querySelector('.cs-image-upload').appendChild(img); }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Wire add/remove buttons
+        c.querySelectorAll('.cs-add-row-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const listId = btn.dataset.list;
+                const fields = btn.dataset.fields.split(',');
+                const labels = btn.dataset.labels.split(',');
+                const container = c.querySelector(`.cs-list-editor[data-list="${listId}"]`);
+                if (container) container.insertAdjacentHTML('beforeend', buildEditorRow(listId, fields, {}, labels));
+            });
+        });
+        c.addEventListener('click', (e) => { if (e.target.classList.contains('cs-row-remove')) e.target.closest('.cs-editor-row').remove(); });
+
+        document.getElementById('cs-comp-cancel').addEventListener('click', () => renderCompanionView());
+        document.getElementById('cs-comp-save').addEventListener('click', async () => {
+            comp.name = document.getElementById('cs-ce-name').value.trim();
+            comp.type = document.getElementById('cs-ce-type').value.trim();
+            comp.image = document.getElementById('cs-ce-image').value.trim();
+            comp.armorClass = parseInt(document.getElementById('cs-ce-ac').value) || 10;
+            comp.hpMax = parseInt(document.getElementById('cs-ce-hpmax').value) || 1;
+            comp.hpCurrent = parseInt(document.getElementById('cs-ce-hpcur').value) || 0;
+            comp.speed = document.getElementById('cs-ce-speed').value.trim();
+            comp.proficiencyBonus = parseInt(document.getElementById('cs-ce-prof').value) || 0;
+            ABILITIES.forEach(ab => { comp[ab] = parseInt(document.getElementById('cs-ce-' + ab).value) || 10; });
+            comp.saves = document.getElementById('cs-ce-saves').value.trim();
+            comp.skills = document.getElementById('cs-ce-skills').value.trim();
+            comp.damageImmunities = document.getElementById('cs-ce-dmgimm').value.trim();
+            comp.conditionImmunities = document.getElementById('cs-ce-condimm').value.trim();
+            comp.senses = document.getElementById('cs-ce-senses').value.trim();
+            comp.languages = document.getElementById('cs-ce-langs').value.trim();
+            comp.traits = collectListEditor(c.querySelector('.cs-list-editor[data-list="compTraits"]'));
+            comp.actions = collectListEditor(c.querySelector('.cs-list-editor[data-list="compActions"]'));
+            comp.reactions = collectListEditor(c.querySelector('.cs-list-editor[data-list="compReactions"]'));
+            comp.notes = document.getElementById('cs-ce-notes').value.trim();
+
+            s.companions[idx] = comp;
+            await saveSheet(s);
+            renderCompanionView();
+        });
+        document.getElementById('cs-comp-delete').addEventListener('click', async () => {
+            if (!confirm('Remover esta ficha extra?')) return;
+            s.companions.splice(idx, 1);
+            activeCompanionIdx = -1;
+            await saveSheet(s);
+            renderSheetView();
+        });
+    }
+
+    function wireCompanionTabs(container) {
+        container.querySelectorAll('.cs-comp-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const idx = parseInt(tab.dataset.comp);
+                activeCompanionIdx = idx;
+                renderSheetView();
+            });
+        });
+    }
 
     // ===== CONTOS (TALES) =====
     function renderContosView() {

@@ -1203,10 +1203,12 @@ function buildEntityMap() {
 }
 
 let entityMap = buildEntityMap();
+window._entityMap = entityMap;
 
 // Reconstruir entityMap (chamado apos salvar/adicionar entidades)
 function rebuildEntityMap() {
     entityMap = buildEntityMap();
+    window._entityMap = entityMap;
 }
 
 function linkifyLocations(text) {
