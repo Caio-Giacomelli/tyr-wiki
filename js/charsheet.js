@@ -269,6 +269,8 @@
                 <div class="cs-stat-pill"><span class="cs-stat-val">${modStr(s.initiative)}</span><span class="cs-stat-lbl">Inic</span></div>
                 <div class="cs-stat-pill"><span class="cs-stat-val">${escHtml(s.speed)}</span><span class="cs-stat-lbl">Desl</span></div>
                 <div class="cs-stat-pill"><span class="cs-stat-val">+${s.proficiencyBonus}</span><span class="cs-stat-lbl">Prof</span></div>
+                ${s.spellSaveDC ? '<div class="cs-stat-pill"><span class="cs-stat-val">' + s.spellSaveDC + '</span><span class="cs-stat-lbl">Spell DC</span></div>' : ''}
+                ${s.spellAttackBonus ? '<div class="cs-stat-pill"><span class="cs-stat-val">' + modStr(s.spellAttackBonus) + '</span><span class="cs-stat-lbl">Spell Atk</span></div>' : ''}
             </div>
 
             <!-- Combat Mode Panel (hidden by default) -->
@@ -604,6 +606,8 @@
                         <div class="cs-field"><label>PV Atual</label><input type="number" id="cs-e-hpcur" value="${s.hpCurrent}"></div>
                         <div class="cs-field"><label>PV Temp</label><input type="number" id="cs-e-hptmp" value="${s.hpTemp}"></div>
                         <div class="cs-field"><label>Dados de Vida</label><input id="cs-e-hd" value="${escAttr(s.hitDice)}"></div>
+                        <div class="cs-field"><label>Spell DC</label><input type="number" id="cs-e-spelldc" value="${s.spellSaveDC}"></div>
+                        <div class="cs-field"><label>Spell Attack</label><input type="number" id="cs-e-spellatk" value="${s.spellAttackBonus}"></div>
                     </div>
                 `)}
                 ${editSection('Testes de Resistência (valor final)', `
@@ -792,6 +796,8 @@
         s.hpCurrent = parseInt(document.getElementById('cs-e-hpcur').value) || 0;
         s.hpTemp = parseInt(document.getElementById('cs-e-hptmp').value) || 0;
         s.hitDice = document.getElementById('cs-e-hd').value.trim();
+        s.spellSaveDC = parseInt(document.getElementById('cs-e-spelldc').value) || 0;
+        s.spellAttackBonus = parseInt(document.getElementById('cs-e-spellatk').value) || 0;
 
         s.saves = {};
         ABILITIES.forEach(ab => { s.saves[ab] = parseInt(document.getElementById('cs-e-sv-' + ab).value) || 0; });
