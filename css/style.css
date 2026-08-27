@@ -1392,6 +1392,392 @@ body {
     padding: 0;
 }
 
+/* ===== HELLVAULT MODE ===== */
+
+/* Botao Hellvault na barra */
+.hellvault-toggle {
+    transition: all 0.3s ease;
+}
+
+.hellvault-toggle.active {
+    color: #ff2222 !important;
+    background: rgba(150, 0, 0, 0.4) !important;
+    border-color: #aa0000 !important;
+    box-shadow: 0 0 12px rgba(255, 0, 0, 0.5);
+    animation: hellvault-btn-pulse 2s ease-in-out infinite;
+}
+
+@keyframes hellvault-btn-pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(255, 0, 0, 0.4); }
+    50% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.8); }
+}
+
+/* Overlay vermelho forte sobre tudo */
+#hellvault-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 30%, rgba(120, 0, 0, 0.45) 0%, rgba(50, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.85) 100%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+    z-index: 5;
+}
+
+body.hellvault-mode #hellvault-overlay {
+    opacity: 1;
+}
+
+/* Vinheta escura nas bordas */
+#hellvault-vignette {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    box-shadow: inset 0 0 150px 80px rgba(0, 0, 0, 0.95);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+    z-index: 6;
+}
+
+body.hellvault-mode #hellvault-vignette {
+    opacity: 1;
+}
+
+/* Mapa fica escuro e avermelhado */
+body.hellvault-mode #map-container,
+body.hellvault-mode .map-frame {
+    filter: saturate(0.2) brightness(0.4) sepia(0.8) hue-rotate(-25deg) contrast(1.2);
+    transition: filter 1.2s ease;
+}
+
+#map-container,
+.map-frame {
+    transition: filter 1.2s ease;
+}
+
+/* ===== TUDO VERMELHO: textos, icones, bordas ===== */
+body.hellvault-mode {
+    color: #cc2222 !important;
+}
+
+body.hellvault-mode h1,
+body.hellvault-mode h2,
+body.hellvault-mode h3,
+body.hellvault-mode h4,
+body.hellvault-mode p,
+body.hellvault-mode span,
+body.hellvault-mode a,
+body.hellvault-mode label,
+body.hellvault-mode li,
+body.hellvault-mode td,
+body.hellvault-mode th,
+body.hellvault-mode div {
+    color: #cc2222 !important;
+}
+
+body.hellvault-mode #lang-selector svg,
+body.hellvault-mode #settings-toggle svg,
+body.hellvault-mode #trail-btn svg,
+body.hellvault-mode .music-btn svg,
+body.hellvault-mode .trail-ctrl-btn svg {
+    stroke: #cc2222 !important;
+    color: #cc2222 !important;
+}
+
+body.hellvault-mode button,
+body.hellvault-mode input,
+body.hellvault-mode select,
+body.hellvault-mode textarea {
+    color: #cc2222 !important;
+    border-color: #5c1111 !important;
+}
+
+/* Todas as bordas douradas viram vermelhas */
+body.hellvault-mode #info-panel,
+body.hellvault-mode #wiki-sidebar,
+body.hellvault-mode .wiki-sidebar,
+body.hellvault-mode #wiki-panel,
+body.hellvault-mode .lang-btn,
+body.hellvault-mode #lang-selector,
+body.hellvault-mode #trail-btn,
+body.hellvault-mode #trail-season,
+body.hellvault-mode .trail-ctrl-btn,
+body.hellvault-mode #settings-toggle,
+body.hellvault-mode #settings-sidebar,
+body.hellvault-mode .settings-btn,
+body.hellvault-mode .music-btn,
+body.hellvault-mode #poi-modal,
+body.hellvault-mode #wiki-add-modal,
+body.hellvault-mode #journey-modal,
+body.hellvault-mode .info-portrait,
+body.hellvault-mode .alt-art-btn,
+body.hellvault-mode .add-detail-btn,
+body.hellvault-mode .add-alt-art-btn,
+body.hellvault-mode .add-image-btn,
+body.hellvault-mode #quest-panel,
+body.hellvault-mode .quest-item,
+body.hellvault-mode .map-link,
+body.hellvault-mode .session-quote,
+body.hellvault-mode .session-field,
+body.hellvault-mode #wiki-search,
+body.hellvault-mode #instructions,
+body.hellvault-mode .wiki-sidebar-header {
+    border-color: #5c1111 !important;
+}
+
+body.hellvault-mode #instructions {
+    border-color: rgba(92, 17, 17, 0.5) !important;
+    color: #882222 !important;
+}
+
+body.hellvault-mode #wiki-sidebar {
+    background: rgba(10, 0, 0, 0.95) !important;
+    border-color: #5c1111 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(92, 17, 17, 0.2) !important;
+}
+
+body.hellvault-mode .wiki-sidebar-header {
+    border-bottom-color: rgba(92, 17, 17, 0.3) !important;
+}
+
+body.hellvault-mode .wiki-sidebar-title {
+    color: #ff2222 !important;
+}
+
+/* Backgrounds escurecem */
+body.hellvault-mode #info-panel {
+    background: linear-gradient(180deg, #1a0505 0%, #0a0000 100%) !important;
+}
+
+body.hellvault-mode #info-panel #city-name {
+    color: #ff2222 !important;
+}
+
+body.hellvault-mode #info-panel #city-region {
+    color: #881111 !important;
+}
+
+body.hellvault-mode #info-panel .info-section h3 {
+    color: #dd2222 !important;
+}
+
+body.hellvault-mode #info-panel .info-section p,
+body.hellvault-mode #info-panel .info-section li {
+    color: #aa3333 !important;
+}
+
+/* Scrollbar */
+body.hellvault-mode ::-webkit-scrollbar-thumb {
+    background: #5c1111 !important;
+}
+
+/* Barra inferior */
+body.hellvault-mode #lang-selector {
+    background: rgba(10, 0, 0, 0.95) !important;
+}
+
+body.hellvault-mode #lang-selector .lang-btn {
+    color: #ff3333 !important;
+    background: rgba(30, 0, 0, 0.9) !important;
+}
+
+body.hellvault-mode #lang-selector .lang-btn svg {
+    stroke: #ff3333 !important;
+}
+
+/* Sidebar wiki */
+body.hellvault-mode .sidebar,
+body.hellvault-mode #sidebar,
+body.hellvault-mode .wiki-sidebar {
+    background: linear-gradient(180deg, #0d0000 0%, #1a0505 100%) !important;
+    border-color: #5c1111 !important;
+}
+
+body.hellvault-mode .wiki-item {
+    color: #aa2222 !important;
+    border-color: #3a0808 !important;
+}
+
+body.hellvault-mode .wiki-item:hover {
+    color: #ff3333 !important;
+    background: rgba(100, 0, 0, 0.2) !important;
+}
+
+body.hellvault-mode .section-title {
+    color: #ff2222 !important;
+    border-color: #5c1111 !important;
+}
+
+/* Botoes de controle do mapa */
+body.hellvault-mode .music-btn,
+body.hellvault-mode #trail-btn,
+body.hellvault-mode #settings-toggle,
+body.hellvault-mode .trail-ctrl-btn {
+    background: rgba(20, 0, 0, 0.9) !important;
+    border-color: #5c1111 !important;
+    color: #cc2222 !important;
+}
+
+body.hellvault-mode #music-timer {
+    border-color: #5c1111 !important;
+    color: #cc2222 !important;
+    background: rgba(20, 0, 0, 0.9) !important;
+}
+
+body.hellvault-mode .music-btn svg,
+body.hellvault-mode #trail-btn svg,
+body.hellvault-mode #settings-toggle svg,
+body.hellvault-mode .trail-ctrl-btn svg {
+    stroke: #cc2222 !important;
+}
+
+/* Header do mapa (Tyr) */
+body.hellvault-mode .map-title,
+body.hellvault-mode #map-title {
+    color: #cc2222 !important;
+    border-color: #5c1111 !important;
+}
+
+/* Settings sidebar */
+body.hellvault-mode #settings-sidebar {
+    background: rgba(10, 0, 0, 0.97) !important;
+    border-color: #5c1111 !important;
+}
+
+body.hellvault-mode .settings-btn {
+    color: #aa2222 !important;
+    border-color: #3a0808 !important;
+}
+
+body.hellvault-mode .settings-section-title {
+    color: #881111 !important;
+}
+
+/* Trail/journey selector */
+body.hellvault-mode #trail-season {
+    background: rgba(10, 0, 0, 0.95) !important;
+    color: #cc2222 !important;
+}
+
+/* Map link colors */
+body.hellvault-mode .map-link {
+    color: #cc2222 !important;
+}
+
+/* Desabilitar pointer-events em elementos nao-hellvault durante o modo */
+body.hellvault-mode .hellvault-disabled {
+    pointer-events: none !important;
+    cursor: default !important;
+}
+
+/* Pulse dos Hellvault POIs no mapa */
+@keyframes hellvault-poi-pulse {
+    0% {
+        r: 22;
+        opacity: 1;
+        stroke-width: 3;
+    }
+    70% {
+        r: 55;
+        opacity: 0;
+        stroke-width: 0.5;
+    }
+    100% {
+        r: 55;
+        opacity: 0;
+        stroke-width: 0.5;
+    }
+}
+
+@keyframes hellvault-poi-glow {
+    0%, 100% {
+        filter: drop-shadow(0 0 8px rgba(255, 20, 20, 0.9)) brightness(2);
+    }
+    50% {
+        filter: drop-shadow(0 0 25px rgba(255, 20, 20, 1)) drop-shadow(0 0 50px rgba(200, 0, 0, 0.8)) brightness(2.5);
+    }
+}
+
+/* Sol Negro - animacao viva */
+@keyframes hellvault-sun-glow {
+    0%, 100% {
+        filter: drop-shadow(0 0 12px rgba(200, 0, 0, 0.8)) drop-shadow(0 0 30px rgba(100, 0, 0, 0.5));
+    }
+    50% {
+        filter: drop-shadow(0 0 25px rgba(255, 20, 0, 1)) drop-shadow(0 0 60px rgba(180, 0, 0, 0.7));
+    }
+}
+
+@keyframes hellvault-sun-corona {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+/* Hellvault overlay POIs (fora do filter do mapa) */
+@keyframes hellvault-html-glow {
+    0%, 100% {
+        box-shadow: 0 0 12px rgba(255, 30, 30, 0.7), 0 0 30px rgba(200, 0, 0, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 30, 30, 1), 0 0 50px rgba(200, 0, 0, 0.7);
+    }
+}
+
+@keyframes hellvault-html-pulse-ring {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.8;
+        border-width: 3px;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(2.5);
+        opacity: 0;
+        border-width: 1px;
+    }
+}
+
+.hellvault-overlay-poi {
+    position: relative;
+}
+
+.hellvault-overlay-poi:hover {
+    transform: scale(1.1) !important;
+}
+
+.hellvault-pulse-ring-html {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 30, 30, 0.8);
+    transform: translate(-50%, -50%) scale(1);
+    animation: hellvault-html-pulse-ring 2.5s ease-out infinite;
+    pointer-events: none;
+}
+
+/* Sol Negro overlay (fora do filter do mapa) */
+@keyframes hellvault-sun-html-glow {
+    0%, 100% {
+        filter: drop-shadow(0 0 20px rgba(200, 0, 0, 1)) drop-shadow(0 0 50px rgba(150, 0, 0, 0.7));
+    }
+    50% {
+        filter: drop-shadow(0 0 40px rgba(255, 20, 0, 1)) drop-shadow(0 0 80px rgba(180, 0, 0, 0.9));
+    }
+}
+
+#hellvault-sun-overlay svg path,
+#hellvault-sun-overlay svg polygon {
+    animation: hellvault-sun-html-flicker 5s ease-in-out infinite;
+}
+
+@keyframes hellvault-sun-html-flicker {
+    0%, 100% { fill: #3a0000; }
+    25% { fill: #4a0505; }
+    50% { fill: #2a0000; }
+    75% { fill: #450000; }
+}
+
 /* ===== BOTÃƒO ADICIONAR WIKI ENTRY ===== */
 .wiki-add-item {
     padding: 6px 10px;
@@ -2062,9 +2448,16 @@ body {
 
 /* Classe global para aplicar fonte Dragao */
 body.font-dragao,
-body.font-dragao * {
+body.font-dragao *:not(#map-container):not(#map-wrapper):not(#map-svg):not(object) {
     font-family: 'Dragao', serif !important;
     text-transform: uppercase !important;
+}
+
+body.font-dragao #map-container,
+body.font-dragao #map-wrapper,
+body.font-dragao #map-svg {
+    font-family: inherit;
+    text-transform: none;
 }
 
 

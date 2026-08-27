@@ -116,7 +116,24 @@ function initSvg() {
 }
 
 // Registrar o load event E verificar se já carregou
-mapSvg.addEventListener('load', initSvg);
+mapSvg.addEventListener('load', function() {
+    initSvg();
+    // Re-renderizar POIs customizados apos reload do SVG
+    if (window._customPOIs && window._customPOIs.length > 0) {
+        function tryRenderPOIs() {
+            if (svgDoc && svgDoc.querySelector('svg')) {
+                window._customPOIs.forEach(poi => {
+                    if (!svgDoc.getElementById(poi.id)) {
+                        if (typeof window._renderSinglePOI === 'function') window._renderSinglePOI(poi);
+                    }
+                });
+            } else {
+                setTimeout(tryRenderPOIs, 200);
+            }
+        }
+        tryRenderPOIs();
+    }
+});
 // Se o SVG já estava em cache e carregou antes do script
 if (mapSvg.contentDocument && mapSvg.contentDocument.querySelector('svg')) {
     initSvg();
@@ -2755,6 +2772,10 @@ if (langToggle && langMenu) {
     };
 
     loadCustomPOIs();
+
+    // Expor customPOIs e renderSinglePOI para acesso externo
+    window._customPOIs = customPOIs;
+    window._renderSinglePOI = renderSinglePOI;
 })();
 
 
@@ -3879,4 +3900,458 @@ if (charsheetCloseBtn) {
     }
 
     loadCustomJourneys();
+})();
+
+
+// ===== MODO HELLVAULT =====
+(function() {
+    const hellvaultBtn = document.getElementById('hellvault-btn');
+    let hellvaultMode = false;
+    let hellvaultPulseElements = []; // circulos de pulse criados no SVG
+
+    // Expor estado do modo hellvault globalmente
+    window._hellvaultMode = false;
+
+    hellvaultBtn.addEventListener('click', () => {
+        hellvaultMode = !hellvaultMode;
+        window._hellvaultMode = hellvaultMode;
+        if (hellvaultMode) {
+            activateHellvaultMode();
+        } else {
+            deactivateHellvaultMode();
+        }
+    });
+
+    function activateHellvaultMode() {
+        document.body.classList.add('hellvault-mode');
+        hellvaultBtn.classList.add('active');
+
+        // Transformar o Sol (g99) em Sol Negro
+        transformSun(true);
+
+        // Destacar Hellvault POIs e desabilitar o resto
+        highlightHellvaults(true);
+
+        // Desabilitar cliques em elementos nao-hellvault no mapa
+        disableNonHellvaultClicks(true);
+    }
+
+    function deactivateHellvaultMode() {
+        document.body.classList.remove('hellvault-mode');
+        hellvaultBtn.classList.remove('active');
+
+        // Reverter o Sol
+        transformSun(false);
+
+        // Remover destaque dos Hellvaults
+        highlightHellvaults(false);
+
+        // Reabilitar cliques
+        disableNonHellvaultClicks(false);
+    }
+
+    let sunOverlayEl = null;
+
+    function transformSun(activate) {
+        if (!svgDoc) return;
+        const sunGroup = svgDoc.getElementById('g99');
+        if (!sunGroup) return;
+        const svgEl = svgDoc.querySelector('svg');
+
+        if (activate) {
+            // Esconder o sol original dentro do SVG
+            sunGroup.style.opacity = '0';
+            sunGroup.style.transition = 'opacity 0.5s ease';
+
+            // Criar overlay HTML do Sol Negro fora do container filtrado
+            createSunOverlay(sunGroup, svgEl);
+
+            // Injetar estilos de animacao no SVG (para pulse rings dos hellvaults)
+            if (!svgDoc.getElementById('hellvault-styles')) {
+                const styleEl = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'style');
+                styleEl.setAttribute('id', 'hellvault-styles');
+                styleEl.textContent = `
+                    @keyframes hellvault-pulse-ring {
+                        0% { r: 18; opacity: 1; stroke-width: 3; }
+                        80% { r: 45; opacity: 0; stroke-width: 0.5; }
+                        100% { r: 45; opacity: 0; stroke-width: 0.5; }
+                    }
+                    .hellvault-pulse-ring {
+                        animation: hellvault-pulse-ring 2.5s ease-out infinite;
+                        fill: none;
+                        stroke: #ff4444;
+                        stroke-width: 3;
+                    }
+                    .hellvault-disabled {
+                        pointer-events: none !important;
+                        cursor: default !important;
+                    }
+                `;
+                svgEl.insertBefore(styleEl, svgEl.firstChild);
+            }
+
+        } else {
+            // Mostrar sol original novamente
+            sunGroup.style.opacity = '';
+            sunGroup.style.transition = '';
+
+            // Remover overlay HTML
+            removeSunOverlay();
+        }
+    }
+
+    function createSunOverlay(sunGroup, svgEl) {
+        removeSunOverlay();
+
+        // Calcular bounding box do sol na tela
+        const bbox = sunGroup.getBBox();
+        const centerPt = svgEl.createSVGPoint();
+        centerPt.x = bbox.x + bbox.width / 2;
+        centerPt.y = bbox.y + bbox.height / 2;
+        const screenCenter = centerPt.matrixTransform(svgEl.getScreenCTM());
+
+        // Tamanho na tela baseado na escala atual
+        const cornerPt = svgEl.createSVGPoint();
+        cornerPt.x = bbox.x;
+        cornerPt.y = bbox.y;
+        const screenCorner = cornerPt.matrixTransform(svgEl.getScreenCTM());
+        const cornerPt2 = svgEl.createSVGPoint();
+        cornerPt2.x = bbox.x + bbox.width;
+        cornerPt2.y = bbox.y + bbox.height;
+        const screenCorner2 = cornerPt2.matrixTransform(svgEl.getScreenCTM());
+
+        const screenW = Math.abs(screenCorner2.x - screenCorner.x);
+        const screenH = Math.abs(screenCorner2.y - screenCorner.y);
+        const size = Math.max(screenW, screenH);
+
+        // Criar o SVG do sol como HTML overlay
+        sunOverlayEl = document.createElement('div');
+        sunOverlayEl.id = 'hellvault-sun-overlay';
+        sunOverlayEl.style.cssText = `
+            position: fixed;
+            left: ${screenCenter.x - size * 1.4 / 2}px;
+            top: ${screenCenter.y - size * 1.4 / 2}px;
+            width: ${size * 1.4}px;
+            height: ${size * 1.4}px;
+            pointer-events: none;
+            z-index: 4;
+            animation: hellvault-sun-html-glow 3s ease-in-out infinite;
+        `;
+
+        // Clonar o SVG do sol e estilizar como Sol Negro
+        const sunSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        sunSvg.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
+        sunSvg.style.cssText = 'width:100%;height:100%;overflow:visible;';
+
+        // Clonar o grupo do sol
+        const clone = sunGroup.cloneNode(true);
+        // Aplicar cores de Sol Negro no clone
+        clone.style.opacity = '1';
+        clone.querySelectorAll('circle').forEach(c => {
+            c.setAttribute('fill', '#000000');
+            c.setAttribute('stroke', '#cc0000');
+            c.setAttribute('stroke-width', '5');
+        });
+        clone.querySelectorAll('path, polygon').forEach(el => {
+            el.setAttribute('fill', '#3a0000');
+            el.setAttribute('stroke', '#880000');
+            el.setAttribute('stroke-width', '1.5');
+        });
+
+        sunSvg.appendChild(clone);
+        sunOverlayEl.appendChild(sunSvg);
+        document.body.appendChild(sunOverlayEl);
+    }
+
+    function removeSunOverlay() {
+        if (sunOverlayEl) {
+            sunOverlayEl.remove();
+            sunOverlayEl = null;
+        }
+    }
+
+    function updateSunOverlayPosition() {
+        if (!sunOverlayEl || !svgDoc) return;
+        const sunGroup = svgDoc.getElementById('g99');
+        if (!sunGroup) return;
+        const svgEl = svgDoc.querySelector('svg');
+
+        const bbox = sunGroup.getBBox();
+        const centerPt = svgEl.createSVGPoint();
+        centerPt.x = bbox.x + bbox.width / 2;
+        centerPt.y = bbox.y + bbox.height / 2;
+        const screenCenter = centerPt.matrixTransform(svgEl.getScreenCTM());
+
+        const cornerPt = svgEl.createSVGPoint();
+        cornerPt.x = bbox.x;
+        cornerPt.y = bbox.y;
+        const screenCorner = cornerPt.matrixTransform(svgEl.getScreenCTM());
+        const cornerPt2 = svgEl.createSVGPoint();
+        cornerPt2.x = bbox.x + bbox.width;
+        cornerPt2.y = bbox.y + bbox.height;
+        const screenCorner2 = cornerPt2.matrixTransform(svgEl.getScreenCTM());
+
+        const screenW = Math.abs(screenCorner2.x - screenCorner.x);
+        const screenH = Math.abs(screenCorner2.y - screenCorner.y);
+        const size = Math.max(screenW, screenH);
+
+        sunOverlayEl.style.left = (screenCenter.x - size * 1.4 / 2) + 'px';
+        sunOverlayEl.style.top = (screenCenter.y - size * 1.4 / 2) + 'px';
+        sunOverlayEl.style.width = (size * 1.4) + 'px';
+        sunOverlayEl.style.height = (size * 1.4) + 'px';
+    }
+
+    function highlightHellvaults(activate) {
+        if (!svgDoc) return;
+        const svgEl = svgDoc.querySelector('svg');
+        const customPOIs = window._customPOIs || [];
+
+        if (activate) {
+            // Criar overlay HTML para hellvaults FORA do container filtrado
+            createHellvaultOverlays(customPOIs);
+
+            customPOIs.forEach(p => {
+                const g = svgDoc.getElementById(p.id);
+                if (!g) return;
+
+                if (p.iconId && p.iconId.startsWith('local:hellvault')) {
+                    // Esconder o POI original dentro do SVG (sera substituido pelo overlay HTML)
+                    g.style.opacity = '0';
+                    g.style.transition = 'opacity 0.5s ease';
+                } else {
+                    g.classList.add('hellvault-disabled');
+                }
+            });
+
+            // Cidades: desabilitar clique
+            if (typeof cityIds !== 'undefined') {
+                cityIds.forEach(cid => {
+                    const g = svgDoc.getElementById(cid);
+                    if (g) {
+                        g.classList.add('hellvault-disabled');
+                    }
+                });
+            }
+
+            // Markers fixos
+            if (typeof mapMarkers !== 'undefined') {
+                mapMarkers.forEach(m => {
+                    const g = svgDoc.getElementById(m.id);
+                    if (g) {
+                        g.classList.add('hellvault-disabled');
+                    }
+                });
+            }
+
+        } else {
+            // Remover overlays HTML
+            removeHellvaultOverlays();
+
+            // Reverter tudo
+            customPOIs.forEach(p => {
+                const g = svgDoc.getElementById(p.id);
+                if (!g) return;
+                g.classList.remove('hellvault-poi-highlighted');
+                g.classList.remove('hellvault-disabled');
+                g.style.transform = '';
+                g.style.filter = '';
+                g.style.opacity = '';
+                g.style.transition = '';
+            });
+
+            // Remover pulse rings
+            hellvaultPulseElements.forEach(ring => {
+                if (ring.parentNode) ring.parentNode.removeChild(ring);
+            });
+            hellvaultPulseElements = [];
+
+            // Reverter cidades
+            if (typeof cityIds !== 'undefined') {
+                cityIds.forEach(cid => {
+                    const g = svgDoc.getElementById(cid);
+                    if (g) {
+                        g.classList.remove('hellvault-disabled');
+                        g.style.opacity = '';
+                        g.style.transition = '';
+                    }
+                });
+            }
+
+            // Reverter markers fixos
+            if (typeof mapMarkers !== 'undefined') {
+                mapMarkers.forEach(m => {
+                    const g = svgDoc.getElementById(m.id);
+                    if (g) {
+                        g.classList.remove('hellvault-disabled');
+                        g.style.opacity = '';
+                        g.style.transition = '';
+                    }
+                });
+            }
+        }
+    }
+
+    // Criar elementos HTML overlay posicionados FORA do container filtrado
+    let hellvaultOverlayContainer = null;
+
+    function createHellvaultOverlays(customPOIs) {
+        removeHellvaultOverlays();
+
+        const mapContainer = document.getElementById('map-container');
+        if (!mapContainer || !svgDoc) return;
+
+        // Container para os overlays - fica como irmao do map-container, nao filho
+        hellvaultOverlayContainer = document.createElement('div');
+        hellvaultOverlayContainer.id = 'hellvault-poi-overlays';
+        hellvaultOverlayContainer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;';
+        document.body.appendChild(hellvaultOverlayContainer);
+
+        const svgEl = svgDoc.querySelector('svg');
+        const hellvaults = customPOIs.filter(p => p.iconId && p.iconId.startsWith('local:hellvault'));
+
+        hellvaults.forEach(poi => {
+            // Converter coordenadas SVG para coordenadas de tela
+            const pt = svgEl.createSVGPoint();
+            pt.x = poi.x;
+            pt.y = poi.y;
+            const screenPt = pt.matrixTransform(svgEl.getScreenCTM());
+
+            const size = (poi.size || 28) * 1.4;
+            const el = document.createElement('div');
+            el.className = 'hellvault-overlay-poi';
+            el.style.cssText = `
+                position: fixed;
+                left: ${screenPt.x - size / 2}px;
+                top: ${screenPt.y - size / 2}px;
+                width: ${size}px;
+                height: ${size}px;
+                border-radius: 50%;
+                background: #1a1008;
+                border: 2px solid #8b6914;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                pointer-events: auto;
+                cursor: pointer;
+                animation: hellvault-html-glow 2s ease-in-out infinite;
+                box-shadow: 0 0 12px rgba(255, 30, 30, 0.7), 0 0 30px rgba(200, 0, 0, 0.4);
+                overflow: visible;
+            `;
+
+            // Pulse rings expandindo ao redor
+            const ring1 = document.createElement('div');
+            ring1.className = 'hellvault-pulse-ring-html';
+            el.appendChild(ring1);
+
+            const ring2 = document.createElement('div');
+            ring2.className = 'hellvault-pulse-ring-html';
+            ring2.style.animationDelay = '1.2s';
+            el.appendChild(ring2);
+
+            // Imagem do icone hellvault
+            if (poi.iconSvg) {
+                const iconDiv = document.createElement('div');
+                iconDiv.style.cssText = 'width:70%;height:70%;display:flex;align-items:center;justify-content:center;';
+                iconDiv.innerHTML = poi.iconSvg;
+                const svgIcon = iconDiv.querySelector('svg');
+                if (svgIcon) {
+                    svgIcon.style.width = '100%';
+                    svgIcon.style.height = '100%';
+                }
+                el.appendChild(iconDiv);
+            }
+
+            // Pulse rings como pseudo-elements via box-shadow animation
+            el.dataset.poiId = poi.id;
+            el.addEventListener('click', () => {
+                // Disparar click no POI original
+                const g = svgDoc.getElementById(poi.id);
+                if (g) g.dispatchEvent(new Event('click', { bubbles: true }));
+            });
+
+            hellvaultOverlayContainer.appendChild(el);
+        });
+    }
+
+    function removeHellvaultOverlays() {
+        if (hellvaultOverlayContainer) {
+            hellvaultOverlayContainer.remove();
+            hellvaultOverlayContainer = null;
+        }
+    }
+
+    // Atualizar posicao dos overlays quando o mapa e movido/zoomado
+    function updateHellvaultOverlayPositions() {
+        if (!hellvaultOverlayContainer || !svgDoc) return;
+        const svgEl = svgDoc.querySelector('svg');
+        const customPOIs = window._customPOIs || [];
+        const hellvaults = customPOIs.filter(p => p.iconId && p.iconId.startsWith('local:hellvault'));
+        const overlays = hellvaultOverlayContainer.querySelectorAll('.hellvault-overlay-poi');
+
+        overlays.forEach((el, i) => {
+            if (!hellvaults[i]) return;
+            const poi = hellvaults[i];
+            const pt = svgEl.createSVGPoint();
+            pt.x = poi.x;
+            pt.y = poi.y;
+            const screenPt = pt.matrixTransform(svgEl.getScreenCTM());
+            const size = (poi.size || 28) * 1.4;
+            el.style.left = (screenPt.x - size / 2) + 'px';
+            el.style.top = (screenPt.y - size / 2) + 'px';
+        });
+    }
+
+    // Observar movimentos do mapa para atualizar posicoes
+    const mapWrapper = document.getElementById('map-wrapper');
+    if (mapWrapper) {
+        const observer = new MutationObserver(() => {
+            if (hellvaultMode) {
+                updateHellvaultOverlayPositions();
+                updateSunOverlayPosition();
+            }
+        });
+        observer.observe(mapWrapper, { attributes: true, attributeFilter: ['style'] });
+    }
+    // Tambem atualizar em scroll/resize
+    window.addEventListener('resize', () => {
+        if (hellvaultMode) {
+            updateHellvaultOverlayPositions();
+            updateSunOverlayPosition();
+        }
+    });
+    document.addEventListener('wheel', () => {
+        if (hellvaultMode) requestAnimationFrame(() => {
+            updateHellvaultOverlayPositions();
+            updateSunOverlayPosition();
+        });
+    });
+    document.addEventListener('mouseup', () => {
+        if (hellvaultMode) setTimeout(() => {
+            updateHellvaultOverlayPositions();
+            updateSunOverlayPosition();
+        }, 50);
+    });
+
+    // Desabilitar/reabilitar cliques em elementos da pagina fora do mapa
+    function disableNonHellvaultClicks(activate) {
+        // Sidebar wiki items
+        const wikiItems = document.querySelectorAll('.wiki-item');
+        wikiItems.forEach(item => {
+            if (activate) {
+                item.classList.add('hellvault-disabled');
+            } else {
+                item.classList.remove('hellvault-disabled');
+            }
+        });
+
+        // Section titles (collapsiveis)
+        const sectionTitles = document.querySelectorAll('.section-title');
+        sectionTitles.forEach(st => {
+            if (activate) {
+                st.classList.add('hellvault-disabled');
+            } else {
+                st.classList.remove('hellvault-disabled');
+            }
+        });
+    }
 })();
