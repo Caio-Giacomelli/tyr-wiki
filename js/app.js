@@ -2188,12 +2188,15 @@ if (langToggle && langMenu) {
     let selectedIconSvg = '';
     let selectedIconId = '';
     let selectedImage = '';
+    let selectedIconColor = '#d4a843';
     let customPOIs = []; // carregado do Firestore
     let editingPOI = null; // POI sendo editado
     const poiDeleteBtn = document.getElementById('poi-delete-btn');
     const poiImageBtn = document.getElementById('poi-image-btn');
     const poiImageStatus = document.getElementById('poi-image-status');
     const poiImagePreview = document.getElementById('poi-image-preview');
+    const poiColorOptions = document.querySelectorAll('.poi-color-option');
+    const poiCustomColorInput = document.getElementById('poi-custom-color');
 
     // Toggle modo PIN
     pinBtn.addEventListener('click', () => {
@@ -2258,6 +2261,7 @@ if (langToggle && langMenu) {
             selectedIconSvg = existingPOI.iconSvg || '';
             selectedIconId = existingPOI.iconId || '';
             selectedImage = existingPOI.image || '';
+            selectedIconColor = existingPOI.iconColor || '#d4a843';
             poiIconPreview.innerHTML = selectedIconSvg || 'Nenhum';
             if (selectedImage) {
                 poiImagePreview.innerHTML = '<img src="' + selectedImage + '" alt="Preview">';
@@ -2275,6 +2279,7 @@ if (langToggle && langMenu) {
             selectedIconSvg = '';
             selectedIconId = '';
             selectedImage = '';
+            selectedIconColor = '#d4a843';
             poiIconPreview.textContent = 'Nenhum';
             poiImagePreview.innerHTML = '';
             poiImageStatus.textContent = 'Nenhuma';
@@ -2283,6 +2288,8 @@ if (langToggle && langMenu) {
         }
         poiIconQuery.value = '';
         poiIconResults.innerHTML = '';
+        // Atualizar seletor de cor
+        syncColorPicker();
         poiOverlay.classList.add('open');
     }
 
@@ -2316,6 +2323,57 @@ if (langToggle && langMenu) {
         });
         input.click();
     });
+
+    // Seletor de cor do icone
+    poiColorOptions.forEach(option => {
+        if (option.dataset.color === 'custom') return;
+        option.addEventListener('click', () => {
+            poiColorOptions.forEach(o => o.classList.remove('selected'));
+            option.classList.add('selected');
+            selectedIconColor = option.dataset.color;
+            updateIconPreviewColor();
+        });
+    });
+
+    poiCustomColorInput.addEventListener('input', (e) => {
+        poiColorOptions.forEach(o => o.classList.remove('selected'));
+        poiCustomColorInput.closest('.poi-color-option').classList.add('selected');
+        selectedIconColor = e.target.value;
+        updateIconPreviewColor();
+    });
+
+    function updateIconPreviewColor() {
+        const svgEl = poiIconPreview.querySelector('svg');
+        if (svgEl) {
+            svgEl.style.fill = selectedIconColor;
+            svgEl.style.color = selectedIconColor;
+            svgEl.querySelectorAll('path, circle, rect, polygon, polyline, line, ellipse, use').forEach(el => {
+                el.setAttribute('fill', selectedIconColor);
+            });
+            svgEl.querySelectorAll('[stroke]').forEach(el => {
+                const s = el.getAttribute('stroke');
+                if (s && s !== 'none') el.setAttribute('stroke', selectedIconColor);
+            });
+        }
+    }
+
+    function syncColorPicker() {
+        let matched = false;
+        poiColorOptions.forEach(o => {
+            o.classList.remove('selected');
+            if (o.dataset.color === selectedIconColor) {
+                o.classList.add('selected');
+                matched = true;
+            }
+        });
+        if (!matched) {
+            // Cor personalizada
+            const customOption = document.querySelector('.poi-color-custom');
+            if (customOption) customOption.classList.add('selected');
+            poiCustomColorInput.value = selectedIconColor;
+        }
+        updateIconPreviewColor();
+    }
 
     // Buscar icones na Iconify API
     poiIconSearchBtn.addEventListener('click', searchIcons);
@@ -2363,6 +2421,7 @@ if (langToggle && langMenu) {
                     selectedIconSvg = result.svgText;
                     selectedIconId = result.iconName;
                     poiIconPreview.innerHTML = result.svgText;
+                    updateIconPreviewColor();
                 });
                 poiIconResults.appendChild(option);
             });
@@ -2389,6 +2448,7 @@ if (langToggle && langMenu) {
                     selectedIconSvg = result.svgText;
                     selectedIconId = result.iconName;
                     poiIconPreview.innerHTML = result.svgText;
+                    updateIconPreviewColor();
                 });
                 poiIconResults.appendChild(option);
             });
@@ -2420,6 +2480,7 @@ if (langToggle && langMenu) {
                 editingPOI.iconSvg = selectedIconSvg;
                 editingPOI.iconId = selectedIconId;
                 editingPOI.image = selectedImage;
+                editingPOI.iconColor = selectedIconColor;
 
                 await db.collection('customPOIs').doc(editingPOI.id).set(editingPOI, { merge: true });
 
@@ -2441,6 +2502,7 @@ if (langToggle && langMenu) {
                     iconSvg: selectedIconSvg,
                     iconId: selectedIconId,
                     image: selectedImage,
+                    iconColor: selectedIconColor,
                     size: 28
                 };
 
@@ -2547,8 +2609,21 @@ if (langToggle && langMenu) {
             iconDiv.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
             iconDiv.innerHTML = poi.iconSvg.replace(/width="[^"]*"/, 'width="' + ((r - 4) * 2 - 4) + '"').replace(/height="[^"]*"/, 'height="' + ((r - 4) * 2 - 4) + '"');
             // Colorir o icone
+            const iconColor = poi.iconColor || '#d4a843';
             const svgIcon = iconDiv.querySelector('svg');
-            if (svgIcon) svgIcon.style.fill = '#d4a843';
+            if (svgIcon) {
+                svgIcon.style.fill = iconColor;
+                svgIcon.style.color = iconColor;
+                // Forcar cor em todos os paths/shapes internos
+                svgIcon.querySelectorAll('path, circle, rect, polygon, polyline, line, ellipse, use').forEach(el => {
+                    el.setAttribute('fill', iconColor);
+                });
+                // Remover strokes que possam manter cor preta
+                svgIcon.querySelectorAll('[stroke]').forEach(el => {
+                    const s = el.getAttribute('stroke');
+                    if (s && s !== 'none') el.setAttribute('stroke', iconColor);
+                });
+            }
             fo.appendChild(iconDiv);
             group.appendChild(fo);
         }
