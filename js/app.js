@@ -605,6 +605,9 @@ function switchEntityArt(entityData, altIndex, collection, docId) {
         const btnArt = btn.dataset.artIndex !== undefined ? parseInt(btn.dataset.artIndex) : null;
         btn.classList.toggle('active', btnArt === altIndex);
     });
+
+    // Propagar a arte selecionada para os icones das jornadas visiveis (retroativo)
+    if (typeof refreshActiveJourneyImages === 'function') refreshActiveJourneyImages();
 }
 
 // Obter a imagem atual (default) de uma entidade considerando selectedArt
@@ -1764,18 +1767,8 @@ function drawJourneyBase() {
     const firstStop = offsetStops[0];
 
     partyChars.forEach((char, i) => {
-        // Buscar imagem padrao do personagem pela lista de entidades
-        let charImg = char.img || '';
-        const allEntities = [
-            ...(typeof characters !== 'undefined' ? characters : []),
-            ...(typeof legion !== 'undefined' ? legion : []),
-            ...(typeof allies !== 'undefined' ? allies : []),
-            ...(typeof villains !== 'undefined' ? villains : []),
-            ...(typeof historicalNPCs !== 'undefined' ? historicalNPCs : [])
-        ];
-        const normName = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        const charData = allEntities.find(e => e && e.name && normName(e.name) === normName(char.name));
-        if (charData) charImg = getEntityDefaultImage(charData);
+        // Buscar imagem padrao do personagem pela lista de entidades (retroativo)
+        const charImg = resolvePartyMemberImage(char);
         if (!charImg) return;
 
         const clipId = `party-clip-${currentJourneyKey}-${i}`;
@@ -1858,9 +1851,10 @@ function advanceJourney() {
         const destParticipants = destStop && destStop.participants && destStop.participants.length > 0 ? destStop.participants : null;
         const spacing = 36;
 
-        // Determinar quais membros serao visiveis na parada de destino
+        // Determinar quais membros serao visiveis na parada de destino (com imagem)
         const visibleInDest = [];
         allPartyChars.forEach((char, i) => {
+            if (!resolvePartyMemberImage(char)) return; // sem imagem: nao ocupa espaco
             if (!destParticipants || destParticipants.includes(char.name)) {
                 visibleInDest.push(i);
             }
@@ -1930,9 +1924,10 @@ function updatePartyVisibility(config, stopIndex) {
     const currentStop = offsetStops[stopIndex];
     const spacing = 36;
 
-    // Determinar quais membros sao visiveis
+    // Determinar quais membros sao visiveis (participam da parada E possuem imagem)
     const visibleIndices = [];
     partyChars.forEach((char, i) => {
+        if (!resolvePartyMemberImage(char)) return; // sem imagem: nao ocupa espaco
         if (!participants || participants.length === 0 || participants.includes(char.name)) {
             visibleIndices.push(i);
         }
@@ -1955,6 +1950,90 @@ function updatePartyVisibility(config, stopIndex) {
         }
     });
 }
+
+// Resolver a imagem atual de um membro da party pelo nome (retroativo)
+// Busca o personagem nas listas de entidades e usa a imagem padrao atual dele.
+function resolvePartyMemberImage(member) {
+    let charImg = member.img || '';
+    const allEntities = [
+        ...(typeof characters !== 'undefined' ? characters : []),
+        ...(typeof legion !== 'undefined' ? legion : []),
+        ...(typeof allies !== 'undefined' ? allies : []),
+        ...(typeof villains !== 'undefined' ? villains : []),
+        ...(typeof historicalNPCs !== 'undefined' ? historicalNPCs : [])
+    ];
+    const normName = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const charData = allEntities.find(e => e && e.name && normName(e.name) === normName(member.name));
+    if (charData) charImg = getEntityDefaultImage(charData);
+    return charImg || '';
+}
+
+// Atualiza as imagens dos icones da party nas jornadas visiveis, resolvendo
+// a imagem atual de cada personagem pelo nome. Cria o icone caso ainda nao exista
+// (ex.: personagem que estava sem imagem quando a jornada foi desenhada).
+// Chamado automaticamente quando a imagem de um personagem e adicionada/trocada.
+function refreshActiveJourneyImages() {
+    if (!svgDoc) return;
+    // Redesenhar a(s) jornada(s) visivel(is) do zero para que:
+    //  - os icones reflitam a imagem atual de cada personagem (retroativo);
+    //  - membros sem imagem nao ocupem espaco no layout (sem buracos).
+    // Preservamos a jornada e a parada atualmente exibida.
+    const visibleKeys = Object.keys(activeJourneys);
+    if (visibleKeys.length === 0) return;
+
+    const savedKey = currentJourneyKey;
+    // Ir ate a ultima parada ja revelada (a animacao para no indice atual)
+    const lastStopIndex = Math.max(0, currentStopIndex);
+
+    visibleKeys.forEach(key => {
+        const config = journeyConfigs[key];
+        if (!config || !config.stops || config.stops.length === 0) return;
+
+        currentJourneyKey = key;
+        removeTrailFor(key);
+        drawJourneyBase();
+
+        // Restaurar as paradas/linhas ja reveladas sem reanimar
+        const offsetStops = getOffsetStopsFor(config.stops);
+        const stopsGroup = svgDoc.getElementById(`journey-stops-${key}`);
+        const linesGroup = svgDoc.getElementById(`journey-lines-${key}`);
+        const limit = Math.min(lastStopIndex, offsetStops.length - 1);
+
+        for (let idx = 0; idx <= limit; idx++) {
+            const stop = offsetStops[idx];
+            if (idx > 0 && linesGroup) {
+                const prev = offsetStops[idx - 1];
+                // Linha externa (colorida, mais grossa)
+                const borderLine = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'line');
+                borderLine.setAttribute('x1', prev.ox); borderLine.setAttribute('y1', prev.oy);
+                borderLine.setAttribute('x2', stop.ox); borderLine.setAttribute('y2', stop.oy);
+                borderLine.setAttribute('stroke', config.pathColor);
+                borderLine.setAttribute('stroke-width', '5');
+                borderLine.setAttribute('stroke-dasharray', '12 7');
+                borderLine.setAttribute('stroke-linecap', 'round');
+                borderLine.setAttribute('opacity', '0.9');
+                linesGroup.appendChild(borderLine);
+                // Linha interna (preta, mais fina)
+                const line = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', prev.ox); line.setAttribute('y1', prev.oy);
+                line.setAttribute('x2', stop.ox); line.setAttribute('y2', stop.oy);
+                line.setAttribute('stroke', '#111');
+                line.setAttribute('stroke-width', '2.5');
+                line.setAttribute('stroke-dasharray', '12 7');
+                line.setAttribute('stroke-linecap', 'round');
+                line.setAttribute('opacity', '0.9');
+                linesGroup.appendChild(line);
+            }
+            if (stopsGroup) placeStopMarker(stop, idx, stopsGroup, config);
+        }
+
+        // Posicionar os icones da party na parada atual (recalcula offsets sem buracos)
+        updatePartyVisibility(config, limit);
+    });
+
+    currentJourneyKey = savedKey;
+}
+window.refreshActiveJourneyImages = refreshActiveJourneyImages;
 
 function placeStopMarker(stop, index, stopsGroup, config) {
     const stopG = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'g');

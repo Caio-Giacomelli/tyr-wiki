@@ -3168,6 +3168,7 @@ body.font-dragao #map-svg {
 }
 
 .quest-panel-header {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -3197,6 +3198,7 @@ body.font-dragao #map-svg {
 
 /* Journey select */
 .quest-panel-journey-select {
+    flex-shrink: 0;
     padding: 8px 16px;
 }
 
@@ -3222,7 +3224,8 @@ body.font-dragao #map-svg {
 
 /* Quest list */
 #quest-list {
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
     padding: 8px 12px;
     display: flex;
@@ -3250,6 +3253,7 @@ body.font-dragao #map-svg {
     border-radius: 6px;
     overflow: hidden;
     transition: border-color 0.15s;
+    flex-shrink: 0;
 }
 .quest-card:hover {
     border-color: rgba(139, 105, 20, 0.5);
@@ -3315,7 +3319,10 @@ body.font-dragao #map-svg {
     grid-template-rows: 0fr;
     transition: grid-template-rows 0.2s ease;
 }
-.quest-card-expand > .quest-card-expand-inner { overflow: hidden; }
+.quest-card-expand > .quest-card-expand-inner {
+    overflow: hidden;
+    min-height: 0;
+}
 .quest-card.quest-expanded .quest-card-expand {
     grid-template-rows: 1fr;
 }
@@ -3371,6 +3378,7 @@ body.font-dragao #map-svg {
 
 /* Add quest button */
 .quest-add-btn {
+    flex-shrink: 0;
     margin: 8px 12px 12px;
     padding: 7px 14px;
     background: rgba(139, 105, 20, 0.1);

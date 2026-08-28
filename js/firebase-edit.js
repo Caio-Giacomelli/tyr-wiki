@@ -125,6 +125,8 @@ async function loadFromFirestore() {
         console.log('Wiki carregada do Firestore');
         // Reconstruir entityMap com dados carregados do Firestore
         if (typeof rebuildEntityMap === 'function') rebuildEntityMap();
+        // Atualizar icones das jornadas visiveis com as imagens carregadas (retroativo)
+        if (typeof refreshActiveJourneyImages === 'function') refreshActiveJourneyImages();
     } catch (error) {
         console.log('Usando dados locais (Firestore indisponível ou vazio):', error.message);
     }
@@ -532,6 +534,9 @@ function enterEditMode() {
                         addArtBtn.disabled = false;
                         exitEditMode();
                         refreshEntityView(entity);
+
+                        // Propagar a nova arte para os icones das jornadas visiveis (retroativo)
+                        if (typeof refreshActiveJourneyImages === 'function') refreshActiveJourneyImages();
                     } catch (err) {
                         console.error('Erro ao adicionar arte:', err);
                         alert('Erro ao adicionar arte. Tente novamente.');
@@ -611,6 +616,8 @@ function enterEditMode() {
                 saveToFirestore(collection, String(entity.id), saveData).then(() => {
                     exitEditMode();
                     refreshEntityView(entity);
+                    // Propagar a mudanca para os icones das jornadas visiveis (retroativo)
+                    if (typeof refreshActiveJourneyImages === 'function') refreshActiveJourneyImages();
                 });
             });
         });
@@ -658,6 +665,9 @@ function enterEditMode() {
                     // Recarregar a view
                     exitEditMode();
                     refreshEntityView(entity);
+
+                    // Propagar a nova imagem para os icones das jornadas visiveis (retroativo)
+                    if (typeof refreshActiveJourneyImages === 'function') refreshActiveJourneyImages();
                 } catch (err) {
                     console.error('Erro ao adicionar imagem:', err);
                     alert('Erro ao adicionar imagem. Tente novamente.');
