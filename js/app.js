@@ -224,7 +224,7 @@ function showCityInfo(id) {
     document.getElementById('city-region').textContent = city.region;
 
     let html = '';
-    if (city.image) html = buildPortraitHtml(city, 'cities["' + id + '"]', 'cities', id);
+    if (hasPortrait(city)) html = buildPortraitHtml(city, 'cities["' + id + '"]', 'cities', id);
     html += `
         <div class="info-section">
             <h3>Descrição</h3>
@@ -511,11 +511,23 @@ setTimeout(() => {
     setTimeout(() => instructions.remove(), 2000);
 }, 5000);
 
+// Marca como ativo o item da lista cujo indice de dados corresponde a `index`.
+// Usa dataset.idx (definido na criacao do item) para funcionar mesmo quando ha
+// entradas nulas/removidas que desalinham a posicao DOM do indice de dados.
+function markWikiItemActive(listEl, index) {
+    if (!listEl) return;
+    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
+    const target = listEl.querySelector('.wiki-item[data-idx="' + index + '"]');
+    if (target) target.classList.add('active');
+}
+
 // ===== WIKI - PERSONAGENS =====
 const charactersList = document.getElementById('characters-list');
 characters.forEach((char, index) => {
+    if (!char || !char.name) return;
     const item = document.createElement('div');
     item.className = 'wiki-item';
+    item.dataset.idx = index;
     item.textContent = char.name;
     item.dataset.searchName = char.name.toLowerCase();
     item.addEventListener('click', () => showCharacterInfo(index));
@@ -525,8 +537,7 @@ characters.forEach((char, index) => {
 function showCharacterInfo(index) {
     const char = characters[index];
 
-    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
-    charactersList.children[index].classList.add('active');
+    markWikiItemActive(charactersList, index);
 
     // Desselecionar cidades
     if (svgDoc) {
@@ -548,7 +559,7 @@ function showCharacterInfo(index) {
 
     let html = '';
 
-    if (char.image) {
+    if (hasPortrait(char)) {
         html += buildPortraitHtml(char, 'characters[' + index + ']', 'characters', index);
     }
 
@@ -574,10 +585,13 @@ function switchEntityArt(entityData, altIndex, collection, docId) {
     const img = document.getElementById('char-portrait');
     if (!img) return;
 
+    const alt = normalizeAltImages(entityData);
+
     if (altIndex === -1) {
-        img.src = entityData.image;
-    } else {
-        img.src = entityData.altImages[altIndex];
+        // Imagem principal (so existe se entity.image estiver definido)
+        img.src = entityData.image || (alt.length > 0 ? alt[0] : '');
+    } else if (alt[altIndex]) {
+        img.src = alt[altIndex];
     }
 
     // Salvar como arte padrao
@@ -586,19 +600,53 @@ function switchEntityArt(entityData, altIndex, collection, docId) {
         db.collection(collection).doc(String(docId)).set({ selectedArt: altIndex }, { merge: true }).catch(() => {});
     }
 
-    // Atualizar botao ativo
-    document.querySelectorAll('.alt-art-btn').forEach((btn, i) => {
-        btn.classList.toggle('active', i === (altIndex + 1));
+    // Atualizar botao ativo pelo indice armazenado no proprio botao
+    document.querySelectorAll('.alt-art-btn').forEach((btn) => {
+        const btnArt = btn.dataset.artIndex !== undefined ? parseInt(btn.dataset.artIndex) : null;
+        btn.classList.toggle('active', btnArt === altIndex);
     });
 }
 
 // Obter a imagem atual (default) de uma entidade considerando selectedArt
-function getEntityDefaultImage(entity) {
-    if (!entity || !entity.image) return '';
-    if (typeof entity.selectedArt === 'number' && entity.selectedArt >= 0 && entity.altImages && entity.altImages[entity.selectedArt]) {
-        return entity.altImages[entity.selectedArt];
+// Normaliza altImages para um array limpo, aceitando array esparso OU objeto {5:url,...}
+function normalizeAltImages(entity) {
+    if (!entity) return [];
+    const raw = entity.altImages;
+    if (!raw) return [];
+    let list;
+    if (Array.isArray(raw)) {
+        list = raw;
+    } else if (typeof raw === 'object') {
+        // Objeto com chaves numericas (ex: vindo do Firestore) — ordenar por chave
+        list = Object.keys(raw)
+            .sort(function(a, b) { return Number(a) - Number(b); })
+            .map(function(k) { return raw[k]; });
+    } else {
+        return [];
     }
-    return entity.image;
+    return list.filter(function(im) { return im; });
+}
+
+// Ha algo para exibir no retrato? (imagem principal OU imagens alternativas)
+function hasPortrait(entity) {
+    if (!entity) return false;
+    if (entity.image) return true;
+    return normalizeAltImages(entity).length > 0;
+}
+
+function getEntityDefaultImage(entity) {
+    if (!entity) return '';
+    // Compactar altImages (remover buracos/nulos de arrays esparsos do Firestore)
+    const alt = normalizeAltImages(entity);
+    // Arte selecionada tem prioridade
+    if (typeof entity.selectedArt === 'number' && entity.selectedArt >= 0 && alt[entity.selectedArt]) {
+        return alt[entity.selectedArt];
+    }
+    // Imagem principal
+    if (entity.image) return entity.image;
+    // Sem imagem principal: usar a primeira alternativa como fallback
+    if (alt.length > 0) return alt[0];
+    return '';
 }
 
 // Helper: gera HTML do retrato com botoes de arte alternativa
@@ -606,7 +654,11 @@ function getEntityDefaultImage(entity) {
 // collection e docId: usados para salvar selectedArt no Firestore
 function buildPortraitHtml(entity, entityRef, collection, docId) {
     let html = '';
-    if (!entity.image) return html;
+    // Normalizar altImages (array esparso ou objeto do Firestore -> array limpo)
+    entity.altImages = normalizeAltImages(entity);
+    const hasAlt = entity.altImages.length > 0;
+    // Sem imagem principal, mas com alt: nao ha o que exibir alem das alt.
+    if (!entity.image && !hasAlt) return html;
 
     // Usar arte selecionada como padrao
     const displayImage = getEntityDefaultImage(entity);
@@ -616,13 +668,26 @@ function buildPortraitHtml(entity, entityRef, collection, docId) {
     html += '<div class="portrait-container">';
     html += '<img class="info-portrait" id="char-portrait" src="' + displayImage + '" alt="' + (entity.name || '') + '">';
 
-    if (entity.altImages && entity.altImages.length > 0) {
+    // Botoes de troca de arte. So faz sentido se houver imagem principal E alternativas,
+    // ou multiplas alternativas.
+    if (entity.image && hasAlt) {
         const colArg = collection ? ", '" + collection + "'" : ", null";
         const docArg = docId !== undefined ? ", '" + docId + "'" : ", null";
         html += '<div class="alt-art-buttons">';
-        html += '<button class="alt-art-btn' + (selectedArt === -1 ? ' active' : '') + '" onclick="switchEntityArt(' + entityRef + ', -1' + colArg + docArg + ')">1</button>';
+        html += '<button class="alt-art-btn' + (selectedArt === -1 ? ' active' : '') + '" data-art-index="-1" onclick="switchEntityArt(' + entityRef + ', -1' + colArg + docArg + ')">1</button>';
         for (var i = 0; i < entity.altImages.length; i++) {
-            html += '<button class="alt-art-btn' + (selectedArt === i ? ' active' : '') + '" onclick="switchEntityArt(' + entityRef + ', ' + i + colArg + docArg + ')">' + (i + 2) + '</button>';
+            html += '<button class="alt-art-btn' + (selectedArt === i ? ' active' : '') + '" data-art-index="' + i + '" onclick="switchEntityArt(' + entityRef + ', ' + i + colArg + docArg + ')">' + (i + 2) + '</button>';
+        }
+        html += '</div>';
+    } else if (!entity.image && hasAlt && entity.altImages.length > 1) {
+        // Sem imagem principal: as alternativas viram as opcoes (1, 2, 3...)
+        const colArg = collection ? ", '" + collection + "'" : ", null";
+        const docArg = docId !== undefined ? ", '" + docId + "'" : ", null";
+        // Se nenhuma arte estiver marcada, considerar a primeira (indice 0) como ativa
+        const effectiveSelected = (selectedArt >= 0 && selectedArt < entity.altImages.length) ? selectedArt : 0;
+        html += '<div class="alt-art-buttons">';
+        for (var j = 0; j < entity.altImages.length; j++) {
+            html += '<button class="alt-art-btn' + (effectiveSelected === j ? ' active' : '') + '" data-art-index="' + j + '" onclick="switchEntityArt(' + entityRef + ', ' + j + colArg + docArg + ')">' + (j + 1) + '</button>';
         }
         html += '</div>';
     }
@@ -640,8 +705,10 @@ function buildPortraitHtml(entity, entityRef, collection, docId) {
 // ===== WIKI - LEGIÃO =====
 const legionList = document.getElementById('legion-list');
 legion.forEach((member, index) => {
+    if (!member || !member.name) return;
     const item = document.createElement('div');
     item.className = 'wiki-item';
+    item.dataset.idx = index;
     item.textContent = member.name;
     item.dataset.searchName = member.name.toLowerCase();
     item.addEventListener('click', () => showLegionInfo(index));
@@ -651,8 +718,7 @@ legion.forEach((member, index) => {
 function showLegionInfo(index) {
     const member = legion[index];
 
-    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
-    legionList.children[index].classList.add('active');
+    markWikiItemActive(legionList, index);
 
     if (svgDoc) {
         const svgEl = svgDoc.querySelector('svg');
@@ -673,7 +739,7 @@ function showLegionInfo(index) {
 
     let html = '';
 
-    if (member.image) {
+    if (hasPortrait(member)) {
         html += buildPortraitHtml(member, 'legion[' + index + ']', 'legion', index);
     }
 
@@ -697,8 +763,10 @@ function showLegionInfo(index) {
 // ===== WIKI - VILÕES =====
 const villainsList = document.getElementById('villains-list');
 villains.forEach((villain, index) => {
+    if (!villain || !villain.name) return;
     const item = document.createElement('div');
     item.className = 'wiki-item';
+    item.dataset.idx = index;
     item.textContent = villain.name;
     item.dataset.searchName = villain.name.toLowerCase();
     item.addEventListener('click', () => showVillainInfo(index));
@@ -709,8 +777,7 @@ function showVillainInfo(index) {
     const villain = villains[index];
 
     // Marcar item ativo
-    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
-    villainsList.children[index].classList.add('active');
+    markWikiItemActive(villainsList, index);
 
     // Desselecionar cidades
     if (svgDoc) {
@@ -732,7 +799,7 @@ function showVillainInfo(index) {
 
     let html = '';
 
-    if (villain.image) {
+    if (hasPortrait(villain)) {
         html += buildPortraitHtml(villain, 'villains[' + index + ']', 'villains', index);
     }
 
@@ -760,8 +827,10 @@ function showVillainInfo(index) {
 const artifactsList = document.getElementById('artifacts-list');
 if (artifactsList && typeof artifacts !== 'undefined') {
     artifacts.forEach((artifact, index) => {
+        if (!artifact || !artifact.name) return;
         const item = document.createElement('div');
         item.className = 'wiki-item';
+        item.dataset.idx = index;
         item.textContent = artifact.name;
         item.dataset.searchName = artifact.name.toLowerCase();
         item.addEventListener('click', () => showArtifactInfo(index));
@@ -772,8 +841,7 @@ if (artifactsList && typeof artifacts !== 'undefined') {
 function showArtifactInfo(index) {
     const artifact = artifacts[index];
 
-    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
-    if (artifactsList) artifactsList.children[index].classList.add('active');
+    markWikiItemActive(artifactsList, index);
 
     if (svgDoc) {
         const svgEl = svgDoc.querySelector('svg');
@@ -794,7 +862,7 @@ function showArtifactInfo(index) {
 
     let html = '';
 
-    if (artifact.image) {
+    if (hasPortrait(artifact)) {
         html += buildPortraitHtml(artifact, 'artifacts[' + index + ']', 'artifacts', index);
     }
 
@@ -819,8 +887,10 @@ function showArtifactInfo(index) {
 const booksList = document.getElementById('books-list');
 if (booksList && typeof books !== 'undefined') {
     books.forEach((book, index) => {
+        if (!book || !book.name) return;
         const item = document.createElement('div');
         item.className = 'wiki-item';
+        item.dataset.idx = index;
         item.textContent = book.name;
         item.dataset.searchName = book.name.toLowerCase();
         item.addEventListener('click', () => showBookInfo(index));
@@ -831,8 +901,7 @@ if (booksList && typeof books !== 'undefined') {
 function showBookInfo(index) {
     const book = books[index];
 
-    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
-    if (booksList) booksList.children[index].classList.add('active');
+    markWikiItemActive(booksList, index);
 
     if (svgDoc) {
         const svgEl = svgDoc.querySelector('svg');
@@ -853,7 +922,7 @@ function showBookInfo(index) {
 
     let html = '';
 
-    if (book.image) {
+    if (hasPortrait(book)) {
         html += buildPortraitHtml(book, 'books[' + index + ']', 'books', index);
     }
 
@@ -981,8 +1050,10 @@ function openBookModalNew(index) {
 const landmarksList = document.getElementById('landmarks-list');
 if (landmarksList && typeof landmarks !== 'undefined') {
     landmarks.forEach((landmark, index) => {
+        if (!landmark || !landmark.name) return;
         const item = document.createElement('div');
         item.className = 'wiki-item';
+        item.dataset.idx = index;
         item.textContent = landmark.name;
         item.dataset.searchName = landmark.name.toLowerCase();
         item.addEventListener('click', () => showLandmarkInfo(index));
@@ -992,8 +1063,7 @@ if (landmarksList && typeof landmarks !== 'undefined') {
 
 function showLandmarkInfo(index) {
     const landmark = landmarks[index];
-    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
-    if (landmarksList) landmarksList.children[index].classList.add('active');
+    markWikiItemActive(landmarksList, index);
 
     if (svgDoc) {
         const svgEl = svgDoc.querySelector('svg');
@@ -1028,8 +1098,10 @@ function showLandmarkInfo(index) {
 const historicalList = document.getElementById('historical-list');
 if (historicalList && typeof historicalNPCs !== 'undefined') {
     historicalNPCs.forEach((npc, index) => {
+        if (!npc || !npc.name) return;
         const item = document.createElement('div');
         item.className = 'wiki-item';
+        item.dataset.idx = index;
         item.textContent = npc.name;
         item.dataset.searchName = npc.name.toLowerCase();
         item.addEventListener('click', () => showHistoricalInfo(index));
@@ -1039,8 +1111,7 @@ if (historicalList && typeof historicalNPCs !== 'undefined') {
 
 function showHistoricalInfo(index) {
     const npc = historicalNPCs[index];
-    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
-    if (historicalList) historicalList.children[index].classList.add('active');
+    markWikiItemActive(historicalList, index);
 
     if (svgDoc) {
         const svgEl = svgDoc.querySelector('svg');
@@ -1056,7 +1127,7 @@ function showHistoricalInfo(index) {
     document.getElementById('city-region').textContent = npc.title;
 
     let html = '';
-    if (npc.image) html += buildPortraitHtml(npc, 'historicalNPCs[' + index + ']', 'historicalNPCs', index);
+    if (hasPortrait(npc)) html += buildPortraitHtml(npc, 'historicalNPCs[' + index + ']', 'historicalNPCs', index);
     html += `
         <div class="info-section">
             <h3>Descrição</h3>
@@ -1077,8 +1148,10 @@ function showHistoricalInfo(index) {
 const alliesList = document.getElementById('allies-list');
 if (alliesList && typeof allies !== 'undefined') {
     allies.forEach((ally, index) => {
+        if (!ally || !ally.name) return;
         const item = document.createElement('div');
         item.className = 'wiki-item';
+        item.dataset.idx = index;
         item.textContent = ally.name;
         item.dataset.searchName = ally.name.toLowerCase();
         item.addEventListener('click', () => showAllyInfo(index));
@@ -1088,8 +1161,7 @@ if (alliesList && typeof allies !== 'undefined') {
 
 function showAllyInfo(index) {
     const ally = allies[index];
-    document.querySelectorAll('.wiki-item').forEach(i => i.classList.remove('active'));
-    if (alliesList) alliesList.children[index].classList.add('active');
+    markWikiItemActive(alliesList, index);
 
     if (svgDoc) {
         const svgEl = svgDoc.querySelector('svg');
@@ -1105,7 +1177,7 @@ function showAllyInfo(index) {
     document.getElementById('city-region').textContent = ally.title;
 
     let html = '';
-    if (ally.image) html += buildPortraitHtml(ally, 'allies[' + index + ']', 'allies', index);
+    if (hasPortrait(ally)) html += buildPortraitHtml(ally, 'allies[' + index + ']', 'allies', index);
     html += `
         <div class="info-section">
             <h3>Descrição</h3>
@@ -1155,6 +1227,7 @@ function buildEntityMap() {
 
     // Personagens
     characters.forEach((char, index) => {
+        if (!char || !char.name) return;
         map[char.name] = { type: 'character', index: index };
         // Adicionar primeiro nome também se tiver sobrenome
         const firstName = char.name.split(' ')[0];
@@ -1165,6 +1238,7 @@ function buildEntityMap() {
 
     // Legião
     legion.forEach((member, index) => {
+        if (!member || !member.name) return;
         map[member.name] = { type: 'legion', index: index };
         const firstName = member.name.split(' ')[0];
         if (firstName !== member.name && firstName.length > 3) {
@@ -1174,6 +1248,7 @@ function buildEntityMap() {
 
     // Vilões
     villains.forEach((villain, index) => {
+        if (!villain || !villain.name) return;
         map[villain.name] = { type: 'villain', index: index };
         const firstName = villain.name.split(' ')[0];
         if (firstName !== villain.name && firstName.length > 3) {
@@ -1184,6 +1259,7 @@ function buildEntityMap() {
     // Artefatos
     if (typeof artifacts !== 'undefined') {
         artifacts.forEach((artifact, index) => {
+            if (!artifact || !artifact.name) return;
             map[artifact.name] = { type: 'artifact', index: index };
         });
     }
@@ -1191,6 +1267,7 @@ function buildEntityMap() {
     // Livros & Relatos
     if (typeof books !== 'undefined') {
         books.forEach((book, index) => {
+            if (!book || !book.name) return;
             map[book.name] = { type: 'book', index: index };
         });
     }

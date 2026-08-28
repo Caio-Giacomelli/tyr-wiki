@@ -40,36 +40,59 @@ let currentEditEntity = null; // { type, id/index, data }
 // ===== CARREGAR DADOS DO FIRESTORE (sobrescreve dados locais se existirem) =====
 async function loadFromFirestore() {
     try {
-        // Carregar cidades
+        // Carregar cidades (Firestore e a fonte de verdade).
+        // cities e um objeto `const` por chave — mutamos no lugar.
         const citiesSnap = await db.collection('cities').get();
-        citiesSnap.forEach(doc => {
-            if (cities[doc.id]) {
-                Object.assign(cities[doc.id], doc.data());
-            }
-        });
+        if (!citiesSnap.empty) {
+            // Limpar chaves atuais (preservando a referencia do objeto const)
+            Object.keys(cities).forEach(k => { delete cities[k]; });
+            citiesSnap.forEach(doc => {
+                cities[doc.id] = doc.data();
+            });
+        }
 
-        // Helper para carregar arrays
+        // Helper para carregar arrays.
+        // FIRESTORE E A FONTE DE VERDADE: o array local e RECONSTRUIDO a partir do banco.
+        // Documentos com ID numerico preenchem o array na sua posicao (preservando indices,
+        // que sao a identidade usada em todo o codigo). Indices sem documento no banco
+        // viram null (removidos do site). Entradas 'new_' vao no fim.
+        // Os arrays sao `const` — nao podem ser reatribuidos, entao mutamos no lugar.
         async function loadCollection(collectionName, localArray) {
             const snap = await db.collection(collectionName).get();
+
+            // Se o banco estiver vazio para esta colecao, manter os dados locais como
+            // fallback (evita apagar tudo caso o Firestore falhe ou nao tenha sido migrado).
+            if (snap.empty) {
+                rebuildSidebarList(collectionName, localArray);
+                return;
+            }
+
+            const numericDocs = {}; // index -> data
+            const newDocs = [];      // entradas criadas pelo site (new_)
+            let maxIndex = -1;
+
             snap.forEach(doc => {
                 const docId = doc.id;
-                // Entradas novas criadas pelo site usam prefixo 'new_'
                 if (docId.startsWith('new_')) {
-                    // Verificar se ja existe no array (por nome)
                     const data = doc.data();
                     data._docId = docId;
-                    const existing = localArray.find(e => e && e.name === data.name);
-                    if (!existing) {
-                        localArray.push(data);
-                    }
+                    newDocs.push(data);
                 } else {
                     const index = parseInt(docId);
-                    if (!isNaN(index) && localArray[index]) {
-                        const docData = doc.data();
-                        Object.assign(localArray[index], docData);
+                    if (!isNaN(index)) {
+                        numericDocs[index] = doc.data();
+                        if (index > maxIndex) maxIndex = index;
                     }
                 }
             });
+
+            // Reconstruir o array no lugar (mantendo a mesma referencia `const`)
+            localArray.length = 0;
+            for (let i = 0; i <= maxIndex; i++) {
+                localArray[i] = numericDocs.hasOwnProperty(i) ? numericDocs[i] : null;
+            }
+            newDocs.forEach(data => localArray.push(data));
+
             // Rebuild sidebar list for this collection
             rebuildSidebarList(collectionName, localArray);
         }
@@ -83,20 +106,18 @@ async function loadFromFirestore() {
         if (typeof allies !== 'undefined') await loadCollection('allies', allies);
         if (typeof landmarks !== 'undefined') await loadCollection('landmarks', landmarks);
 
-        // Carregar sessoes da wiki
+        // Carregar sessoes da wiki (Firestore e a fonte de verdade).
         if (typeof wikiSessions !== 'undefined') {
             const sessSnap = await db.collection('wikiSessionsFS').get();
-            sessSnap.forEach(doc => {
-                const data = doc.data();
-                data.id = data.id || doc.id;
-                // Verificar se ja existe no array local (pelo id)
-                const existing = wikiSessions.find(s => s.id === data.id);
-                if (!existing) {
+            if (!sessSnap.empty) {
+                // Reconstruir no lugar (mantendo a referencia)
+                wikiSessions.length = 0;
+                sessSnap.forEach(doc => {
+                    const data = doc.data();
+                    data.id = data.id || doc.id;
                     wikiSessions.push(data);
-                } else {
-                    Object.assign(existing, data);
-                }
-            });
+                });
+            }
             // Rebuild da lista de sessoes no sidebar
             rebuildSessionsSidebar();
         }
@@ -119,6 +140,7 @@ function rebuildSessionsSidebar() {
     // Agrupar por jornada
     const sessionsByJourney = {};
     wikiSessions.forEach((session, index) => {
+        if (!session || !session.title) return;
         const key = session.journeyKey || 'outros';
         if (!sessionsByJourney[key]) sessionsByJourney[key] = [];
         sessionsByJourney[key].push({ session, index });
@@ -183,6 +205,7 @@ function rebuildSidebarList(collectionName, localArray) {
         if (!entry || !entry.name) return;
         const item = document.createElement('div');
         item.className = 'wiki-item';
+        item.dataset.idx = index;
         item.textContent = entry.name;
         item.dataset.searchName = entry.name.toLowerCase();
         item.addEventListener('click', () => config.showFn(index));
@@ -244,6 +267,141 @@ async function saveToFirestore(collection, docId, data) {
         return false;
     }
 }
+
+// ===== SINCRONIZAR TODOS OS DADOS LOCAIS COM O BANCO =====
+// Grava tudo o que existe localmente (incluindo imagens e edicoes atuais em memoria)
+// no Firestore, preservando os mesmos IDs que o carregamento espera. Nada e apagado
+// do banco: e um envio de tudo (upsert). Serve para garantir que o banco tenha uma
+// copia completa antes de removermos a dependencia dos dados locais.
+async function syncAllLocalDataToFirestore(onProgress) {
+    if (typeof db === 'undefined') {
+        throw new Error('Banco de dados indisponivel.');
+    }
+
+    let saved = 0;
+    let failed = 0;
+
+    // Helper: grava um array. docId = indice numerico, exceto entradas com _docId (new_...)
+    async function syncArray(collectionName, arr) {
+        if (!Array.isArray(arr)) return;
+        for (let i = 0; i < arr.length; i++) {
+            const entry = arr[i];
+            if (!entry || !entry.name) continue; // pular buracos/nulos
+            const docId = entry._docId ? entry._docId : String(i);
+            // Nao gravar o campo interno _docId dentro do documento
+            const data = Object.assign({}, entry);
+            delete data._docId;
+            try {
+                await db.collection(collectionName).doc(docId).set(data, { merge: true });
+                saved++;
+            } catch (e) {
+                console.error('Falha ao sincronizar ' + collectionName + '/' + docId, e);
+                failed++;
+            }
+            if (onProgress) onProgress(saved, failed);
+        }
+    }
+
+    // Helper: grava um objeto (cities). docId = a chave.
+    async function syncObject(collectionName, obj) {
+        if (!obj || typeof obj !== 'object') return;
+        for (const key of Object.keys(obj)) {
+            const entry = obj[key];
+            if (!entry) continue;
+            const data = Object.assign({}, entry);
+            delete data._docId;
+            try {
+                await db.collection(collectionName).doc(String(key)).set(data, { merge: true });
+                saved++;
+            } catch (e) {
+                console.error('Falha ao sincronizar ' + collectionName + '/' + key, e);
+                failed++;
+            }
+            if (onProgress) onProgress(saved, failed);
+        }
+    }
+
+    // Cidades (objeto por chave)
+    if (typeof cities !== 'undefined') await syncObject('cities', cities);
+
+    // Colecoes em array (docId = indice)
+    if (typeof characters !== 'undefined') await syncArray('characters', characters);
+    if (typeof legion !== 'undefined') await syncArray('legion', legion);
+    if (typeof villains !== 'undefined') await syncArray('villains', villains);
+    if (typeof artifacts !== 'undefined') await syncArray('artifacts', artifacts);
+    if (typeof books !== 'undefined') await syncArray('books', books);
+    if (typeof historicalNPCs !== 'undefined') await syncArray('historicalNPCs', historicalNPCs);
+    if (typeof allies !== 'undefined') await syncArray('allies', allies);
+    if (typeof landmarks !== 'undefined') await syncArray('landmarks', landmarks);
+
+    // Sessoes da wiki (docId = session.id)
+    if (typeof wikiSessions !== 'undefined') {
+        for (const session of wikiSessions) {
+            if (!session || !session.id) continue;
+            const data = {
+                id: session.id,
+                journeyKey: session.journeyKey || '',
+                title: session.title || '',
+                quote: session.quote || '',
+                quoteAuthor: session.quoteAuthor || '',
+                content: session.content || ''
+            };
+            try {
+                await db.collection('wikiSessionsFS').doc(String(session.id)).set(data, { merge: true });
+                saved++;
+            } catch (e) {
+                console.error('Falha ao sincronizar wikiSessionsFS/' + session.id, e);
+                failed++;
+            }
+            if (onProgress) onProgress(saved, failed);
+        }
+    }
+
+    return { saved, failed };
+}
+
+// ===== BOTAO SINCRONIZAR (aba Ferramentas) =====
+(function() {
+    const syncBtn = document.getElementById('sync-db-btn');
+    if (!syncBtn) return;
+
+    syncBtn.addEventListener('click', async () => {
+        if (syncBtn.disabled) return;
+        const confirmed = confirm(
+            'Isso vai enviar TODOS os dados locais (paginas da wiki, imagens, cidades, ' +
+            'sessoes) para o banco de dados, mesclando com o que ja existe la.\n\n' +
+            'Nada sera apagado do banco. Deseja continuar?'
+        );
+        if (!confirmed) return;
+
+        const originalText = syncBtn.textContent;
+        syncBtn.disabled = true;
+        syncBtn.textContent = 'Sincronizando... (0)';
+
+        try {
+            const result = await syncAllLocalDataToFirestore((saved) => {
+                syncBtn.textContent = 'Sincronizando... (' + saved + ')';
+            });
+            if (result.failed > 0) {
+                syncBtn.textContent = '\u26A0 ' + result.saved + ' ok, ' + result.failed + ' falhas';
+                alert('Sincronizacao concluida com ' + result.failed + ' falha(s). ' +
+                      result.saved + ' registros salvos. Veja o console para detalhes.');
+            } else {
+                syncBtn.textContent = '\u2713 ' + result.saved + ' salvos!';
+                alert('Sincronizacao concluida! ' + result.saved + ' registros salvos no banco.');
+            }
+        } catch (e) {
+            console.error('Erro na sincronizacao:', e);
+            syncBtn.textContent = '\u2717 Erro';
+            alert('Erro na sincronizacao: ' + e.message);
+        }
+
+        setTimeout(() => {
+            syncBtn.textContent = originalText;
+            syncBtn.disabled = false;
+        }, 4000);
+    });
+})();
 
 // ===== BOTÃO DE EDIÇÃO =====
 const editBtn = document.getElementById('edit-btn');
@@ -595,7 +753,9 @@ function enterEditMode() {
                     await db.collection(collection).doc(firestoreDocId).delete();
                 }
 
-                // Remover do array local
+                // Remover do array local.
+                // Para NAO desalinhar os indices (que sao a identidade usada no banco),
+                // entradas com indice numerico viram null (tombstone) em vez de splice.
                 const typeArrays = {
                     character: characters,
                     legion: legion,
@@ -609,31 +769,36 @@ function enterEditMode() {
                 };
 
                 const arr = typeArrays[entity.type];
-                if (arr && typeof entity.id === 'number') {
-                    arr.splice(entity.id, 1);
-                }
+                const collectionNameForRebuild = {
+                    character: 'characters', legion: 'legion', villain: 'villains',
+                    artifact: 'artifacts', book: 'books', historical: 'historicalNPCs',
+                    ally: 'allies', landmark: 'landmarks'
+                }[entity.type];
 
-                // Remover item do sidebar e recarregar a lista
-                const listIds = {
-                    character: 'characters-list',
-                    legion: 'legion-list',
-                    villain: 'villains-list',
-                    artifact: 'artifacts-list',
-                    book: 'books-list',
-                    historical: 'historical-list',
-                    ally: 'allies-list',
-                    landmark: 'landmarks-list',
-                    session: 'sessions-list'
-                };
-                const listEl = document.getElementById(listIds[entity.type]);
-                if (listEl) {
-                    if (entity.type === 'session' && typeof rebuildSessionsSidebar === 'function') {
-                        rebuildSessionsSidebar();
-                    } else {
-                        const items = listEl.querySelectorAll('.wiki-item');
-                        if (items[entity.id]) items[entity.id].remove();
+                if (arr) {
+                    if (entity.data._docId) {
+                        // Entrada criada pelo site (new_): remover pelo _docId
+                        const pos = arr.findIndex(e => e && e._docId === entity.data._docId);
+                        if (pos !== -1) arr.splice(pos, 1);
+                    } else if (typeof entity.id === 'number') {
+                        // Entrada base (indice numerico): tombstone para preservar indices
+                        arr[entity.id] = null;
+                    } else if (entity.type === 'session') {
+                        // Sessao: remover pelo id
+                        const pos = arr.findIndex(s => s && s.id === entity.id);
+                        if (pos !== -1) arr.splice(pos, 1);
                     }
                 }
+
+                // Reconstruir o sidebar da colecao afetada
+                if (entity.type === 'session') {
+                    if (typeof rebuildSessionsSidebar === 'function') rebuildSessionsSidebar();
+                } else if (collectionNameForRebuild && typeof rebuildSidebarList === 'function') {
+                    rebuildSidebarList(collectionNameForRebuild, arr);
+                }
+
+                // Atualizar mapa de entidades (links [Nome])
+                if (typeof rebuildEntityMap === 'function') rebuildEntityMap();
 
                 exitEditMode();
                 hideEditButton();

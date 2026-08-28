@@ -191,6 +191,7 @@
     function getCharacterItems() {
         if (typeof characters === 'undefined') return [];
         return characters.map(function(c, i) {
+            if (!c || !c.name) return null;
             return {
                 name: c.name,
                 subtitle: c.title,
@@ -198,12 +199,13 @@
                 type: 'character',
                 index: i
             };
-        });
+        }).filter(Boolean);
     }
 
     function getHistoricalItems() {
         if (typeof historicalNPCs === 'undefined') return [];
         return historicalNPCs.map(function(n, i) {
+            if (!n || !n.name) return null;
             return {
                 name: n.name,
                 subtitle: n.title,
@@ -211,12 +213,13 @@
                 type: 'historical',
                 index: i
             };
-        });
+        }).filter(Boolean);
     }
 
     function getAllyItems() {
         if (typeof allies === 'undefined') return [];
         return allies.map(function(a, i) {
+            if (!a || !a.name) return null;
             return {
                 name: a.name,
                 subtitle: a.title,
@@ -224,12 +227,13 @@
                 type: 'ally',
                 index: i
             };
-        });
+        }).filter(Boolean);
     }
 
     function getLegionItems() {
         if (typeof legion === 'undefined') return [];
         return legion.map(function(m, i) {
+            if (!m || !m.name) return null;
             return {
                 name: m.name,
                 subtitle: m.title,
@@ -237,12 +241,13 @@
                 type: 'legion',
                 index: i
             };
-        });
+        }).filter(Boolean);
     }
 
     function getVillainItems() {
         if (typeof villains === 'undefined') return [];
         return villains.map(function(v, i) {
+            if (!v || !v.name) return null;
             return {
                 name: v.name,
                 subtitle: v.title + (v.location ? ' — ' + v.location : ''),
@@ -250,13 +255,14 @@
                 type: 'villain',
                 index: i
             };
-        });
+        }).filter(Boolean);
     }
 
     function getLocationItems() {
         if (typeof cities === 'undefined') return [];
         return Object.keys(cities).map(function(id) {
             var c = cities[id];
+            if (!c) return null;
             return {
                 name: c.displayName || id,
                 subtitle: c.region,
@@ -264,12 +270,13 @@
                 type: 'location',
                 index: id
             };
-        });
+        }).filter(Boolean);
     }
 
     function getArtifactItems() {
         if (typeof artifacts === 'undefined') return [];
         return artifacts.map(function(a, i) {
+            if (!a || !a.name) return null;
             return {
                 name: a.name,
                 subtitle: 'Artefato',
@@ -277,12 +284,13 @@
                 type: 'artifact',
                 index: i
             };
-        });
+        }).filter(Boolean);
     }
 
     function getBookItems() {
         if (typeof books === 'undefined') return [];
         return books.map(function(b, i) {
+            if (!b || !b.name) return null;
             return {
                 name: b.name,
                 subtitle: 'Livro / Relato',
@@ -290,12 +298,13 @@
                 type: 'book',
                 index: i
             };
-        });
+        }).filter(Boolean);
     }
 
     function getLandmarkItems() {
         if (typeof landmarks === 'undefined') return [];
         return landmarks.map(function(l, i) {
+            if (!l || !l.name) return null;
             return {
                 name: l.name,
                 subtitle: 'Marco Histórico',
@@ -303,12 +312,13 @@
                 type: 'landmark',
                 index: i
             };
-        });
+        }).filter(Boolean);
     }
 
     function getSessionItems() {
         if (typeof wikiSessions === 'undefined') return [];
         return wikiSessions.map(function(s, i) {
+            if (!s || !s.title) return null;
             return {
                 name: s.title,
                 subtitle: s.journeyKey || '',
@@ -316,7 +326,7 @@
                 type: 'session',
                 index: i
             };
-        });
+        }).filter(Boolean);
     }
 
     function getEntityDefaultImageSafe(entity) {
@@ -463,7 +473,8 @@
 
     function buildEntityHtml(entity, entityRef, collection, docId) {
         var html = '';
-        if (entity.image) {
+        var showPortrait = (typeof hasPortrait === 'function') ? hasPortrait(entity) : !!entity.image;
+        if (showPortrait) {
             html += buildPortraitHtmlSafe(entity, entityRef, collection, docId);
         }
         html += '<div class="info-section"><h3>Descrição</h3><p>' + linkifyWrap(entity.description || '') + '</p></div>';
