@@ -945,7 +945,10 @@ async function saveEdits() {
 
     // Determinar collection e atualizar dados locais
     let collection = '';
-    let docId = entity.id;
+    // Para entradas criadas pelo site (arrays), o documento real no banco usa o _docId
+    // (ex: 'new_1787...'), NAO o indice do array. Usar o indice criaria um documento
+    // duplicado ao salvar. Cidades usam a chave (string) que ja vem em entity.id.
+    let docId = (entity.data && entity.data._docId) ? entity.data._docId : entity.id;
 
     switch (entity.type) {
         case 'city':
@@ -1073,9 +1076,24 @@ async function saveEdits() {
         exitEditMode();
         // Refresh da view para renderizar links atualizados
         refreshEntityView(entity);
-        // Reconstruir sidebar de sessoes se mudou a jornada
-        if (entity.type === 'session' && typeof rebuildSessionsSidebar === 'function') {
-            rebuildSessionsSidebar();
+        // Reconstruir a sidebar da colecao para refletir mudanca de nome no item
+        const collectionByType = {
+            character: 'characters', legion: 'legion', villain: 'villains',
+            artifact: 'artifacts', book: 'books', historical: 'historicalNPCs',
+            ally: 'allies', landmark: 'landmarks'
+        };
+        if (entity.type === 'session') {
+            if (typeof rebuildSessionsSidebar === 'function') rebuildSessionsSidebar();
+        } else if (collectionByType[entity.type] && typeof rebuildSidebarList === 'function') {
+            const arrByType = {
+                character: characters, legion: legion, villain: villains,
+                artifact: (typeof artifacts !== 'undefined' ? artifacts : []),
+                book: (typeof books !== 'undefined' ? books : []),
+                historical: (typeof historicalNPCs !== 'undefined' ? historicalNPCs : []),
+                ally: (typeof allies !== 'undefined' ? allies : []),
+                landmark: (typeof landmarks !== 'undefined' ? landmarks : [])
+            };
+            rebuildSidebarList(collectionByType[entity.type], arrByType[entity.type]);
         }
         // Feedback visual
         editBtn.textContent = '✓';
