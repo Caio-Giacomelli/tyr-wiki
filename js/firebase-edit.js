@@ -249,6 +249,15 @@ async function saveToFirestore(collection, docId, data) {
 const editBtn = document.getElementById('edit-btn');
 
 function showEditButton(entityType, entityId, entityData) {
+    // Se estava editando outra entidade e navegou para uma pagina diferente,
+    // sair do modo de edicao para nao sobrescrever a pagina errada ao salvar.
+    if (editMode && currentEditEntity) {
+        const isSameEntity = currentEditEntity.type === entityType &&
+                             String(currentEditEntity.id) === String(entityId);
+        if (!isSameEntity) {
+            exitEditMode();
+        }
+    }
     currentEditEntity = { type: entityType, id: entityId, data: entityData };
     if (editBtn) editBtn.style.display = 'flex';
 }
