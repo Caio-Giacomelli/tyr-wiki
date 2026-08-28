@@ -2181,6 +2181,28 @@ if (langToggle && langMenu) {
         }
     });
 
+    // Expor controles para o Modo Hellvault
+    window._musicPlayer = {
+        pause: function() {
+            if (isPlaying) {
+                audio.pause();
+                isPlaying = false;
+                musicBtn.classList.remove('playing');
+                clearInterval(timerInterval);
+                timerInterval = null;
+                saveMusicTime();
+            }
+        },
+        disableButton: function() {
+            musicBtn.disabled = true;
+            musicBtn.classList.add('music-disabled');
+        },
+        enableButton: function() {
+            musicBtn.disabled = false;
+            musicBtn.classList.remove('music-disabled');
+        }
+    };
+
     // Carregar tempo ao iniciar
     loadMusicTime();
 })();
@@ -3909,6 +3931,11 @@ if (charsheetCloseBtn) {
     let hellvaultMode = false;
     let hellvaultPulseElements = []; // circulos de pulse criados no SVG
 
+    // Musica do modo Hellvault (toca baixinho)
+    const hellvaultAudio = new Audio('assets/songs/IN THE HOUSE - IN A HEARTBEAT.mp3');
+    hellvaultAudio.loop = true;
+    hellvaultAudio.volume = 0.15;
+
     // Expor estado do modo hellvault globalmente
     window._hellvaultMode = false;
 
@@ -3934,6 +3961,16 @@ if (charsheetCloseBtn) {
 
         // Desabilitar cliques em elementos nao-hellvault no mapa
         disableNonHellvaultClicks(true);
+
+        // Pausar a musica normal e desabilitar seu botao
+        if (window._musicPlayer) {
+            window._musicPlayer.pause();
+            window._musicPlayer.disableButton();
+        }
+
+        // Tocar a musica do Hellvault baixinho
+        hellvaultAudio.currentTime = 0;
+        hellvaultAudio.play().catch(function() {});
     }
 
     function deactivateHellvaultMode() {
@@ -3948,6 +3985,15 @@ if (charsheetCloseBtn) {
 
         // Reabilitar cliques
         disableNonHellvaultClicks(false);
+
+        // Parar a musica do Hellvault
+        hellvaultAudio.pause();
+        hellvaultAudio.currentTime = 0;
+
+        // Reabilitar o botao de musica normal
+        if (window._musicPlayer) {
+            window._musicPlayer.enableButton();
+        }
     }
 
     let sunOverlayEl = null;

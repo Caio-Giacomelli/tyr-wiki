@@ -1623,6 +1623,13 @@ body.hellvault-mode #music-timer {
     background: rgba(20, 0, 0, 0.9) !important;
 }
 
+/* Botao de musica desabilitado no Modo Hellvault */
+.music-btn.music-disabled {
+    opacity: 0.4;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+
 body.hellvault-mode .music-btn svg,
 body.hellvault-mode #trail-btn svg,
 body.hellvault-mode #settings-toggle svg,
