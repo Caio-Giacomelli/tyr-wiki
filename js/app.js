@@ -9,6 +9,8 @@ let scale = 1;
 let translateX = 0;
 let translateY = 0;
 let isDragging = false;
+let isMiddlePanning = false; // pan livre com o botao do meio do mouse
+let panStartPending = false; // aguardando o 1o mousemove para fixar a origem do pan
 let startX, startY;
 let lastTranslateX, lastTranslateY;
 let svgDoc = null;
@@ -106,6 +108,30 @@ function initSvg() {
 
         updateTransform();
     }, { passive: false });
+
+    // ===== PAN COM BOTAO DO MEIO DO MOUSE (dentro do SVG) =====
+    // Os eventos de mouse sobre o SVG embutido nao borbulham para o document
+    // externo. Aqui detectamos o pressionar do botao do meio sobre o mapa e
+    // delegamos para startMiddlePan(), que assume o controle via document externo.
+    svgDoc.addEventListener('pointerdown', (e) => {
+        if (e.button !== 1) return; // apenas botao do meio
+        e.preventDefault();
+        startMiddlePan(); // ativa o overlay externo, que assume o arraste
+    });
+    // Cancelar o autoscroll padrao do navegador tambem dentro do SVG (mousedown
+    // nativo + auxclick), senao o pointerup do fim do arraste e engolido.
+    svgDoc.addEventListener('mousedown', (e) => {
+        if (e.button === 1) e.preventDefault();
+    });
+    svgDoc.addEventListener('auxclick', (e) => {
+        if (e.button === 1) e.preventDefault();
+    });
+    // DEBUG TEMPORARIO: registrar eventos do botao do meio dentro do SVG.
+    if (typeof window._panDebugLog === 'function') {
+        ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'auxclick'].forEach(function (t) {
+            svgDoc.addEventListener(t, window._panDebugLog, true);
+        });
+    }
 
     // Renderizar marcadores de pontos de interesse (Hellvaults)
     if (typeof mapMarkers !== 'undefined') {
@@ -382,24 +408,119 @@ document.getElementById('close-panel').addEventListener('click', () => {
 });
 
 // ===== PAN (ARRASTAR MAPA) =====
-mapContainer.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
+const mapPanOverlay = document.getElementById('map-pan-overlay');
+
+// Inicia o pan pelo botao do meio. O pressionar pode vir do document externo ou
+// do documento SVG embutido. Em ambos os casos, ativamos uma camada transparente
+// por cima do mapa (#map-pan-overlay), que passa a receber TODOS os pointermove
+// no sistema de coordenadas do document externo. Assim o arraste e continuo
+// (segurar e mover) e sem trepidacao, sem precisar mexer nos pointer-events do
+// <object> do SVG (o que quebrava o "segurar").
+function startMiddlePan() {
+    if (isMiddlePanning) return;
+    isMiddlePanning = true;
+    // A origem so e fixada no primeiro pointermove sobre o overlay, para garantir
+    // que start e movimento venham do mesmo sistema de coordenadas (delta 0 -> sem salto).
+    panStartPending = true;
     lastTranslateX = translateX;
     lastTranslateY = translateY;
+    mapContainer.style.cursor = 'grabbing';
+    if (mapPanOverlay) mapPanOverlay.classList.add('active');
+}
+
+// Botao do meio: cancelar o autoscroll do navegador de forma confiavel. O
+// autoscroll e disparado no "mousedown" nativo do botao do meio; se ele ativar,
+// ele "engole" o pointerup do fim do arraste e o pan vira um toggle (liga num
+// clique, desliga no outro). Cancelamos em fase de captura no window para o
+// mousedown, pointerdown e auxclick.
+window.addEventListener('mousedown', (e) => {
+    if (e.button === 1) e.preventDefault();
+}, true);
+window.addEventListener('pointerdown', (e) => {
+    if (e.button === 1) e.preventDefault();
+}, true);
+window.addEventListener('auxclick', (e) => {
+    if (e.button === 1) e.preventDefault();
+}, true);
+
+// Pressionar o botao do meio sobre a area do mapa (fora do SVG) inicia o pan.
+mapContainer.addEventListener('pointerdown', (e) => {
+    if (e.button === 1) {
+        e.preventDefault();
+        startMiddlePan();
+    } else if (e.button === 0 && e.target !== mapPanOverlay) {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        lastTranslateX = translateX;
+        lastTranslateY = translateY;
+    }
 });
 
-document.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
+function handlePanMove(e) {
+    if (!isDragging && !isMiddlePanning) return;
+    if (panStartPending) {
+        startX = e.clientX;
+        startY = e.clientY;
+        lastTranslateX = translateX;
+        lastTranslateY = translateY;
+        panStartPending = false;
+        return;
+    }
     translateX = lastTranslateX + (e.clientX - startX);
     translateY = lastTranslateY + (e.clientY - startY);
     updateTransform();
-});
+}
 
-document.addEventListener('mouseup', () => {
+function handlePanEnd(e) {
+    // Se for um "up" com informacao de botao, so encerrar o pan do meio quando o
+    // proprio botao do meio (button 1) for solto. Eventos sem botao (blur,
+    // pointercancel) sempre encerram.
+    if (isMiddlePanning && e && (e.type === 'pointerup' || e.type === 'mouseup') && e.button !== 1) return;
+    if (isMiddlePanning) {
+        mapContainer.style.cursor = '';
+        if (mapPanOverlay) mapPanOverlay.classList.remove('active');
+    }
     isDragging = false;
-});
+    isMiddlePanning = false;
+    panStartPending = false;
+}
+
+// O overlay (quando ativo) recebe o arraste; o document cobre o caso de soltar
+// fora da janela do mapa. Escutamos pointerup E mouseup (redundancia contra o
+// autoscroll engolir um deles), alem de pointercancel/blur como rede de seguranca.
+if (mapPanOverlay) {
+    mapPanOverlay.addEventListener('pointermove', handlePanMove);
+    mapPanOverlay.addEventListener('pointerup', handlePanEnd);
+    mapPanOverlay.addEventListener('mouseup', handlePanEnd);
+}
+document.addEventListener('pointermove', handlePanMove);
+document.addEventListener('pointerup', handlePanEnd);
+document.addEventListener('mouseup', handlePanEnd);
+document.addEventListener('pointercancel', handlePanEnd);
+window.addEventListener('blur', handlePanEnd);
+
+// ===== DEBUG TEMPORARIO DO PAN (remover depois) =====
+// Loga os eventos de mouse/ponteiro do botao do meio para descobrir quais de
+// fato disparam no navegador do usuario. Aperte e segure o botao do meio sobre o
+// mapa, arraste e solte; depois copie o console.
+(function () {
+    function logEvt(scope) {
+        return function (e) {
+            if (e.button === 1 || e.buttons === 4 || e.type === 'pointercancel' || e.type === 'blur') {
+                console.log('[PAN-DEBUG]', scope, e.type,
+                    'button=', e.button, 'buttons=', e.buttons,
+                    'isMiddlePanning=', isMiddlePanning);
+            }
+        };
+    }
+    ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'auxclick', 'pointercancel'].forEach(function (t) {
+        window.addEventListener(t, logEvt('window'), true);
+    });
+    window.addEventListener('blur', logEvt('window'), true);
+    // Exposto para o initSvg registrar o mesmo log dentro do documento SVG.
+    window._panDebugLog = logEvt('svgDoc');
+})();
 
 // ===== ZOOM =====
 mapContainer.addEventListener('wheel', (e) => {
@@ -798,7 +919,11 @@ function showVillainInfo(index) {
     }
 
     document.getElementById('city-name').textContent = villain.name;
-    document.getElementById('city-region').textContent = villain.title + ' — ' + villain.location;
+    // Subtitulo como texto livre (igual as outras paginas). Se ainda houver um campo
+    // "location" separado (dados de seed antigos), combina com o title so na exibicao.
+    document.getElementById('city-region').textContent = villain.location
+        ? villain.title + ' — ' + villain.location
+        : villain.title;
 
     let html = '';
 

@@ -991,6 +991,9 @@ async function saveEdits() {
             collection = 'villains';
             editedData.name = newName;
             editedData.title = newRegion;
+            // O subtitulo do vilao agora e texto livre. Zerar o campo "location"
+            // (dados de seed antigos) para que ele nao seja re-anexado na exibicao.
+            editedData.location = '';
             if (editedData.features) {
                 editedData.details = editedData.features;
                 delete editedData.features;

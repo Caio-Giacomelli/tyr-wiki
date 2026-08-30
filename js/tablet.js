@@ -406,7 +406,7 @@
                 if (typeof villains === 'undefined') return null;
                 var villain = villains[item.index];
                 name = villain.name;
-                region = villain.title + ' — ' + villain.location;
+                region = villain.location ? villain.title + ' — ' + villain.location : villain.title;
                 html = buildEntityHtml(villain, 'villains[' + item.index + ']', 'villains', item.index);
                 break;
 

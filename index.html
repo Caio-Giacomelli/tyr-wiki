@@ -15,6 +15,9 @@
         <div id="map-wrapper">
             <object id="map-svg" type="image/svg+xml" data="assets/maps/Mapa-Tyr.svg">Mapa de Tyr</object>
         </div>
+        <!-- Camada usada apenas durante o pan com o botao do meio: captura os
+             eventos do ponteiro para arrastar continuamente sobre o SVG. -->
+        <div id="map-pan-overlay"></div>
     </div>
 
     <!-- Controles de Zoom -->

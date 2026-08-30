@@ -41,6 +41,20 @@ body {
     height: 100%;
 }
 
+/* Camada de captura do pan (botao do meio). Inativa por padrao para nao
+   bloquear cliques nas cidades; ativada via JS apenas durante o arraste. */
+#map-pan-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    display: none;
+    cursor: grabbing;
+}
+
+#map-pan-overlay.active {
+    display: block;
+}
+
 #map-svg {
     width: 100%;
     height: 100%;
