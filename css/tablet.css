@@ -1,5 +1,5 @@
-/* ===== TABLET EXPERIENCE =====
-   Ativo apenas em telas entre 600px e 1024px (tablets)
+/* ===== TABLET E MOBILE EXPERIENCE =====
+   Ativo em telas até 1366px (tablets e celulares)
    Esconde elementos desktop e mostra navegação adaptada
    ===== */
 
@@ -10,8 +10,8 @@
     display: none;
 }
 
-/* ===== MEDIA QUERY: TABLET (600px - 1366px) ===== */
-@media (min-width: 600px) and (max-width: 1366px) {
+/* ===== MEDIA QUERY: TABLET E MOBILE (até 1366px) ===== */
+@media (max-width: 1366px) {
 
     /* --- Esconder elementos desktop --- */
     #wiki-sidebar {
@@ -623,11 +623,5 @@
     }
 }
 
-/* ===== MOBILE (abaixo de 600px) - manter comportamento atual ===== */
-@media (max-width: 599px) {
-    #tablet-nav,
-    #tablet-wiki-view,
-    #tablet-bottom-sheet {
-        display: none !important;
-    }
-}
+/* Abaixo de 600px o celular usa a mesma interface tablet (wiki full-screen),
+   garantindo que todas as seções e entradas apareçam. */

@@ -1,5 +1,5 @@
 // ===== TABLET EXPERIENCE MODULE =====
-// Ativo apenas em telas tablet (600px - 1024px)
+// Ativo em telas tablet e celular (até 1366px)
 // Gerencia: navegação, wiki view, bottom-sheet, jornada tablet
 
 (function() {
@@ -19,7 +19,8 @@
     // ===== DETECÇÃO DE TABLET =====
     function isTablet() {
         const w = window.innerWidth;
-        return w >= 600 && w <= 1366;
+        // Inclui celulares (abaixo de 600px) para usar a wiki full-screen com todas as entradas
+        return w <= 1366;
     }
 
     // Se não é tablet, não inicializar (mas observar resize)
