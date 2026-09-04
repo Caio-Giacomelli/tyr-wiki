@@ -1709,8 +1709,12 @@ trailNextBtn.addEventListener('click', () => {
     advanceJourney();
 });
 
-function showJourneyStop(stop, index) {
-    const config = journeyConfigs[currentJourneyKey];
+function showJourneyStop(stop, index, journeyKey) {
+    // journeyKey identifica a jornada da parada clicada. Sem ele (ex.: durante a
+    // animacao), usa a jornada atual. Evita mostrar a contagem/sessao de outra jornada
+    // quando ha varias trilhas desenhadas no mapa ao mesmo tempo.
+    const key = journeyKey || currentJourneyKey;
+    const config = journeyConfigs[key];
     document.getElementById('city-name').textContent = stop.location;
     document.getElementById('city-region').textContent = stop.session;
 
@@ -1731,7 +1735,7 @@ function showJourneyStop(stop, index) {
 
         if (config.sessions[index] && config.sessions[index].content) {
             sessionId = index;
-        } else if (currentJourneyKey === 'solnegro') {
+        } else if (key === 'solnegro') {
             var isT2 = stop.session.indexOf('T2') === 0;
             var stopSession = stop.session.replace(/^T\d+ - /, '');
             if (isT2) {
@@ -1744,14 +1748,14 @@ function showJourneyStop(stop, index) {
                 var numMatch = stopSession.match(/(\d+)/);
                 if (numMatch) sessionId = parseInt(numMatch[1]);
             }
-        } else if (currentJourneyKey === 'cicatriz') {
+        } else if (key === 'cicatriz') {
             var epMatch2 = stop.session.match(/E(\d+)/);
             if (epMatch2) sessionId = parseInt(epMatch2[1]) - 1;
         } else {
             sessionId = index;
         }
         if (sessionId !== null && config.sessions[sessionId] && config.sessions[sessionId].content) {
-            sessionBtn = '<button id="session-read-btn" onclick="openSessionModalFor(\'' + currentJourneyKey + '\', ' + sessionId + ')">Ler Sess\u00e3o Completa</button>';
+            sessionBtn = '<button id="session-read-btn" onclick="openSessionModalFor(\'' + key + '\', ' + sessionId + ')">Ler Sess\u00e3o Completa</button>';
         }
     }
 
@@ -2025,7 +2029,7 @@ function advanceJourney() {
             } else {
                 updatePartyVisibility(config, thisIndex);
                 placeStopMarker(stop, thisIndex, stopsGroup, config);
-                showJourneyStop(config.stops[thisIndex], thisIndex);
+                showJourneyStop(config.stops[thisIndex], thisIndex, currentJourneyKey);
                 if (journeyMode === 'auto' && currentStopIndex === thisIndex) {
                     journeyAnimation = setTimeout(() => { currentStopIndex++; advanceJourney(); }, 2500);
                 }
@@ -2037,7 +2041,7 @@ function advanceJourney() {
         // Primeira parada: ajustar visibilidade dos membros
         updatePartyVisibility(config, 0);
         placeStopMarker(stop, 0, stopsGroup, config);
-        showJourneyStop(config.stops[0], 0);
+        showJourneyStop(config.stops[0], 0, currentJourneyKey);
         if (journeyMode === 'auto') {
             journeyAnimation = setTimeout(() => { currentStopIndex++; advanceJourney(); }, 2000);
         }
@@ -2191,7 +2195,7 @@ function placeStopMarker(stop, index, stopsGroup, config) {
     stopG.addEventListener('click', (e) => {
         e.stopPropagation();
         const cfg = journeyConfigs[currentKey];
-        showJourneyStop(cfg.stops[index], index);
+        showJourneyStop(cfg.stops[index], index, currentKey);
     });
 
     stopG.addEventListener('mouseenter', () => circle.setAttribute('r', '14'));
