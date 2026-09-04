@@ -54,9 +54,12 @@
             <button class="settings-btn" id="charsheet-btn" title="Ficha de Personagem">&#9876; Ficha D&D 5e</button>
         </div>
         <div class="settings-section">
+            <div class="settings-section-title">Modo Mestre</div>
+            <button class="settings-btn" id="master-create-btn" title="Criar uma revela&#231;&#227;o">&#128065; Nova Revela&#231;&#227;o</button>
+        </div>
+        <div class="settings-section">
             <div class="settings-section-title">Ferramentas</div>
             <button class="settings-btn" id="debug-btn" title="Modo Debug"><img src="img/debug.png" alt="Debug" class="settings-icon"> Debug Mode</button>
-            <button class="settings-btn" id="sync-db-btn" title="Enviar todos os dados locais para o banco">&#8593; Sincronizar com Banco</button>
         </div>
     </div>
 
@@ -233,6 +236,12 @@
             </svg>
             <span>Ficha</span>
         </button>
+        <button class="tablet-nav-btn tablet-nav-master" id="tablet-nav-master" aria-label="Revela&#231;&#245;es">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            <span>Revela&#231;&#245;es</span>
+        </button>
     </nav>
 
     <!-- ===== TABLET: Painel Wiki Full-Screen ===== -->
@@ -272,6 +281,7 @@
         <div class="lang-btn" id="lang-toggle">PT-BR</div>
         <div class="lang-btn pin-toggle" id="pin-btn" title="Marcar Ponto de Interesse"><svg class="pin-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
         <div class="lang-btn quest-toggle" id="quest-btn" title="Demandas"><svg class="quest-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2H8a2 2 0 0 0-2 2v16l6-3 6 3V4a2 2 0 0 0-2-2z"/><line x1="10" y1="8" x2="14" y2="8"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div>
+        <div class="lang-btn master-toggle" id="master-btn" title="Revela&#231;&#245;es"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
         <div class="lang-btn hellvault-toggle" id="hellvault-btn" title="Hellvault"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 21V10a7.5 7.5 0 0 1 15 0v11"/><path d="M3.5 21h17"/><path d="M12 12.2c1.6 1.5 2.4 2.9 2.4 4.3a2.4 2.4 0 0 1-4.8 0c0-.8.3-1.5.9-2.2.1.7.5 1 .9 1.1-.4-1.1-.1-2.2.6-3.2z" fill="currentColor" stroke="none"/></svg></div>
     </div>
 
@@ -373,6 +383,52 @@
         <div id="charsheet-container"></div>
     </div>
 
+    <!-- ===== MODO MESTRE: Banner de Revelação (aparece ao vivo) ===== -->
+    <div id="master-banner">
+        <div id="master-banner-card">
+            <button id="master-banner-close" aria-label="Fechar">&times;</button>
+            <div id="master-banner-image"></div>
+            <div id="master-banner-info">
+                <h2 id="master-banner-title"></h2>
+                <p id="master-banner-desc"></p>
+                <span id="master-banner-time"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODO MESTRE: Modal de Publicação ===== -->
+    <div id="master-modal-overlay">
+        <div id="master-modal">
+            <button id="master-modal-close" aria-label="Fechar">&times;</button>
+            <h2 class="master-modal-title">&#128065; Revelar aos Aventureiros</h2>
+            <div class="master-form">
+                <label>Nome / Título</label>
+                <input type="text" id="master-f-title" placeholder="O que você está revelando?" maxlength="120">
+                <label>Imagem</label>
+                <div class="master-image-upload">
+                    <button type="button" id="master-image-btn">Escolher imagem...</button>
+                    <span id="master-image-status">Nenhuma</span>
+                </div>
+                <div id="master-image-preview"></div>
+                <label>Descrição (opcional)</label>
+                <textarea id="master-f-desc" placeholder="Algum contexto sobre a imagem..."></textarea>
+                <button type="button" id="master-f-publish" class="master-publish-btn">Revelar a todos</button>
+                <button type="button" id="master-f-history" class="master-history-link">Ver histórico de revelações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODO MESTRE: Painel de Histórico ===== -->
+    <div id="master-history-overlay">
+        <div id="master-history-panel">
+            <div class="master-history-header">
+                <h2 class="master-history-title">&#128220; Revelações</h2>
+                <button id="master-history-close" aria-label="Fechar">&times;</button>
+            </div>
+            <div id="master-history-list"></div>
+        </div>
+    </div>
+
     <!-- Firebase SDK (compat CDN) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -388,6 +444,7 @@
     <script src="js/firebase-edit.js"></script>
     <script src="js/charsheet.js"></script>
     <script src="js/quests.js"></script>
+    <script src="js/reveals.js"></script>
 
     <!-- Hellvault Mode Overlay -->
     <div id="hellvault-overlay"></div>

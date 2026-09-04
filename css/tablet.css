@@ -26,6 +26,11 @@
         display: none !important;
     }
 
+    /* Olhinho de Revelacoes: redundante no mobile, ja existe na nav inferior */
+    #master-btn {
+        display: none !important;
+    }
+
     #settings-toggle {
         top: 10px;
         right: 10px;
@@ -92,9 +97,17 @@
         font-family: 'Crimson Text', serif;
         font-size: 11px;
         cursor: pointer;
-        padding: 8px 16px;
+        padding: 8px 10px;
         border-radius: 8px;
         transition: all 0.2s ease;
+    }
+
+    /* Com 4 botoes na nav, reduzir texto para caber */
+    .tablet-nav-btn span {
+        max-width: 68px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .tablet-nav-btn svg {
@@ -625,3 +638,27 @@
 
 /* Abaixo de 600px o celular usa a mesma interface tablet (wiki full-screen),
    garantindo que todas as seções e entradas apareçam. */
+
+/* ===== MODO MESTRE (mobile e tablet) ===== */
+@media (max-width: 1366px) {
+    /* Realce do botao de revelacoes na nav quando ha algo novo */
+    .tablet-nav-master.has-new {
+        color: #d4a843;
+        animation: master-nav-pulse 1.8s ease-in-out infinite;
+    }
+    .tablet-nav-master.has-new svg { stroke: #d4a843; }
+    @keyframes master-nav-pulse {
+        0%, 100% { opacity: 0.75; }
+        50% { opacity: 1; }
+    }
+
+    /* Banner de revelacao ocupa a tela toda com folga p/ a nav inferior */
+    #master-banner { padding: 16px; }
+    #master-banner-card { padding: 18px; max-height: 82vh; }
+    #master-banner-title { font-size: 22px; }
+    #master-banner-image img { max-height: 50vh; }
+
+    /* Historico e modal acima da barra de navegacao */
+    #master-history-overlay, #master-modal-overlay { padding: 16px; }
+    #master-history-panel { max-height: 78vh; }
+}

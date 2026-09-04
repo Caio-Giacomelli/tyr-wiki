@@ -58,6 +58,12 @@
         navMap.addEventListener('click', function() { switchView('map'); });
         navWiki.addEventListener('click', function() { switchView('wiki'); });
         if (navSheet) navSheet.addEventListener('click', function() { switchView('charsheet'); });
+
+        // Modo Mestre (Revelacoes): abre o overlay, nao troca de view.
+        var navMaster = document.getElementById('tablet-nav-master');
+        if (navMaster) navMaster.addEventListener('click', function() {
+            if (typeof window.openMasterMode === 'function') window.openMasterMode();
+        });
     }
 
     function switchView(view) {
