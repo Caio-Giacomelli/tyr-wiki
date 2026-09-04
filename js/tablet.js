@@ -19,8 +19,14 @@
     // ===== DETECÇÃO DE TABLET =====
     function isTablet() {
         const w = window.innerWidth;
-        // Inclui celulares (abaixo de 600px) para usar a wiki full-screen com todas as entradas
-        return w <= 1366;
+        // Modo tablet/mobile só em dispositivos de toque (pointer: coarse) com largura
+        // até 1366px. Notebook/desktop usam mouse (pointer: fine) e ficam sempre no modo
+        // computador, mesmo em telas pequenas. Espelha a media query do CSS.
+        let isTouch = true;
+        if (window.matchMedia) {
+            isTouch = window.matchMedia('(pointer: coarse)').matches;
+        }
+        return isTouch && w <= 1366;
     }
 
     // Se não é tablet, não inicializar (mas observar resize)

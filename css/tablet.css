@@ -1,6 +1,8 @@
 /* ===== TABLET E MOBILE EXPERIENCE =====
-   Ativo em telas até 1366px (tablets e celulares)
-   Esconde elementos desktop e mostra navegação adaptada
+   Ativo em telas de toque (tablets e celulares) com largura até 1366px.
+   `pointer: coarse` = dispositivo de toque (dedo). Notebook/desktop usa mouse
+   (pointer: fine) e por isso fica SEMPRE no modo computador, mesmo com tela pequena.
+   Esconde elementos desktop e mostra navegação adaptada.
    ===== */
 
 /* Por padrão, esconder todos os elementos tablet em desktop */
@@ -10,8 +12,8 @@
     display: none;
 }
 
-/* ===== MEDIA QUERY: TABLET E MOBILE (até 1366px) ===== */
-@media (max-width: 1366px) {
+/* ===== MEDIA QUERY: TABLET E MOBILE (toque, até 1366px) ===== */
+@media (max-width: 1366px) and (pointer: coarse) {
 
     /* --- Esconder elementos desktop --- */
     #wiki-sidebar {
@@ -640,7 +642,7 @@
    garantindo que todas as seções e entradas apareçam. */
 
 /* ===== MODO MESTRE (mobile e tablet) ===== */
-@media (max-width: 1366px) {
+@media (max-width: 1366px) and (pointer: coarse) {
     /* Realce do botao de revelacoes na nav quando ha algo novo */
     .tablet-nav-master.has-new {
         color: #d4a843;
