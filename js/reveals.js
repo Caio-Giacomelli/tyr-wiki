@@ -282,7 +282,7 @@
     function renderHistory() {
         if (!el.historyList) return;
         if (!reveals.length) {
-            el.historyList.innerHTML = '<div class="master-history-empty">Nenhuma revelacao ainda.</div>';
+            el.historyList.innerHTML = '<div class="master-history-empty">Nenhuma revelação ainda.</div>';
             return;
         }
         el.historyList.innerHTML = '';
