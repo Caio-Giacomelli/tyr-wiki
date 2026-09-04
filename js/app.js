@@ -1828,6 +1828,9 @@ function startJourney() {
         removeTrailFor(currentJourneyKey);
     }
     currentStopIndex = 0;
+    // Sinaliza jornada ativa: no mobile o painel de parada abre discreto (peek),
+    // sem cobrir o mapa/animacao. Ver interceptInfoPanel em tablet.js.
+    window._journeyActive = true;
     drawJourneyBase();
     advanceJourney();
 }
@@ -1838,6 +1841,7 @@ function stopJourney() {
         journeyAnimation = null;
     }
     journeyMode = null;
+    window._journeyActive = false;
     trailAutoBtn.classList.remove('active');
     trailStepBtn.classList.remove('active');
 }

@@ -587,15 +587,15 @@
         });
     }
 
-    function showBottomSheet(name, region, html) {
+    function showBottomSheet(name, region, html, state) {
         if (!sheetEl) return;
 
         if (sheetName) sheetName.textContent = name;
         if (sheetRegion) sheetRegion.textContent = region;
         if (sheetBody) sheetBody.innerHTML = html;
 
-        // Abrir no estado half por padrão
-        setSheetState('half');
+        // Estado padrão 'half'; chamador pode pedir 'peek' (ex.: jornada) para não tapar o mapa.
+        setSheetState(state || 'half');
     }
 
     function closeBottomSheet() {
@@ -670,7 +670,11 @@
                         var name = document.getElementById('city-name').textContent;
                         var region = document.getElementById('city-region').textContent;
                         var html = document.getElementById('city-info').innerHTML;
-                        showBottomSheet(name, region, html);
+
+                        // Durante a jornada, abrir discreto (peek) para deixar o mapa e a
+                        // animacao visiveis. O usuario arrasta o sheet para cima se quiser ler mais.
+                        var sheetState = window._journeyActive ? 'peek' : 'half';
+                        showBottomSheet(name, region, html, sheetState);
 
                         // Mudar para view mapa se não estiver
                         if (currentView !== 'map' && currentView !== 'journey') {
