@@ -162,7 +162,11 @@ function rebuildSessionsSidebar() {
             item.className = 'wiki-item';
             item.textContent = session.title;
             item.dataset.searchName = session.title.toLowerCase();
-            item.addEventListener('click', () => showSessionPageInfo(index));
+            // Recalcular o indice pelo objeto no clique (wikiSessions pode ser reordenado).
+            item.addEventListener('click', () => {
+                const i = wikiSessions.indexOf(session);
+                showSessionPageInfo(i >= 0 ? i : index);
+            });
             listEl.appendChild(item);
         });
     });
@@ -210,7 +214,13 @@ function rebuildSidebarList(collectionName, localArray) {
         item.dataset.idx = index;
         item.textContent = entry.name;
         item.dataset.searchName = entry.name.toLowerCase();
-        item.addEventListener('click', () => config.showFn(index));
+        // Recalcular o indice pelo objeto no momento do clique: o array pode ser
+        // reconstruido depois (loadFromFirestore) e o indice fixo ficaria desatualizado,
+        // abrindo/editando a pagina errada.
+        item.addEventListener('click', () => {
+            const i = localArray.indexOf(entry);
+            config.showFn(i >= 0 ? i : index);
+        });
         listEl.appendChild(item);
     });
 
@@ -858,45 +868,72 @@ function exitEditMode() {
 
 // Recarregar a view de uma entidade apos alteracoes de imagem
 function refreshEntityView(entity) {
+    // O indice do array pode ter mudado (loadFromFirestore reconstroi os arrays).
+    // Resolvemos o indice ATUAL a partir do objeto estavel (entity.data); se nao achar,
+    // caimos no entity.id como fallback.
+    function currentIndex(arr) {
+        if (!Array.isArray(arr)) return entity.id;
+        const i = arr.indexOf(entity.data);
+        return i >= 0 ? i : entity.id;
+    }
+
     switch (entity.type) {
-        case 'character':
-            showCharacterInfo(entity.id);
-            showEditButton('character', entity.id, characters[entity.id]);
+        case 'character': {
+            const i = currentIndex(characters);
+            showCharacterInfo(i);
+            showEditButton('character', i, characters[i]);
             break;
-        case 'legion':
-            showLegionInfo(entity.id);
-            showEditButton('legion', entity.id, legion[entity.id]);
+        }
+        case 'legion': {
+            const i = currentIndex(legion);
+            showLegionInfo(i);
+            showEditButton('legion', i, legion[i]);
             break;
-        case 'villain':
-            showVillainInfo(entity.id);
-            showEditButton('villain', entity.id, villains[entity.id]);
+        }
+        case 'villain': {
+            const i = currentIndex(villains);
+            showVillainInfo(i);
+            showEditButton('villain', i, villains[i]);
             break;
-        case 'artifact':
-            showArtifactInfo(entity.id);
-            showEditButton('artifact', entity.id, artifacts[entity.id]);
+        }
+        case 'artifact': {
+            const i = currentIndex(artifacts);
+            showArtifactInfo(i);
+            showEditButton('artifact', i, artifacts[i]);
             break;
-        case 'book':
-            showBookInfo(entity.id);
-            showEditButton('book', entity.id, books[entity.id]);
+        }
+        case 'book': {
+            const i = currentIndex(books);
+            showBookInfo(i);
+            showEditButton('book', i, books[i]);
             break;
-        case 'historical':
-            showHistoricalInfo(entity.id);
-            showEditButton('historical', entity.id, historicalNPCs[entity.id]);
+        }
+        case 'historical': {
+            const i = currentIndex(historicalNPCs);
+            showHistoricalInfo(i);
+            showEditButton('historical', i, historicalNPCs[i]);
             break;
-        case 'ally':
-            showAllyInfo(entity.id);
-            showEditButton('ally', entity.id, allies[entity.id]);
+        }
+        case 'ally': {
+            const i = currentIndex(allies);
+            showAllyInfo(i);
+            showEditButton('ally', i, allies[i]);
             break;
-        case 'landmark':
-            showLandmarkInfo(entity.id);
-            showEditButton('landmark', entity.id, landmarks[entity.id]);
+        }
+        case 'landmark': {
+            const i = currentIndex(landmarks);
+            showLandmarkInfo(i);
+            showEditButton('landmark', i, landmarks[i]);
             break;
+        }
         case 'city':
             showCityInfo(entity.id);
             break;
-        case 'session':
-            showSessionPageInfo(entity.id);
+        case 'session': {
+            const i = currentIndex(wikiSessions);
+            showSessionPageInfo(i);
             break;
+        }
     }
 }
 
@@ -955,9 +992,14 @@ async function saveEdits() {
 
     // Determinar collection e atualizar dados locais
     let collection = '';
-    // Para entradas criadas pelo site (arrays), o documento real no banco usa o _docId
-    // (ex: 'new_1787...'), NAO o indice do array. Usar o indice criaria um documento
-    // duplicado ao salvar. Cidades usam a chave (string) que ja vem em entity.id.
+    // ALVO ESTAVEL: entity.data aponta para o MESMO objeto que esta no array/objeto global.
+    // O indice do array (entity.id) NAO e estavel — ele muda quando loadFromFirestore
+    // reconstroi os arrays (documentos numericos ocupam seus indices, entradas 'new_' vao
+    // pro fim). Por isso NAO usamos arr[entity.id]: gravariamos por cima da pagina errada.
+    // Escrevemos direto em entity.data, que sempre e a entrada correta.
+    const target = entity.data;
+    // Documento no banco: entradas criadas pelo site usam _docId ('new_1787...'); cidades
+    // usam a chave (string) que ja vem em entity.id. Nunca usar o indice numerico do array.
     let docId = (entity.data && entity.data._docId) ? entity.data._docId : entity.id;
 
     switch (entity.type) {
@@ -965,7 +1007,8 @@ async function saveEdits() {
             collection = 'cities';
             if (newRegion) editedData.region = newRegion;
             if (newName) editedData.displayName = newName;
-            Object.assign(cities[entity.id], editedData);
+            // Cidades sao indexadas por chave estavel (entity.id); target === cities[entity.id].
+            Object.assign(target, editedData);
             break;
         case 'character':
             collection = 'characters';
@@ -975,7 +1018,7 @@ async function saveEdits() {
                 editedData.details = editedData.features;
                 delete editedData.features;
             }
-            Object.assign(characters[entity.id], editedData);
+            Object.assign(target, editedData);
             break;
         case 'legion':
             collection = 'legion';
@@ -985,7 +1028,7 @@ async function saveEdits() {
                 editedData.details = editedData.features;
                 delete editedData.features;
             }
-            Object.assign(legion[entity.id], editedData);
+            Object.assign(target, editedData);
             break;
         case 'villain':
             collection = 'villains';
@@ -998,7 +1041,7 @@ async function saveEdits() {
                 editedData.details = editedData.features;
                 delete editedData.features;
             }
-            Object.assign(villains[entity.id], editedData);
+            Object.assign(target, editedData);
             break;
         case 'artifact':
             collection = 'artifacts';
@@ -1007,7 +1050,7 @@ async function saveEdits() {
                 editedData.details = editedData.features;
                 delete editedData.features;
             }
-            Object.assign(artifacts[entity.id], editedData);
+            Object.assign(target, editedData);
             break;
         case 'book':
             collection = 'books';
@@ -1016,7 +1059,7 @@ async function saveEdits() {
                 editedData.details = editedData.features;
                 delete editedData.features;
             }
-            Object.assign(books[entity.id], editedData);
+            Object.assign(target, editedData);
             break;
         case 'historical':
             collection = 'historicalNPCs';
@@ -1026,7 +1069,7 @@ async function saveEdits() {
                 editedData.details = editedData.features;
                 delete editedData.features;
             }
-            Object.assign(historicalNPCs[entity.id], editedData);
+            Object.assign(target, editedData);
             break;
         case 'ally':
             collection = 'allies';
@@ -1036,7 +1079,7 @@ async function saveEdits() {
                 editedData.details = editedData.features;
                 delete editedData.features;
             }
-            Object.assign(allies[entity.id], editedData);
+            Object.assign(target, editedData);
             break;
         case 'landmark':
             collection = 'landmarks';
@@ -1045,7 +1088,7 @@ async function saveEdits() {
                 editedData.details = editedData.features;
                 delete editedData.features;
             }
-            Object.assign(landmarks[entity.id], editedData);
+            Object.assign(target, editedData);
             break;
         case 'session':
             collection = 'wikiSessionsFS';
@@ -1078,7 +1121,7 @@ async function saveEdits() {
                 editedData.quoteAuthor = quoteAuthorField.textContent.trim();
             }
             docId = entity.data.id || entity.data._docId || String(entity.id);
-            Object.assign(wikiSessions[entity.id], editedData);
+            Object.assign(target, editedData);
             break;
     }
 

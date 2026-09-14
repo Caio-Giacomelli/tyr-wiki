@@ -1610,7 +1610,11 @@ if (sessionsList && typeof wikiSessions !== 'undefined') {
             item.className = 'wiki-item';
             item.textContent = session.title;
             item.dataset.searchName = session.title.toLowerCase();
-            item.addEventListener('click', () => showSessionPageInfo(index));
+            // Recalcular o indice pelo objeto no clique (wikiSessions pode ser reordenado).
+            item.addEventListener('click', () => {
+                const i = wikiSessions.indexOf(session);
+                showSessionPageInfo(i >= 0 ? i : index);
+            });
             if (sessAddBtn) sessionsList.insertBefore(item, sessAddBtn);
             else sessionsList.appendChild(item);
         });
@@ -3449,7 +3453,12 @@ if (langToggle && langMenu) {
             const displayName = currentAddType === 'session' ? (entry.title || entry.name || '') : entry.name;
             item.textContent = displayName;
             item.dataset.searchName = displayName.toLowerCase();
-            item.addEventListener('click', () => showFn(newIndex));
+            // Recalcular o indice pelo objeto no clique: apos loadFromFirestore o array e
+            // reconstruido e o newIndex fixo apontaria para a entrada errada.
+            item.addEventListener('click', () => {
+                const i = arr.indexOf(entry);
+                showFn(i >= 0 ? i : newIndex);
+            });
 
             // Inserir antes do botao "+"
             const addBtn = listEl.querySelector('.wiki-add-item');
