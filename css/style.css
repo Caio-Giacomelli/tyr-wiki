@@ -2832,6 +2832,53 @@ body.font-dragao #map-svg {
     cursor: pointer; transition: all 0.15s;
 }
 .cs-cm-rest-btn:hover { border-color: #d4a843; color: #d4a843; background: rgba(139,105,20,0.12); }
+
+/* ===== Modo Batalha: blocos expandidos (ataques, chips, log) ===== */
+.cs-cm-block { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(139,105,20,0.2); }
+.cs-cm-block-title {
+    font-family: 'MedievalSharp', cursive; font-size: 12px; color: #d4a843;
+    text-align: center; letter-spacing: 0.5px; margin-bottom: 8px;
+}
+/* Ataques: exibicao de bonus e dano (sem rolagem) */
+.cs-cm-atk-list { display: flex; flex-direction: column; gap: 6px; }
+.cs-cm-atk-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cs-cm-atk-name { flex: 1 1 90px; min-width: 90px; font-size: 12px; color: #eee; font-weight: 600; }
+.cs-cm-atk-val {
+    padding: 4px 10px; border-radius: 10px;
+    font-size: 11px; font-family: 'Crimson Text', serif; color: #c8b088;
+    border: 1px solid rgba(139,105,20,0.35); background: rgba(44,24,16,0.7);
+}
+.cs-cm-atk-val b { color: #ffd873; font-size: 12px; }
+.cs-cm-atk-val.cs-cm-atk-dmg { color: #c99; }
+.cs-cm-atk-val.cs-cm-atk-dmg b { color: #f0a0a0; }
+/* Chips de estado (modificadores / habilidades / debuffs) */
+.cs-cm-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.cs-cm-chip {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    padding: 5px 10px; border-radius: 10px; cursor: pointer; text-align: left;
+    border: 1px solid rgba(139,105,20,0.35); background: rgba(44,24,16,0.7);
+    color: #a08050; font-family: 'Crimson Text', serif; transition: all 0.15s;
+    opacity: 0.65;
+}
+.cs-cm-chip:hover { border-color: #d4a843; opacity: 0.9; }
+.cs-cm-chip-name { font-size: 12px; }
+.cs-cm-chip-note { font-size: 9px; opacity: 0.8; }
+.cs-cm-chip.cs-cm-chip-on {
+    opacity: 1; color: #f0e0c0; background: rgba(139,105,20,0.28);
+    border-color: #d4a843; box-shadow: 0 0 6px rgba(212,168,67,0.3);
+}
+.cs-cm-chip.cs-cm-chip-on .cs-cm-chip-name b { color: #ffd873; }
+
+/* Editor: rótulo com checkbox e dica de cálculo */
+.cs-check-label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: #c8b088; }
+.cs-check-label input[type="checkbox"] { width: auto; margin: 0; }
+.cs-calc-hint { font-size: 11px; color: #a08050; font-style: italic; margin-bottom: 8px; }
+/* Selo de rolagem nas magias (CD / Ataque) */
+.cs-ability-roll {
+    font-size: 10px; color: #ffd873; background: rgba(139,105,20,0.22);
+    padding: 1px 7px; border-radius: 8px; border: 1px solid rgba(212,168,67,0.4);
+}
+
 /* Toolbar right group */
 .cs-toolbar-right { display: flex; gap: 6px; }
 /* Combat toggle active state */
@@ -2911,12 +2958,14 @@ body.font-dragao #map-svg {
 /* Ability Cards (collapsible individually) */
 .cs-ability-card { margin-bottom: 4px; border: 1px solid rgba(139,105,20,0.2); border-radius: 5px; overflow: hidden; }
 .cs-ability-header {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; gap: 8px;
     padding: 6px 9px; cursor: pointer; background: rgba(44,24,16,0.4);
     transition: background 0.15s;
 }
 .cs-ability-header:hover { background: rgba(139,105,20,0.12); }
-.cs-ability-name { font-size: 12px; color: #eee; font-weight: 600; }
+/* Nome ocupa o espaco livre, empurrando o selo (CD/Ataque) e o custo para a direita */
+.cs-ability-name { font-size: 12px; color: #eee; font-weight: 600; flex: 1 1 auto; }
+.cs-ability-roll { margin-left: auto; }
 .cs-ability-cost { font-size: 10px; color: #a08050; background: rgba(139,105,20,0.15); padding: 1px 6px; border-radius: 8px; }
 .cs-ability-body {
     display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.2s ease;
@@ -3073,8 +3122,9 @@ body.font-dragao #map-svg {
 .cs-eg6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
 .cs-field { display: flex; flex-direction: column; gap: 2px; }
 .cs-field label { font-size: 10px; color: #a08050; text-transform: uppercase; letter-spacing: 0.3px; }
-.cs-field input, .cs-field textarea { padding: 7px 9px; background: rgba(255,255,255,0.04); border: 1px solid #555; border-radius: 5px; color: #eee; font-size: 13px; font-family: 'Crimson Text', serif; }
-.cs-field input:focus, .cs-field textarea:focus { outline: none; border-color: #d4a843; }
+.cs-field input, .cs-field textarea, .cs-field select { padding: 7px 9px; background: rgba(255,255,255,0.04); border: 1px solid #555; border-radius: 5px; color: #eee; font-size: 13px; font-family: 'Crimson Text', serif; }
+.cs-field input:focus, .cs-field textarea:focus, .cs-field select:focus { outline: none; border-color: #d4a843; }
+.cs-field select option { background: #2a1a0e; color: #eee; }
 .cs-fc { align-items: center; }
 .cs-ism { width: 100%; text-align: center; }
 .cs-skills-edit { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 10px; }
@@ -3115,6 +3165,10 @@ body.font-dragao #map-svg {
     align-self: flex-start;
 }
 .cs-add-row-btn:hover { background: rgba(139,105,20,0.2); border-color: #d4a843; color: #d4a843; }
+/* Campos compactos nas linhas de ataque (checkbox Prof e Extra) */
+.cs-atk-row .cs-fc { flex: 0 0 auto; min-width: 60px; align-items: center; }
+.cs-atk-row .cs-fc input[type="checkbox"] { width: auto; }
+.cs-atk-row .cs-atk-extra { max-width: 80px; }
 
 /* Spell Slots Editor */
 .cs-slots-editor { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }

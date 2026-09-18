@@ -24,6 +24,7 @@
             hpMax: 10, hpCurrent: 10, hpTemp: 0,
             hitDice: '1d10', hitDiceRemaining: 1,
             proficiencyBonus: 2,
+            profAuto: true, // PROF calculado pelo nivel (2 + floor((nivel-1)/4))
             // Saving throws (proficiency + value override)
             saves: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
             saveProficiencies: [],
@@ -40,13 +41,16 @@
             // Psionic / Special
             specialMechanics: [], // { name, desc }
             // Attacks
-            attacks: [], // { name, bonus, damage, desc }
+            // { name, bonus, damage, desc, ability?, useProf?, atkExtra? }
+            // Se 'ability' definido, o bonus de ataque e calculado; senao usa 'bonus' (texto).
+            attacks: [],
             // Inventory
             equipment: [], // { name, bonus, damage, desc, charges }
             currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
             // Spellcasting
             spellSlots: {}, // { 1: { max, used }, 2: { max, used } }
             spellcastingAbility: '', spellSaveDC: 0, spellAttackBonus: 0,
+            spellAuto: true, // Spell DC e Spell Atk calculados a partir do atributo de conjuracao
             // Personality
             personalityTraits: '', ideals: '', bonds: '', flaws: '',
             // Roleplay
@@ -57,6 +61,10 @@
             companions: [], // array of companion stat blocks
             // Bonus/Misc
             bonusMechanics: [], // { name, desc }
+            // Modo batalha: estados ativos durante o combate
+            activeModifiers: [], // { name, value, active } ex: { name:'Abençoado', value:'+1d4', active:false }
+            activeAbilities: [], // { name, note, active } ex: { name:'Fúria', note:'+2 dano', active:false }
+            activeDebuffs: [],   // { name, note, active } ex: { name:'Envenenado', note:'desvantagem', active:false }
             notes: ''
         };
     }
@@ -106,6 +114,51 @@
 
     function getMod(score) { return Math.floor((score - 10) / 2); }
     function modStr(val) { return val >= 0 ? '+' + val : String(val); }
+
+    // ===== CALCULOS DERIVADOS (D&D 5e) =====
+    // Bonus de proficiencia por nivel: 2 + floor((nivel-1)/4). Se profAuto for false,
+    // usa o override manual em proficiencyBonus.
+    function getProfBonus(s) {
+        if (s.profAuto === false) return s.proficiencyBonus || 2;
+        const lvl = s.level || 1;
+        return 2 + Math.floor((lvl - 1) / 4);
+    }
+    // Atributo de conjuracao efetivo (fallback para 'int' se nao definido).
+    function getSpellAbility(s) {
+        return ABILITIES.includes(s.spellcastingAbility) ? s.spellcastingAbility : '';
+    }
+    // Spell Save DC = 8 + PROF + mod(atributo de conjuracao). Se spellAuto for false,
+    // usa o override manual. Retorna 0 se nao houver atributo de conjuracao definido.
+    function calcSpellDC(s) {
+        if (s.spellAuto === false) return s.spellSaveDC || 0;
+        const ab = getSpellAbility(s);
+        if (!ab) return s.spellSaveDC || 0;
+        return 8 + getProfBonus(s) + getMod(s[ab]);
+    }
+    // Spell Attack = PROF + mod(atributo de conjuracao).
+    function calcSpellAttack(s) {
+        if (s.spellAuto === false) return s.spellAttackBonus || 0;
+        const ab = getSpellAbility(s);
+        if (!ab) return s.spellAttackBonus || 0;
+        return getProfBonus(s) + getMod(s[ab]);
+    }
+    // Bonus de ataque de uma arma. Se a arma tem campos estruturados (ability), calcula
+    // mod(atributo) + PROF (se useProf) + atkExtra. Caso contrario, usa o texto livre 'bonus'
+    // (compatibilidade com armas antigas).
+    function calcAttackBonus(s, atk) {
+        if (atk.ability && ABILITIES.includes(atk.ability)) {
+            let total = getMod(s[atk.ability]);
+            if (atk.useProf) total += getProfBonus(s);
+            total += parseInt(atk.atkExtra) || 0;
+            return total;
+        }
+        return null; // sem estrutura: cai no texto livre
+    }
+    // Texto de bonus a exibir para um ataque (calculado ou texto livre).
+    function attackBonusText(s, atk) {
+        const calc = calcAttackBonus(s, atk);
+        return calc !== null ? modStr(calc) : (atk.bonus || '');
+    }
     function escHtml(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
     function escAttr(s) { return escHtml(s); }
 
@@ -240,6 +293,8 @@
         if (!c || !currentSheet) return;
         const s = currentSheet;
         const companions = s.companions || [];
+        const csSpellDC = calcSpellDC(s);
+        const csSpellAtk = calcSpellAttack(s);
 
         let html = `
         <div class="cs-sheet">
@@ -268,9 +323,9 @@
                 <div class="cs-stat-pill"><span class="cs-stat-val">${s.armorClass}</span><span class="cs-stat-lbl">CA</span></div>
                 <div class="cs-stat-pill"><span class="cs-stat-val">${modStr(s.initiative)}</span><span class="cs-stat-lbl">Inic</span></div>
                 <div class="cs-stat-pill"><span class="cs-stat-val">${escHtml(s.speed)}</span><span class="cs-stat-lbl">Desl</span></div>
-                <div class="cs-stat-pill"><span class="cs-stat-val">+${s.proficiencyBonus}</span><span class="cs-stat-lbl">Prof</span></div>
-                ${s.spellSaveDC ? '<div class="cs-stat-pill"><span class="cs-stat-val">' + s.spellSaveDC + '</span><span class="cs-stat-lbl">Spell DC</span></div>' : ''}
-                ${s.spellAttackBonus ? '<div class="cs-stat-pill"><span class="cs-stat-val">' + modStr(s.spellAttackBonus) + '</span><span class="cs-stat-lbl">Spell Atk</span></div>' : ''}
+                <div class="cs-stat-pill"><span class="cs-stat-val">+${getProfBonus(s)}</span><span class="cs-stat-lbl">Prof</span></div>
+                ${csSpellDC ? '<div class="cs-stat-pill"><span class="cs-stat-val">' + csSpellDC + '</span><span class="cs-stat-lbl">Spell DC</span></div>' : ''}
+                ${csSpellAtk ? '<div class="cs-stat-pill"><span class="cs-stat-val">' + modStr(csSpellAtk) + '</span><span class="cs-stat-lbl">Spell Atk</span></div>' : ''}
             </div>
 
             <!-- Combat Mode Panel (hidden by default) -->
@@ -287,6 +342,8 @@
                         <button class="cs-cm-hp-btn cs-cm-heal" data-action="hp-up5">5</button>
                     </div>
                     ${renderCombatSlots(s)}
+                    ${renderCombatAttacks(s)}
+                    ${renderCombatToggles(s)}
                 </div>
             </div>
 
@@ -320,8 +377,9 @@
         if (s.attacks && s.attacks.length > 0) {
             let atkHtml = '<div class="cs-attacks-list">';
             s.attacks.forEach(a => {
+                const bonusTxt = attackBonusText(s, a);
                 atkHtml += `<div class="cs-atk-card">
-                    <div class="cs-atk-top"><span class="cs-atk-name">${escHtml(a.name)}</span><span class="cs-atk-bonus">${escHtml(a.bonus)}</span><span class="cs-atk-dmg">${escHtml(a.damage)}</span></div>
+                    <div class="cs-atk-top"><span class="cs-atk-name">${escHtml(a.name)}</span><span class="cs-atk-bonus">${escHtml(bonusTxt)}</span><span class="cs-atk-dmg">${escHtml(a.damage)}</span></div>
                     ${a.desc ? '<div class="cs-atk-desc">' + escHtml(a.desc) + '</div>' : ''}
                 </div>`;
             });
@@ -420,9 +478,24 @@
             } else if (action === 'slot-rest') {
                 Object.keys(s.spellSlots).forEach(lvl => { if (s.spellSlots[lvl]) s.spellSlots[lvl].used = 0; });
                 s.hpCurrent = s.hpMax;
+            } else if (action.startsWith('toggle-')) {
+                // Ligar/desligar modificador, habilidade ou debuff ativo.
+                const m = action.match(/^toggle-(mod|abl|deb)-(\d+)$/);
+                if (m) {
+                    const arrByKey = { mod: s.activeModifiers, abl: s.activeAbilities, deb: s.activeDebuffs };
+                    const arr = arrByKey[m[1]] || [];
+                    const it = arr[parseInt(m[2])];
+                    if (it) {
+                        it.active = !it.active;
+                        const container = document.getElementById('cs-cm-chips-' + m[1]);
+                        if (container) container.innerHTML = renderCombatChips(m[1], arr);
+                        await saveSheet(s);
+                    }
+                }
+                return;
             }
 
-            // Update display
+            // Update display (HP e slots)
             document.getElementById('cs-cm-hp').innerHTML = s.hpCurrent + '<small>/' + s.hpMax + '</small>';
             document.getElementById('cs-hp-display').textContent = s.hpCurrent + '/' + s.hpMax;
             // Update slots display
@@ -479,7 +552,55 @@
         return html;
     }
 
+    // Ataques rapidos no modo batalha: apenas mostra o bonus de ataque e o dano de cada
+    // ataque (sem rolagem — o jogador rola os dados fisicos).
+    function renderCombatAttacks(s) {
+        const attacks = s.attacks || [];
+        if (!attacks.length) return '';
+        let html = '<div class="cs-cm-block"><div class="cs-cm-block-title">Ataques</div><div class="cs-cm-atk-list">';
+        attacks.forEach(a => {
+            const bonusTxt = attackBonusText(s, a);
+            html += `<div class="cs-cm-atk-row">
+                <span class="cs-cm-atk-name">${escHtml(a.name || 'Ataque')}</span>
+                ${bonusTxt ? '<span class="cs-cm-atk-val">Ataque <b>' + escHtml(bonusTxt) + '</b></span>' : ''}
+                ${a.damage ? '<span class="cs-cm-atk-val cs-cm-atk-dmg">Dano <b>' + escHtml(a.damage) + '</b></span>' : ''}
+            </div>`;
+        });
+        html += '</div></div>';
+        return html;
+    }
+
+    // Modificadores, habilidades e debuffs ativos: cada um vira um "chip" que liga/desliga.
+    function renderCombatToggles(s) {
+        const groups = [
+            { key: 'mod', title: 'Modificadores Ativos', items: s.activeModifiers || [] },
+            { key: 'abl', title: 'Habilidades Ativas', items: s.activeAbilities || [] },
+            { key: 'deb', title: 'Debuffs / Condições', items: s.activeDebuffs || [] }
+        ];
+        let html = '';
+        groups.forEach(g => {
+            if (!g.items.length) return;
+            html += '<div class="cs-cm-block"><div class="cs-cm-block-title">' + g.title + '</div>';
+            html += '<div class="cs-cm-chips" id="cs-cm-chips-' + g.key + '">' + renderCombatChips(g.key, g.items) + '</div>';
+            html += '</div>';
+        });
+        return html;
+    }
+    function renderCombatChips(key, items) {
+        let html = '';
+        items.forEach((it, i) => {
+            const val = it.value ? ' <b>' + escHtml(it.value) + '</b>' : '';
+            const note = it.note ? '<span class="cs-cm-chip-note">' + escHtml(it.note) + '</span>' : '';
+            html += `<button class="cs-cm-chip${it.active ? ' cs-cm-chip-on' : ''}" data-action="toggle-${key}-${i}">
+                <span class="cs-cm-chip-name">${escHtml(it.name)}${val}</span>${note}
+            </button>`;
+        });
+        return html;
+    }
+
     function renderAbilitiesTabs(s) {
+        const spellDC = calcSpellDC(s);
+        const spellAtk = calcSpellAttack(s);
         const cats = [
             { key: 'action', label: 'Ação', items: s.abilitiesAction || [] },
             { key: 'bonus', label: 'Bônus', items: s.abilitiesBonus || [] },
@@ -501,9 +622,22 @@
             panelsHtml += `<div class="cs-tab-panel${i === 0 ? ' cs-tab-visible' : ''}" data-tab="${cat.key}">`;
             cat.items.forEach(ab => {
                 const compStr = ab.components ? ab.components : '';
+                // Selo de DC/Ataque no cabecalho quando a magia usa um desses
+                // (campo usesRoll: 'dc' | 'attack'). saveAbility (opcional) diz qual
+                // resistencia o alvo faz (ex: DES).
+                let rollBadge = '';
+                if (ab.usesRoll === 'dc') {
+                    const saveAb = ABILITIES.includes(ab.saveAbility) ? ABILITY_NAMES[ab.saveAbility] : '';
+                    const dcTxt = spellDC ? 'CD ' + spellDC : 'CD —';
+                    const badgeTxt = saveAb ? saveAb + ' ' + dcTxt : dcTxt;
+                    rollBadge = '<span class="cs-ability-roll" title="Teste de Resistência do alvo">' + badgeTxt + '</span>';
+                } else if (ab.usesRoll === 'attack' && (spellAtk || spellAtk === 0)) {
+                    rollBadge = '<span class="cs-ability-roll" title="Ataque de Magia">' + modStr(spellAtk) + ' Atk</span>';
+                }
                 panelsHtml += `<div class="cs-ability-card">
                     <div class="cs-ability-header" onclick="this.parentElement.classList.toggle('cs-ab-open')">
                         <span class="cs-ability-name">${escHtml(ab.name)}</span>
+                        ${rollBadge}
                         ${ab.cost ? '<span class="cs-ability-cost">' + escHtml(ab.cost) + '</span>' : ''}
                     </div>
                     <div class="cs-ability-body"><div>
@@ -601,13 +735,30 @@
                         <div class="cs-field"><label>CA</label><input type="number" id="cs-e-ac" value="${s.armorClass}"></div>
                         <div class="cs-field"><label>Iniciativa</label><input type="number" id="cs-e-init" value="${s.initiative}"></div>
                         <div class="cs-field"><label>Deslocamento</label><input id="cs-e-speed" value="${escAttr(s.speed)}"></div>
-                        <div class="cs-field"><label>Prof. Bônus</label><input type="number" id="cs-e-prof" value="${s.proficiencyBonus}"></div>
                         <div class="cs-field"><label>PV Max</label><input type="number" id="cs-e-hpmax" value="${s.hpMax}"></div>
                         <div class="cs-field"><label>PV Atual</label><input type="number" id="cs-e-hpcur" value="${s.hpCurrent}"></div>
                         <div class="cs-field"><label>PV Temp</label><input type="number" id="cs-e-hptmp" value="${s.hpTemp}"></div>
                         <div class="cs-field"><label>Dados de Vida</label><input id="cs-e-hd" value="${escAttr(s.hitDice)}"></div>
-                        <div class="cs-field"><label>Spell DC</label><input type="number" id="cs-e-spelldc" value="${s.spellSaveDC}"></div>
-                        <div class="cs-field"><label>Spell Attack</label><input type="number" id="cs-e-spellatk" value="${s.spellAttackBonus}"></div>
+                    </div>
+                `)}
+                ${editSection('Proficiência & Conjuração', `
+                    <div class="cs-calc-hint">Marque "Automático" para calcular pelos atributos e nível. Desmarque para digitar o valor manualmente.</div>
+                    <div class="cs-eg2">
+                        <div class="cs-field cs-field-full">
+                            <label class="cs-check-label"><input type="checkbox" id="cs-e-profauto" ${s.profAuto === false ? '' : 'checked'}> Prof. Bônus automático (pelo nível)</label>
+                        </div>
+                        <div class="cs-field"><label>Prof. Bônus (manual)</label><input type="number" id="cs-e-prof" value="${s.proficiencyBonus}"></div>
+                        <div class="cs-field"><label>Atributo de Conjuração</label>
+                            <select id="cs-e-spellability">
+                                <option value=""${getSpellAbility(s) ? '' : ' selected'}>— nenhum —</option>
+                                ${ABILITIES.map(ab => '<option value="' + ab + '"' + (s.spellcastingAbility === ab ? ' selected' : '') + '>' + ABILITY_NAMES[ab] + '</option>').join('')}
+                            </select>
+                        </div>
+                        <div class="cs-field cs-field-full">
+                            <label class="cs-check-label"><input type="checkbox" id="cs-e-spellauto" ${s.spellAuto === false ? '' : 'checked'}> Spell DC / Spell Attack automáticos</label>
+                        </div>
+                        <div class="cs-field"><label>Spell DC (manual)</label><input type="number" id="cs-e-spelldc" value="${s.spellSaveDC}"></div>
+                        <div class="cs-field"><label>Spell Attack (manual)</label><input type="number" id="cs-e-spellatk" value="${s.spellAttackBonus}"></div>
                     </div>
                 `)}
                 ${editSection('Testes de Resistência (valor final)', `
@@ -620,10 +771,10 @@
                         ${SKILLS_LIST.map(sk => `<div class="cs-sk-edit"><label>${sk.name}</label><input type="number" id="cs-e-sk-${sk.key}" value="${s.skills && s.skills[sk.key] !== undefined ? s.skills[sk.key] : getMod(s[sk.ability])}" class="cs-ism"></div>`).join('')}
                     </div>
                 `)}
-                ${editSection('Ataques', renderListEditor('attacks', s.attacks || [], ['name', 'bonus', 'damage', 'desc'], ['Nome', 'Bônus', 'Dano', 'Descrição']))}
-                ${editSection('Habilidades - Ação', renderListEditor('abAction', s.abilitiesAction || [], ['name', 'cost', 'castingTime', 'components', 'range', 'duration', 'desc', 'link'], ['Nome', 'Custo (Slot)', 'Tempo de Conjuração', 'Componentes (V, S, M)', 'Alcance', 'Duração', 'Descrição', 'Link (Saber mais)']))}
-                ${editSection('Habilidades - Bônus', renderListEditor('abBonus', s.abilitiesBonus || [], ['name', 'cost', 'castingTime', 'components', 'range', 'duration', 'desc', 'link'], ['Nome', 'Custo (Slot)', 'Tempo de Conjuração', 'Componentes (V, S, M)', 'Alcance', 'Duração', 'Descrição', 'Link (Saber mais)']))}
-                ${editSection('Habilidades - Reação', renderListEditor('abReaction', s.abilitiesReaction || [], ['name', 'cost', 'castingTime', 'components', 'range', 'duration', 'desc', 'link'], ['Nome', 'Custo (Slot)', 'Tempo de Conjuração', 'Componentes (V, S, M)', 'Alcance', 'Duração', 'Descrição', 'Link (Saber mais)']))}
+                ${editSection('Ataques', renderAttacksEditor(s.attacks || []))}
+                ${editSection('Habilidades - Ação', renderSpellEditor('abAction', s.abilitiesAction || []))}
+                ${editSection('Habilidades - Bônus', renderSpellEditor('abBonus', s.abilitiesBonus || []))}
+                ${editSection('Habilidades - Reação', renderSpellEditor('abReaction', s.abilitiesReaction || []))}
                 ${editSection('Traços de Classe & Passivos', renderListEditor('classFeatures', (s.classFeatures || []).concat(s.abilitiesPassive || []), ['name', 'desc'], ['Nome', 'Descrição']))}
                 ${editSection('Poderes Especiais', renderListEditor('special', s.specialMechanics || [], ['name', 'desc'], ['Nome', 'Descrição']))}
                 ${editSection('Inventário', renderListEditor('equip', s.equipment || [], ['name', 'bonus', 'damage', 'desc', 'charges'], ['Nome', 'Bônus', 'Dano', 'Descrição', 'Cargas']))}
@@ -642,6 +793,9 @@
                     <div class="cs-field"><label>Proficiências</label><textarea id="cs-e-proftext" class="cs-ta-sm">${escHtml(s.proficienciesText)}</textarea></div>
                 `)}
                 ${editSection('Bônus & Mecânicas', renderListEditor('bonus', s.bonusMechanics || [], ['name', 'desc'], ['Nome', 'Descrição']))}
+                ${editSection('Modo Batalha: Modificadores Ativos', renderListEditor('activeMods', s.activeModifiers || [], ['name', 'value', 'note'], ['Nome', 'Valor (ex: +1d4)', 'Observação']))}
+                ${editSection('Modo Batalha: Habilidades Ativas', renderListEditor('activeAbs', s.activeAbilities || [], ['name', 'note'], ['Nome', 'Efeito']))}
+                ${editSection('Modo Batalha: Debuffs / Condições', renderListEditor('activeDebs', s.activeDebuffs || [], ['name', 'note'], ['Nome', 'Efeito']))}
                 ${editSection('Notas', `<textarea id="cs-e-notes" class="cs-ta">${escHtml(s.notes)}</textarea>`)}
                 ${editSection('Fichas Extras', `
                     <div class="cs-companions-list">
@@ -694,14 +848,35 @@
             });
         }
 
-        // Wire up add-row buttons
+        // Wire up add-row buttons (editores genericos). Os editores dedicados de ataques e
+        // magias usam a mesma classe visual, mas sao tratados separadamente abaixo — por isso
+        // ignoramos botoes com data-atk-add/data-spell-add aqui.
         c.querySelectorAll('.cs-add-row-btn').forEach(btn => {
+            if (btn.dataset.atkAdd || btn.dataset.spellAdd || !btn.dataset.fields) return;
             btn.addEventListener('click', () => {
                 const listId = btn.dataset.list;
                 const fields = btn.dataset.fields.split(',');
                 const labels = btn.dataset.labels.split('|');
                 const container = c.querySelector(`.cs-list-editor[data-list="${listId}"]`);
                 if (container) container.insertAdjacentHTML('beforeend', buildEditorRow(listId, fields, {}, labels));
+            });
+        });
+
+        // Wire up add-attack button (editor dedicado)
+        const addAtkBtn = c.querySelector('[data-atk-add]');
+        if (addAtkBtn) {
+            addAtkBtn.addEventListener('click', () => {
+                const container = c.querySelector('.cs-atk-editor[data-list="attacks"]');
+                if (container) container.insertAdjacentHTML('beforeend', buildAttackRow({}));
+            });
+        }
+
+        // Wire up add-spell buttons (editor dedicado de magias/habilidades)
+        c.querySelectorAll('[data-spell-add]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const listId = btn.dataset.spellAdd;
+                const container = c.querySelector(`.cs-spell-editor[data-list="${listId}"]`);
+                if (container) container.insertAdjacentHTML('beforeend', buildSpellRow({}));
             });
         });
 
@@ -736,6 +911,95 @@
         html += '<button class="cs-row-remove" title="Remover">&times;</button>';
         html += '</div>';
         return html;
+    }
+
+    // Editor dedicado de ATAQUES: alem do texto livre, permite estruturar o bonus
+    // (atributo + proficiencia + extra) para calculo automatico.
+    function renderAttacksEditor(items) {
+        let html = '<div class="cs-list-editor cs-atk-editor" data-list="attacks">';
+        items.forEach(a => { html += buildAttackRow(a); });
+        html += '</div>';
+        html += '<button class="cs-add-row-btn" data-atk-add="1">+ Adicionar ataque</button>';
+        return html;
+    }
+    function buildAttackRow(a) {
+        a = a || {};
+        const abOpts = '<option value="">Bônus manual (texto)</option>' +
+            ABILITIES.map(ab => '<option value="' + ab + '"' + (a.ability === ab ? ' selected' : '') + '>' + ABILITY_NAMES[ab] + '</option>').join('');
+        return `<div class="cs-editor-row cs-atk-row">
+            <div class="cs-field"><label>Nome</label><input class="cs-atk-field" data-field="name" value="${escAttr(a.name || '')}" placeholder="Nome..."></div>
+            <div class="cs-field"><label>Dano</label><input class="cs-atk-field" data-field="damage" value="${escAttr(a.damage || '')}" placeholder="ex: 1d8+4"></div>
+            <div class="cs-field"><label>Atributo do ataque</label><select class="cs-atk-field cs-atk-ability" data-field="ability">${abOpts}</select></div>
+            <div class="cs-field cs-fc"><label>Prof?</label><input type="checkbox" class="cs-atk-field cs-atk-prof" data-field="useProf" ${a.useProf ? 'checked' : ''}></div>
+            <div class="cs-field cs-fc"><label>Extra</label><input type="number" class="cs-atk-field cs-atk-extra" data-field="atkExtra" value="${a.atkExtra != null ? a.atkExtra : ''}" placeholder="0"></div>
+            <div class="cs-field"><label>Bônus manual</label><input class="cs-atk-field" data-field="bonus" value="${escAttr(a.bonus || '')}" placeholder="ex: +7"></div>
+            <div class="cs-field cs-field-full"><label>Descrição</label><textarea class="cs-ta-sm cs-atk-field" data-field="desc" placeholder="Descrição...">${escHtml(a.desc || '')}</textarea></div>
+            <button class="cs-row-remove" title="Remover">&times;</button>
+        </div>`;
+    }
+    function collectAttacksEditor(container) {
+        if (!container) return [];
+        const rows = container.querySelectorAll('.cs-atk-row');
+        const items = [];
+        rows.forEach(row => {
+            const item = {};
+            let hasValue = false;
+            row.querySelectorAll('.cs-atk-field').forEach(input => {
+                const f = input.dataset.field;
+                if (input.type === 'checkbox') { item[f] = input.checked; }
+                else if (f === 'atkExtra') { const v = input.value.trim(); item[f] = v ? (parseInt(v) || 0) : 0; if (v) hasValue = true; }
+                else { const v = input.value.trim(); item[f] = v; if (v) hasValue = true; }
+            });
+            if (hasValue) items.push(item);
+        });
+        return items;
+    }
+
+    // Editor dedicado de MAGIAS/HABILIDADES: campos existentes + seletor de "usa rolagem"
+    // (CD do save do alvo ou ataque de magia), que sera exibido com o valor calculado.
+    function renderSpellEditor(listId, items) {
+        let html = `<div class="cs-list-editor cs-spell-editor" data-list="${listId}">`;
+        items.forEach(sp => { html += buildSpellRow(sp); });
+        html += '</div>';
+        html += `<button class="cs-add-row-btn" data-spell-add="${listId}">+ Adicionar</button>`;
+        return html;
+    }
+    function buildSpellRow(sp) {
+        sp = sp || {};
+        const rollOpts = '<option value="">Nenhuma</option>' +
+            '<option value="dc"' + (sp.usesRoll === 'dc' ? ' selected' : '') + '>CD (Teste de Resistência)</option>' +
+            '<option value="attack"' + (sp.usesRoll === 'attack' ? ' selected' : '') + '>Ataque de Magia</option>';
+        const saveOpts = '<option value="">— save do alvo —</option>' +
+            ABILITIES.map(ab => '<option value="' + ab + '"' + (sp.saveAbility === ab ? ' selected' : '') + '>' + ABILITY_NAMES[ab] + '</option>').join('');
+        return `<div class="cs-editor-row cs-spell-row">
+            <div class="cs-field"><label>Nome</label><input class="cs-spell-field" data-field="name" value="${escAttr(sp.name || '')}" placeholder="Nome..."></div>
+            <div class="cs-field"><label>Custo (Slot)</label><input class="cs-spell-field" data-field="cost" value="${escAttr(sp.cost || '')}" placeholder="ex: 1º"></div>
+            <div class="cs-field"><label>Usa rolagem</label><select class="cs-spell-field" data-field="usesRoll">${rollOpts}</select></div>
+            <div class="cs-field"><label>Atributo do save</label><select class="cs-spell-field" data-field="saveAbility">${saveOpts}</select></div>
+            <div class="cs-field"><label>Tempo de Conjuração</label><input class="cs-spell-field" data-field="castingTime" value="${escAttr(sp.castingTime || '')}" placeholder="ex: 1 ação"></div>
+            <div class="cs-field"><label>Componentes</label><input class="cs-spell-field" data-field="components" value="${escAttr(sp.components || '')}" placeholder="V, S, M"></div>
+            <div class="cs-field"><label>Alcance</label><input class="cs-spell-field" data-field="range" value="${escAttr(sp.range || '')}" placeholder="ex: 18m"></div>
+            <div class="cs-field"><label>Duração</label><input class="cs-spell-field" data-field="duration" value="${escAttr(sp.duration || '')}" placeholder="ex: Instantânea"></div>
+            <div class="cs-field cs-field-full"><label>Descrição</label><textarea class="cs-ta-sm cs-spell-field" data-field="desc" placeholder="Descrição...">${escHtml(sp.desc || '')}</textarea></div>
+            <div class="cs-field cs-field-full"><label>Link (Saber mais)</label><input class="cs-spell-field" data-field="link" value="${escAttr(sp.link || '')}" placeholder="https://..."></div>
+            <button class="cs-row-remove" title="Remover">&times;</button>
+        </div>`;
+    }
+    function collectSpellEditor(container) {
+        if (!container) return [];
+        const rows = container.querySelectorAll('.cs-spell-row');
+        const items = [];
+        rows.forEach(row => {
+            const item = {};
+            let hasValue = false;
+            row.querySelectorAll('.cs-spell-field').forEach(input => {
+                const v = input.value.trim();
+                item[input.dataset.field] = v;
+                if (v && input.dataset.field === 'name') hasValue = true;
+            });
+            if (hasValue) items.push(item);
+        });
+        return items;
     }
 
     function renderSpellSlotsEditor(s) {
@@ -798,6 +1062,13 @@
         s.hitDice = document.getElementById('cs-e-hd').value.trim();
         s.spellSaveDC = parseInt(document.getElementById('cs-e-spelldc').value) || 0;
         s.spellAttackBonus = parseInt(document.getElementById('cs-e-spellatk').value) || 0;
+        // Proficiencia & conjuracao (automatico vs manual)
+        const profAutoEl = document.getElementById('cs-e-profauto');
+        s.profAuto = profAutoEl ? profAutoEl.checked : true;
+        const spellAutoEl = document.getElementById('cs-e-spellauto');
+        s.spellAuto = spellAutoEl ? spellAutoEl.checked : true;
+        const spellAbilityEl = document.getElementById('cs-e-spellability');
+        s.spellcastingAbility = spellAbilityEl ? spellAbilityEl.value : '';
 
         s.saves = {};
         ABILITIES.forEach(ab => { s.saves[ab] = parseInt(document.getElementById('cs-e-sv-' + ab).value) || 0; });
@@ -806,15 +1077,29 @@
         SKILLS_LIST.forEach(sk => { s.skills[sk.key] = parseInt(document.getElementById('cs-e-sk-' + sk.key).value) || 0; });
 
         // Collect list editors
-        s.attacks = collectListEditor(c.querySelector('.cs-list-editor[data-list="attacks"]'));
-        s.abilitiesAction = collectListEditor(c.querySelector('.cs-list-editor[data-list="abAction"]'));
-        s.abilitiesBonus = collectListEditor(c.querySelector('.cs-list-editor[data-list="abBonus"]'));
-        s.abilitiesReaction = collectListEditor(c.querySelector('.cs-list-editor[data-list="abReaction"]'));
+        s.attacks = collectAttacksEditor(c.querySelector('.cs-atk-editor[data-list="attacks"]'));
+        s.abilitiesAction = collectSpellEditor(c.querySelector('.cs-spell-editor[data-list="abAction"]'));
+        s.abilitiesBonus = collectSpellEditor(c.querySelector('.cs-spell-editor[data-list="abBonus"]'));
+        s.abilitiesReaction = collectSpellEditor(c.querySelector('.cs-spell-editor[data-list="abReaction"]'));
         s.classFeatures = collectListEditor(c.querySelector('.cs-list-editor[data-list="classFeatures"]'));
         s.abilitiesPassive = [];
         s.specialMechanics = collectListEditor(c.querySelector('.cs-list-editor[data-list="special"]'));
         s.equipment = collectListEditor(c.querySelector('.cs-list-editor[data-list="equip"]'));
         s.bonusMechanics = collectListEditor(c.querySelector('.cs-list-editor[data-list="bonus"]'));
+        // Modo batalha: preservar o estado 'active' atual ao recoletar da edicao
+        const prevMods = s.activeModifiers || [];
+        const prevAbs = s.activeAbilities || [];
+        const prevDebs = s.activeDebuffs || [];
+        function mergeActive(collected, prev) {
+            return collected.map(item => {
+                const match = prev.find(p => p.name === item.name);
+                item.active = match ? !!match.active : false;
+                return item;
+            });
+        }
+        s.activeModifiers = mergeActive(collectListEditor(c.querySelector('.cs-list-editor[data-list="activeMods"]')), prevMods);
+        s.activeAbilities = mergeActive(collectListEditor(c.querySelector('.cs-list-editor[data-list="activeAbs"]')), prevAbs);
+        s.activeDebuffs = mergeActive(collectListEditor(c.querySelector('.cs-list-editor[data-list="activeDebs"]')), prevDebs);
 
         s.currency = { cp: parseInt(document.getElementById('cs-e-cp').value)||0, sp: parseInt(document.getElementById('cs-e-sp').value)||0, ep: parseInt(document.getElementById('cs-e-ep').value)||0, gp: parseInt(document.getElementById('cs-e-gp').value)||0, pp: parseInt(document.getElementById('cs-e-pp').value)||0 };
 

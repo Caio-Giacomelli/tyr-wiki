@@ -1583,6 +1583,28 @@ const journeyConfigs = {
     ]}
 };
 
+// ===== ORDENACAO NATURAL DE SESSOES =====
+// Ordena por titulo entendendo os numeros como numeros (ex: "T2 E4" > "T2 E3" > "T1 E10").
+// Assim as sessoes de cada jornada ficam em ordem logica, e nao na ordem de criacao/carga.
+function sessionSortKey(title) {
+    // Extrai a sequencia de numeros do titulo, na ordem: [temporada, episodio, ...]
+    const nums = (String(title || '').match(/\d+/g) || []).map(function(n) { return parseInt(n, 10); });
+    return nums;
+}
+function compareSessions(a, b) {
+    const ka = sessionSortKey(a.title);
+    const kb = sessionSortKey(b.title);
+    const len = Math.max(ka.length, kb.length);
+    for (let i = 0; i < len; i++) {
+        const va = ka[i] !== undefined ? ka[i] : -1;
+        const vb = kb[i] !== undefined ? kb[i] : -1;
+        if (va !== vb) return va - vb;
+    }
+    // Empate nos numeros: desempata por titulo (localeCompare em pt-BR).
+    return String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR');
+}
+window.compareSessions = compareSessions;
+
 // ===== WIKI - RESUMO DAS SESSÕES =====
 const sessionsList = document.getElementById('sessions-list');
 if (sessionsList && typeof wikiSessions !== 'undefined') {
@@ -1591,6 +1613,10 @@ if (sessionsList && typeof wikiSessions !== 'undefined') {
         const key = session.journeyKey || 'outros';
         if (!sessionsByJourney[key]) sessionsByJourney[key] = [];
         sessionsByJourney[key].push({ session, index });
+    });
+    // Ordenar as sessoes dentro de cada jornada por titulo (ordem natural).
+    Object.keys(sessionsByJourney).forEach(function(k) {
+        sessionsByJourney[k].sort(function(x, y) { return compareSessions(x.session, y.session); });
     });
 
     const sessAddBtn = sessionsList.querySelector('.wiki-add-item');

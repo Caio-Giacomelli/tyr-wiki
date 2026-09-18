@@ -147,6 +147,12 @@ function rebuildSessionsSidebar() {
         if (!sessionsByJourney[key]) sessionsByJourney[key] = [];
         sessionsByJourney[key].push({ session, index });
     });
+    // Ordenar as sessoes dentro de cada jornada por titulo (ordem natural), igual ao app.js.
+    if (typeof compareSessions === 'function') {
+        Object.keys(sessionsByJourney).forEach(function(k) {
+            sessionsByJourney[k].sort(function(x, y) { return compareSessions(x.session, y.session); });
+        });
+    }
 
     Object.keys(sessionsByJourney).forEach(journeyKey => {
         const config = typeof journeyConfigs !== 'undefined' ? journeyConfigs[journeyKey] : null;
