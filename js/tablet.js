@@ -95,6 +95,8 @@
 
             case 'wiki':
                 document.getElementById('tablet-nav-wiki').classList.add('active');
+                // Garantir que a lista reflete os dados atuais (Firestore, edicoes, exclusoes)
+                rebuildWiki();
                 if (wikiView) wikiView.classList.add('active');
                 if (mapContainer) mapContainer.style.display = 'none';
                 if (charsheetOverlay) charsheetOverlay.classList.remove('open');
@@ -136,6 +138,41 @@
         }
     }
 
+    // Reconstroi a lista a partir dos dados ATUAIS, preservando secoes abertas, a
+    // pesquisa e a rolagem. Os arrays da wiki sao reconstruidos quando o Firestore
+    // carrega (e a cada criacao/edicao/exclusao), entao a lista montada na
+    // inicializacao fica desatualizada: indices trocados e paginas faltando.
+    function rebuildWiki() {
+        var content = document.getElementById('tablet-wiki-content');
+        if (!content) return;
+
+        var openTitles = {};
+        content.querySelectorAll('.tablet-wiki-section-header.open').forEach(function(h) {
+            openTitles[h.dataset.title] = true;
+        });
+        var scrollTop = content.scrollTop;
+
+        buildWikiSections(content);
+
+        var searchInput = document.getElementById('tablet-wiki-search');
+        var query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        if (query) {
+            filterWikiItems(query);
+        } else {
+            content.querySelectorAll('.tablet-wiki-section-header').forEach(function(h) {
+                if (!openTitles[h.dataset.title]) return;
+                h.classList.add('open');
+                h.nextElementSibling.classList.add('open');
+            });
+        }
+        content.scrollTop = scrollTop;
+    }
+
+    // Chamado por firebase-edit.js / app.js sempre que os dados da wiki mudam.
+    window.rebuildTabletWiki = debounce(function() {
+        if (tabletInitialized) rebuildWiki();
+    }, 50);
+
     function buildWikiSections(container) {
         container.innerHTML = '';
 
@@ -160,6 +197,7 @@
 
             var header = document.createElement('div');
             header.className = 'tablet-wiki-section-header';
+            header.dataset.title = section.title;
             header.innerHTML = '<span>' + section.title + ' <small style="color:#888;font-size:12px;">(' + section.items.length + ')</small></span><span class="t-arrow">&#9654;</span>';
             header.addEventListener('click', function() {
                 header.classList.toggle('open');
@@ -170,7 +208,16 @@
             var list = document.createElement('div');
             list.className = 'tablet-wiki-section-list';
 
+            var lastGroup = null;
             section.items.forEach(function(item) {
+                // Sub-cabecalho (ex.: sessoes agrupadas por jornada, como no desktop)
+                if (item.group && item.group !== lastGroup) {
+                    lastGroup = item.group;
+                    var sub = document.createElement('div');
+                    sub.className = 'tablet-wiki-sub-header';
+                    sub.textContent = item.group;
+                    list.appendChild(sub);
+                }
                 var el = document.createElement('div');
                 el.className = 'tablet-wiki-item';
                 el.dataset.searchName = item.name.toLowerCase();
@@ -189,7 +236,7 @@
 
                 el.innerHTML = html;
                 el.addEventListener('click', function() {
-                    onWikiItemClick(item);
+                    onWikiItemClick(item, el);
                 });
                 list.appendChild(el);
             });
@@ -201,74 +248,46 @@
     }
 
     // ===== ITEM DATA BUILDERS =====
-    function getCharacterItems() {
-        if (typeof characters === 'undefined') return [];
-        return characters.map(function(c, i) {
-            if (!c || !c.name) return null;
+    // Cada item guarda a referencia do objeto (entity) e do array (arr): o indice e
+    // recalculado no clique, pois os arrays podem ser reconstruidos depois.
+    function getEntityItems(arr, type, subtitleFn) {
+        if (!arr) return [];
+        return arr.map(function(e, i) {
+            if (!e || !e.name) return null;
             return {
-                name: c.name,
-                subtitle: c.title,
-                image: c.image ? getEntityDefaultImageSafe(c) : null,
-                type: 'character',
-                index: i
+                name: e.name,
+                subtitle: subtitleFn(e),
+                image: e.image ? getEntityDefaultImageSafe(e) : null,
+                type: type,
+                index: i,
+                entity: e,
+                arr: arr
             };
         }).filter(Boolean);
+    }
+
+    function titleOf(e) { return e.title || ''; }
+
+    function getCharacterItems() {
+        return getEntityItems(typeof characters !== 'undefined' ? characters : null, 'character', titleOf);
     }
 
     function getHistoricalItems() {
-        if (typeof historicalNPCs === 'undefined') return [];
-        return historicalNPCs.map(function(n, i) {
-            if (!n || !n.name) return null;
-            return {
-                name: n.name,
-                subtitle: n.title,
-                image: n.image ? getEntityDefaultImageSafe(n) : null,
-                type: 'historical',
-                index: i
-            };
-        }).filter(Boolean);
+        return getEntityItems(typeof historicalNPCs !== 'undefined' ? historicalNPCs : null, 'historical', titleOf);
     }
 
     function getAllyItems() {
-        if (typeof allies === 'undefined') return [];
-        return allies.map(function(a, i) {
-            if (!a || !a.name) return null;
-            return {
-                name: a.name,
-                subtitle: a.title,
-                image: a.image ? getEntityDefaultImageSafe(a) : null,
-                type: 'ally',
-                index: i
-            };
-        }).filter(Boolean);
+        return getEntityItems(typeof allies !== 'undefined' ? allies : null, 'ally', titleOf);
     }
 
     function getLegionItems() {
-        if (typeof legion === 'undefined') return [];
-        return legion.map(function(m, i) {
-            if (!m || !m.name) return null;
-            return {
-                name: m.name,
-                subtitle: m.title,
-                image: m.image ? getEntityDefaultImageSafe(m) : null,
-                type: 'legion',
-                index: i
-            };
-        }).filter(Boolean);
+        return getEntityItems(typeof legion !== 'undefined' ? legion : null, 'legion', titleOf);
     }
 
     function getVillainItems() {
-        if (typeof villains === 'undefined') return [];
-        return villains.map(function(v, i) {
-            if (!v || !v.name) return null;
-            return {
-                name: v.name,
-                subtitle: v.title + (v.location ? ' — ' + v.location : ''),
-                image: v.image ? getEntityDefaultImageSafe(v) : null,
-                type: 'villain',
-                index: i
-            };
-        }).filter(Boolean);
+        return getEntityItems(typeof villains !== 'undefined' ? villains : null, 'villain', function(v) {
+            return (v.title || '') + (v.location ? ' — ' + v.location : '');
+        });
     }
 
     function getLocationItems() {
@@ -287,59 +306,51 @@
     }
 
     function getArtifactItems() {
-        if (typeof artifacts === 'undefined') return [];
-        return artifacts.map(function(a, i) {
-            if (!a || !a.name) return null;
-            return {
-                name: a.name,
-                subtitle: 'Artefato',
-                image: a.image ? getEntityDefaultImageSafe(a) : null,
-                type: 'artifact',
-                index: i
-            };
-        }).filter(Boolean);
+        return getEntityItems(typeof artifacts !== 'undefined' ? artifacts : null, 'artifact', function() { return 'Artefato'; });
     }
 
     function getBookItems() {
-        if (typeof books === 'undefined') return [];
-        return books.map(function(b, i) {
-            if (!b || !b.name) return null;
-            return {
-                name: b.name,
-                subtitle: 'Livro / Relato',
-                image: b.image ? getEntityDefaultImageSafe(b) : null,
-                type: 'book',
-                index: i
-            };
-        }).filter(Boolean);
+        return getEntityItems(typeof books !== 'undefined' ? books : null, 'book', function() { return 'Livro / Relato'; });
     }
 
     function getLandmarkItems() {
-        if (typeof landmarks === 'undefined') return [];
-        return landmarks.map(function(l, i) {
-            if (!l || !l.name) return null;
-            return {
-                name: l.name,
-                subtitle: 'Marco Histórico',
-                image: null,
-                type: 'landmark',
-                index: i
-            };
-        }).filter(Boolean);
+        return getEntityItems(typeof landmarks !== 'undefined' ? landmarks : null, 'landmark', function() { return 'Marco Histórico'; })
+            .map(function(item) { item.image = null; return item; });
     }
 
+    // Sessoes agrupadas por jornada e em ordem natural, igual ao menu do desktop.
     function getSessionItems() {
         if (typeof wikiSessions === 'undefined') return [];
-        return wikiSessions.map(function(s, i) {
-            if (!s || !s.title) return null;
-            return {
-                name: s.title,
-                subtitle: s.journeyKey || '',
-                image: null,
-                type: 'session',
-                index: i
-            };
-        }).filter(Boolean);
+        var groups = {};
+        var order = [];
+        wikiSessions.forEach(function(s, i) {
+            if (!s || !s.title) return;
+            var key = s.journeyKey || 'outros';
+            if (!groups[key]) { groups[key] = []; order.push(key); }
+            groups[key].push({ session: s, index: i });
+        });
+
+        var items = [];
+        order.forEach(function(key) {
+            if (typeof compareSessions === 'function') {
+                groups[key].sort(function(x, y) { return compareSessions(x.session, y.session); });
+            }
+            var config = typeof journeyConfigs !== 'undefined' ? journeyConfigs[key] : null;
+            var journeyName = config && config.displayName ? config.displayName : key;
+            groups[key].forEach(function(g) {
+                items.push({
+                    name: g.session.title,
+                    subtitle: '',
+                    image: null,
+                    type: 'session',
+                    index: g.index,
+                    entity: g.session,
+                    arr: wikiSessions,
+                    group: journeyName
+                });
+            });
+        });
+        return items;
     }
 
     function getEntityDefaultImageSafe(entity) {
@@ -350,12 +361,26 @@
     }
 
     // ===== WIKI ITEM CLICK =====
-    function onWikiItemClick(item) {
+    function onWikiItemClick(item, clicked) {
+        // Recalcular o indice pelo objeto: o array pode ter sido reconstruido desde que
+        // a lista foi montada, e o indice fixo abriria a pagina errada.
+        if (item.arr) {
+            var liveIndex = item.arr.indexOf(item.entity);
+            if (liveIndex < 0) {
+                // A entrada nao existe mais (dados recarregados): atualizar a lista.
+                rebuildWiki();
+                return;
+            }
+            item.index = liveIndex;
+        } else if (item.type === 'location' && (typeof cities === 'undefined' || !cities[item.index])) {
+            rebuildWiki();
+            return;
+        }
+
         // Marcar ativo
         document.querySelectorAll('.tablet-wiki-item').forEach(function(el) {
             el.classList.remove('active');
         });
-        var clicked = document.querySelector('.tablet-wiki-item[data-type="' + item.type + '"][data-index="' + item.index + '"]');
         if (clicked) clicked.classList.add('active');
 
         // Para locais, mudar para o mapa e selecionar a cidade
@@ -517,6 +542,11 @@
     function filterWikiItems(query) {
         var items = document.querySelectorAll('.tablet-wiki-item');
         var sections = document.querySelectorAll('.tablet-wiki-section');
+
+        // Sub-cabecalhos (jornadas) so aparecem fora da pesquisa
+        document.querySelectorAll('.tablet-wiki-sub-header').forEach(function(sub) {
+            sub.style.display = query ? 'none' : '';
+        });
 
         if (!query) {
             items.forEach(function(item) { item.classList.remove('hidden'); });

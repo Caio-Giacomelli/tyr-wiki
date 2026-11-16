@@ -127,6 +127,8 @@ async function loadFromFirestore() {
         if (typeof rebuildEntityMap === 'function') rebuildEntityMap();
         // Atualizar icones das jornadas visiveis com as imagens carregadas (retroativo)
         if (typeof refreshActiveJourneyImages === 'function') refreshActiveJourneyImages();
+        // Lista da wiki no mobile/tablet (inclui cidades, que nao passam pelo rebuildSidebarList)
+        if (typeof window.rebuildTabletWiki === 'function') window.rebuildTabletWiki();
     } catch (error) {
         console.log('Usando dados locais (Firestore indisponível ou vazio):', error.message);
     }
@@ -186,6 +188,9 @@ function rebuildSessionsSidebar() {
         if (typeof openAddModal === 'function') openAddModal('session');
     });
     listEl.appendChild(addBtn);
+
+    // Manter a lista da wiki no mobile/tablet em sincronia
+    if (typeof window.rebuildTabletWiki === 'function') window.rebuildTabletWiki();
 }
 
 // Reconstruir lista do sidebar apos carregar do Firestore
@@ -271,6 +276,9 @@ function rebuildSidebarList(collectionName, localArray) {
             });
         }
     } catch(e) { /* entityMap pode nao estar disponivel ainda */ }
+
+    // Manter a lista da wiki no mobile/tablet em sincronia
+    if (typeof window.rebuildTabletWiki === 'function') window.rebuildTabletWiki();
 }
 
 // ===== SALVAR ENTIDADE NO FIRESTORE =====

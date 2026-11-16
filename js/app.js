@@ -3470,6 +3470,7 @@ if (langToggle && langMenu) {
 
             // Adicionar ao array local
             arr.push(entry);
+            if (typeof window.rebuildTabletWiki === 'function') window.rebuildTabletWiki();
 
             // Adicionar item na lista do sidebar
             const listEl = typeArrayMap[currentAddType].listEl();
