@@ -21,6 +21,8 @@
     let S = null;              // ficha carregada
     let editMode = false;
     let editDirty = false;     // houve alteracao no formulario de edicao
+    let combatOpen = false;    // painel do modo combate aberto (lembrado no aparelho)
+    try { combatOpen = localStorage.getItem('cs2-combat') === '1'; } catch (e) { /* sem storage */ }
     let tab = 'acoes';         // aba ativa (visualizacao)
     let editTab = 'geral';     // aba ativa (edicao)
     let actFilter = 'all';     // filtro da aba Acoes
@@ -439,8 +441,8 @@
         return `<div class="cs2" data-mode="view">
             ${renderTop()}
             <div class="cs2-scroll">
-                ${renderVitals()}
-                ${renderStates()}
+                ${renderStrip()}
+                ${combatOpen ? renderCombat() : ''}
                 <div class="cs2-body">
                     ${renderSide()}
                     <main class="cs2-main">
@@ -490,8 +492,8 @@
         const actions = editMode
             ? `<button class="cs2-btn" data-act="edit-cancel">Cancelar</button>
                <button class="cs2-btn cs2-btn-primary" data-act="edit-save">✓ Salvar</button>`
-            : `<button class="cs2-btn cs2-btn-rest" data-act="short-rest" title="Descanso curto"><span class="cs2-bi">☾</span><span class="cs2-bl">Desc. curto</span></button>
-               <button class="cs2-btn cs2-btn-rest" data-act="long-rest" title="Descanso longo"><span class="cs2-bi">☀</span><span class="cs2-bl">Desc. longo</span></button>
+            : `<button class="cs2-btn cs2-btn-combat${combatOpen ? ' on' : ''}" data-act="combat" title="Modo combate" aria-pressed="${combatOpen}"><span class="cs2-bi">⚔</span><span class="cs2-bl">Combate</span></button>
+               <button class="cs2-btn" data-act="rest" title="Descansar"><span class="cs2-bi">☾</span><span class="cs2-bl">Descansar</span></button>
                <button class="cs2-btn" data-act="edit" title="Editar ficha"><span class="cs2-bi">✎</span><span class="cs2-bl">Editar</span></button>
                <button class="cs2-icon-btn" data-act="menu" title="Mais opções" aria-label="Mais opções">⋮</button>
                <button class="cs2-icon-btn cs2-desktop-only" data-act="close" title="Fechar" aria-label="Fechar">✕</button>`;
@@ -511,12 +513,55 @@
         </header>`;
     }
 
-    // ----- Vitais -----
-    function renderVitals() {
-        const s = S;
+    // ----- Faixa de resumo (sempre visivel) -----
+    function hpState(s) {
+        const pct = Math.round(s.hpCurrent / s.hpMax * 100);
+        return s.hpCurrent <= 0 ? 'down' : pct <= 25 ? 'crit' : pct <= 50 ? 'low' : 'ok';
+    }
+    function hpBar(s, cls) {
         const pct = Math.max(0, Math.min(100, Math.round(s.hpCurrent / s.hpMax * 100)));
         const tmpPct = Math.max(0, Math.min(100 - pct, Math.round((s.hpTemp || 0) / s.hpMax * 100)));
-        const state = s.hpCurrent <= 0 ? 'down' : pct <= 25 ? 'crit' : pct <= 50 ? 'low' : 'ok';
+        return `<div class="cs2-hp-bar${cls ? ' ' + cls : ''}"><i style="width:${pct}%"></i><b style="width:${tmpPct}%"></b></div>`;
+    }
+    function renderStrip() {
+        const s = S;
+        const cells = [
+            `<div class="cs2-st cs2-st-hp" data-state="${hpState(s)}">
+                <span class="cs2-st-l">Vida</span>
+                <span class="cs2-st-v">${s.hpCurrent}<small>/${s.hpMax}</small>${s.hpTemp > 0 ? `<em>+${s.hpTemp}</em>` : ''}</span>
+                ${hpBar(s, 'small')}
+            </div>`,
+            stripCell('CA', s.armorClass, 'cs2-st-ac'),
+            stripCell('Iniciativa', modStr(s.initiative)),
+            stripCell('Deslocamento', esc(s.speed || '—'), 'cs2-st-speed'),
+            stripCell('Proficiência', modStr(profBonus(s))),
+            stripCell('Inspiração', s.inspiration > 0 ? '★' + (s.inspiration > 1 ? '<small>×' + s.inspiration + '</small>' : '') : '<span class="cs2-st-none">—</span>', s.inspiration > 0 ? 'cs2-st-insp on' : 'cs2-st-insp')
+        ];
+        if (isCaster(s)) cells.push(stripCell('Magia <small>CD · Atq</small>', `${spellDC(s) || '—'}<span class="cs2-st-dot">·</span>${modStr(spellAtk(s))}`, 'cs2-st-magic'));
+        // Efeitos ligados aparecem discretos mesmo com o modo combate fechado
+        const active = [].concat(
+            (s.activeModifiers || []).filter(x => x.active).map(x => esc(x.name) + (x.value ? ' ' + esc(x.value) : '')),
+            (s.activeAbilities || []).filter(x => x.active).map(x => esc(x.name)),
+            (s.activeDebuffs || []).filter(x => x.active).map(x => '<span class="deb">' + esc(x.name) + '</span>')
+        );
+        return `<section class="cs2-strip">${cells.join('')}</section>
+            ${!combatOpen && (active.length || s.hpCurrent <= 0) ? `<div class="cs2-active-line">
+                ${s.hpCurrent <= 0 ? '<span class="deb">Caído — abra o modo combate para os testes contra a morte</span>' : ''}
+                ${active.length ? '<span class="cs2-active-l">Em efeito:</span> ' + active.join('<span class="cs2-st-dot">·</span>') : ''}
+            </div>` : ''}`;
+    }
+    function tile(label, value, title, kind) {
+        return `<div class="cs2-tile${kind ? ' cs2-tile-' + kind : ''}"${title ? ` title="${esc(title)}"` : ''}>
+            <span class="cs2-tile-l">${label}</span><span class="cs2-tile-v">${value}</span>
+        </div>`;
+    }
+    function stripCell(label, value, cls) {
+        return `<div class="cs2-st${cls ? ' ' + cls : ''}"><span class="cs2-st-l">${label}</span><span class="cs2-st-v">${value}</span></div>`;
+    }
+
+    // ----- Modo combate (escondido atras do botao do topo) -----
+    function renderCombat() {
+        const s = S;
         const hd = parseHitDice(s);
         const ds = s.deathSaves || { s: 0, f: 0 };
         const deathHtml = s.hpCurrent <= 0 ? `
@@ -525,56 +570,65 @@
                 <div class="cs2-death-row"><span>Falhas</span>${[0, 1, 2].map(i => `<button class="cs2-death-pip fail${i < ds.f ? ' on' : ''}" data-act="death" data-kind="f" data-i="${i}" aria-label="Falha ${i + 1}"></button>`).join('')}</div>
                 ${ds.s >= 3 ? '<div class="cs2-death-msg ok">Estabilizado</div>' : ds.f >= 3 ? '<div class="cs2-death-msg fail">Morto</div>' : '<div class="cs2-death-msg">Testes contra a morte</div>'}
             </div>` : '';
-        const tiles = [
-            tile('CA', s.armorClass, 'Classe de Armadura', 'shield'),
-            tile('Iniciativa', modStr(s.initiative), '', ''),
-            tile('Desloc.', esc(s.speed || '—'), '', 'speed'),
-            tile('Proficiência', modStr(profBonus(s)), '', ''),
-            `<div class="cs2-tile cs2-tile-insp${s.inspiration > 0 ? ' on' : ''}">
-                <span class="cs2-tile-l">Inspiração</span>
-                <div class="cs2-insp">
-                    <button class="cs2-mini" data-act="insp" data-v="-1" aria-label="Menos inspiração">−</button>
-                    <span class="cs2-tile-v">${s.inspiration > 0 ? '★' + (s.inspiration > 1 ? s.inspiration : '') : '☆'}</span>
-                    <button class="cs2-mini" data-act="insp" data-v="1" aria-label="Mais inspiração">+</button>
-                </div>
-            </div>`
-        ];
-        if (isCaster(s)) {
-            tiles.push(`<div class="cs2-tile cs2-tile-magic" title="CD de resistência e bônus de ataque de magia">
-                <span class="cs2-tile-l">Magia</span>
-                <div class="cs2-magic-v"><span><b>${spellDC(s) || '—'}</b><small>CD</small></span><span><b>${modStr(spellAtk(s))}</b><small>Atq</small></span></div>
-            </div>`);
-        }
-        return `<section class="cs2-vitals">
-            <div class="cs2-hp" data-state="${state}">
-                <div class="cs2-hp-head">
-                    <span class="cs2-hp-title">Pontos de Vida</span>
-                    <span class="cs2-hd" title="Dados de vida restantes">DV ${s.hitDiceRemaining}/${hd.total} · d${hd.die}</span>
-                </div>
-                <div class="cs2-hp-main">
-                    <button class="cs2-hp-step" data-act="hp" data-v="-1" aria-label="Perder 1 PV">−</button>
-                    <div class="cs2-hp-nums">
-                        <span class="cs2-hp-cur">${s.hpCurrent}</span><span class="cs2-hp-sep">/</span><span class="cs2-hp-max">${s.hpMax}</span>
-                        ${s.hpTemp > 0 ? `<span class="cs2-hp-tmp">+${s.hpTemp} temp</span>` : ''}
-                    </div>
-                    <button class="cs2-hp-step" data-act="hp" data-v="1" aria-label="Recuperar 1 PV">+</button>
-                </div>
-                <div class="cs2-hp-bar"><i style="width:${pct}%"></i><b style="width:${tmpPct}%"></b></div>
-                <div class="cs2-hp-input">
-                    <button class="cs2-hp-btn dmg" data-act="dmg">Dano</button>
-                    <input type="number" inputmode="numeric" min="0" id="cs2-hp-amt" placeholder="0" aria-label="Quantidade">
-                    <button class="cs2-hp-btn heal" data-act="heal">Curar</button>
-                    <button class="cs2-hp-btn tmp" data-act="temp" title="Definir PV temporários">Temp</button>
-                </div>
-                ${deathHtml}
+        const slots = slotRows(s);
+        return `<section class="cs2-combat">
+            <div class="cs2-combat-h">
+                <h2>⚔ Modo Combate</h2>
+                <button class="cs2-btn cs2-btn-sm" data-act="combat">Recolher</button>
             </div>
-            <div class="cs2-tiles">${tiles.join('')}</div>
+            <div class="cs2-combat-grid">
+                <div class="cs2-hp" data-state="${hpState(s)}">
+                    <div class="cs2-hp-head">
+                        <span class="cs2-hp-title">Pontos de Vida</span>
+                        <span class="cs2-hd" title="Dados de vida restantes">Dados de vida ${s.hitDiceRemaining}/${hd.total} · d${hd.die}</span>
+                    </div>
+                    <div class="cs2-hp-main">
+                        <button class="cs2-hp-step" data-act="hp" data-v="-1" aria-label="Perder 1 PV">−</button>
+                        <div class="cs2-hp-nums">
+                            <span class="cs2-hp-cur">${s.hpCurrent}</span><span class="cs2-hp-sep">/</span><span class="cs2-hp-max">${s.hpMax}</span>
+                            ${s.hpTemp > 0 ? `<span class="cs2-hp-tmp">+${s.hpTemp} temporários</span>` : ''}
+                        </div>
+                        <button class="cs2-hp-step" data-act="hp" data-v="1" aria-label="Recuperar 1 PV">+</button>
+                    </div>
+                    ${hpBar(s)}
+                    <div class="cs2-hp-input">
+                        <button class="cs2-hp-btn dmg" data-act="dmg">Dano</button>
+                        <input type="number" inputmode="numeric" min="0" id="cs2-hp-amt" placeholder="0" aria-label="Quantidade">
+                        <button class="cs2-hp-btn heal" data-act="heal">Curar</button>
+                        <button class="cs2-hp-btn tmp" data-act="temp" title="Definir PV temporários">Temp.</button>
+                    </div>
+                    ${deathHtml}
+                </div>
+                <div class="cs2-combat-side">
+                    <div class="cs2-combat-row">
+                        <span class="cs2-combat-l">Inspiração heroica</span>
+                        <div class="cs2-insp">
+                            <button class="cs2-mini" data-act="insp" data-v="-1" aria-label="Menos inspiração">−</button>
+                            <span class="cs2-insp-v${s.inspiration > 0 ? ' on' : ''}">${s.inspiration > 0 ? '★' + (s.inspiration > 1 ? ' ×' + s.inspiration : '') : '☆'}</span>
+                            <button class="cs2-mini" data-act="insp" data-v="1" aria-label="Mais inspiração">+</button>
+                        </div>
+                    </div>
+                    ${slots ? `<div class="cs2-combat-block"><div class="cs2-combat-l">Espaços de magia <small>toque para gastar / recuperar</small></div>${slots}</div>` : ''}
+                    ${renderStates()}
+                </div>
+            </div>
         </section>`;
     }
-    function tile(label, value, title, kind) {
-        return `<div class="cs2-tile${kind ? ' cs2-tile-' + kind : ''}"${title ? ` title="${esc(title)}"` : ''}>
-            <span class="cs2-tile-l">${label}</span><span class="cs2-tile-v">${value}</span>
-        </div>`;
+    function slotRows(s) {
+        if (!hasSlots(s)) return '';
+        let html = '';
+        for (let l = 1; l <= 9; l++) {
+            const sl = s.spellSlots[l];
+            if (!sl || !sl.max) continue;
+            const used = Math.min(sl.used || 0, sl.max);
+            const rem = sl.max - used;
+            html += `<div class="cs2-slot-row">
+                <span class="cs2-slot-l">${l}º</span>
+                <div class="cs2-pips">${Array.from({ length: sl.max }, (_, i) => `<button class="cs2-pip${i < rem ? ' on' : ''}" data-act="slot" data-lvl="${l}" data-i="${i}" aria-label="Espaço ${l}º ${i + 1}"></button>`).join('')}</div>
+                <span class="cs2-slot-c">${rem}/${sl.max}</span>
+            </div>`;
+        }
+        return html;
     }
 
     // ----- Estados de batalha -----
@@ -585,7 +639,7 @@
             { key: 'deb', arr: S.activeDebuffs || [], label: 'Condições', cls: 'deb' }
         ].filter(g => g.arr.length);
         if (!groups.length) return '';
-        return `<section class="cs2-states">
+        return `<section class="cs2-states"><div class="cs2-combat-l">Estados de batalha <small>toque para ligar / desligar</small></div>
             ${groups.map(g => `<div class="cs2-states-g">
                 <span class="cs2-states-l">${g.label}</span>
                 <div class="cs2-chips">${g.arr.map((it, i) => `<button class="cs2-chip ${g.cls}${it.active ? ' on' : ''}" data-act="state" data-g="${g.key}" data-i="${i}" aria-pressed="${it.active ? 'true' : 'false'}">
@@ -725,19 +779,7 @@
             </div>`;
         }
         if (hasSlots(s)) {
-            html += `<div class="cs2-card cs2-slots"><div class="cs2-card-t">Espaços de Magia <small>toque para gastar / recuperar</small></div>`;
-            for (let l = 1; l <= 9; l++) {
-                const sl = s.spellSlots[l];
-                if (!sl || !sl.max) continue;
-                const used = Math.min(sl.used || 0, sl.max);
-                const rem = sl.max - used;
-                html += `<div class="cs2-slot-row">
-                    <span class="cs2-slot-l">${l}º</span>
-                    <div class="cs2-pips">${Array.from({ length: sl.max }, (_, i) => `<button class="cs2-pip${i < rem ? ' on' : ''}" data-act="slot" data-lvl="${l}" data-i="${i}" aria-label="Espaço ${l}º ${i + 1}"></button>`).join('')}</div>
-                    <span class="cs2-slot-c">${rem}/${sl.max}</span>
-                </div>`;
-            }
-            html += '</div>';
+            html += `<div class="cs2-card cs2-slots"><div class="cs2-card-t">Espaços de Magia <small>toque para gastar / recuperar</small></div>${slotRows(s)}</div>`;
         }
         // Magias = habilidades com circulo (campo Custo) ou que usam CD/ataque.
         const groups = {};
@@ -1357,6 +1399,13 @@
                 c.hpCurrent = Math.max(0, Math.min(c.hpMax, (parseInt(c.hpCurrent) || 0) + parseInt(el.dataset.v)));
                 queueSave(); render(); break;
             }
+            case 'combat':
+                combatOpen = !combatOpen;
+                try { localStorage.setItem('cs2-combat', combatOpen ? '1' : '0'); } catch (e) { /* sem storage */ }
+                render();
+                if (combatOpen) overlay.scrollTo({ top: 0, behavior: 'smooth' });
+                break;
+            case 'rest': openRestChooser(); break;
             case 'short-rest': openShortRest(); break;
             case 'long-rest': openLongRest(); break;
             case 'conto-new': openContoEditor(-1); break;
@@ -1572,6 +1621,20 @@
                 setRemembered(null);
                 renderLogin();
             }
+        });
+    }
+
+    function openRestChooser() {
+        const m = openModal(`
+            <div class="cs2-modal-h"><h3>Descansar</h3><button class="cs2-icon-btn" data-modal-close aria-label="Fechar">✕</button></div>
+            <div class="cs2-rest-choice">
+                <button class="cs2-rest-opt" data-r="short"><b>☾ Descanso curto</b><span>Gastar dados de vida para recuperar PV</span></button>
+                <button class="cs2-rest-opt" data-r="long"><b>☀ Descanso longo</b><span>PV, espaços de magia e dados de vida</span></button>
+            </div>`, 'small');
+        m.addEventListener('click', e => {
+            const b = e.target.closest('[data-r]');
+            if (!b) return;
+            if (b.dataset.r === 'short') openShortRest(); else openLongRest();
         });
     }
 
