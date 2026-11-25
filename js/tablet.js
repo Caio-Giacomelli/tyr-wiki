@@ -64,6 +64,8 @@
         navMap.addEventListener('click', function() { switchView('map'); });
         navWiki.addEventListener('click', function() { switchView('wiki'); });
         if (navSheet) navSheet.addEventListener('click', function() { switchView('charsheet'); });
+        var navSheet2 = document.getElementById('tablet-nav-sheet2');
+        if (navSheet2) navSheet2.addEventListener('click', function() { switchView('charsheet2'); });
 
         // Modo Mestre (Revelacoes): abre o overlay, nao troca de view.
         var navMaster = document.getElementById('tablet-nav-master');
@@ -83,6 +85,8 @@
         const wikiView = document.getElementById('tablet-wiki-view');
         const mapContainer = document.getElementById('map-container');
         const charsheetOverlay = document.getElementById('charsheet-overlay');
+        // Ficha v2: fechar ao sair dela (salva pendencias antes)
+        if (view !== 'charsheet2' && typeof window.closeCharsheetV2 === 'function') window.closeCharsheetV2();
 
         switch (view) {
             case 'map':
@@ -112,8 +116,21 @@
                 closeBottomSheet();
                 showMapControls(false);
                 break;
+
+            case 'charsheet2':
+                document.getElementById('tablet-nav-sheet2').classList.add('active');
+                if (wikiView) wikiView.classList.remove('active');
+                if (mapContainer) mapContainer.style.display = 'none';
+                if (charsheetOverlay) charsheetOverlay.classList.remove('open');
+                if (typeof window.openCharsheetV2 === 'function') window.openCharsheetV2();
+                closeBottomSheet();
+                showMapControls(false);
+                break;
         }
     }
+
+    // Exposto para a Ficha v2 poder trocar de view (ex.: abrir a ficha antiga).
+    window.tabletSwitchView = switchView;
 
     function showMapControls(show) {
         var zoomControls = document.getElementById('zoom-controls');
